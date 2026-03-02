@@ -1,0 +1,21 @@
+{
+  "movies": [
+    {
+      "id": "test-1",
+      "title": "Тестовый фильм",
+      "original_title": "Test Movie",
+      "director": "Тестовый режиссёр",
+      "actors": ["Актёр 1", "Актёр 2"],
+      "genres": ["драма", "комедия"],
+      "year": 2024,
+      "duration_min": 120,
+      "source": "kinoteatr.ru",
+      "url": "https://kinoteatr.ru/film/test-1/naberezhnie-chelni/"
+    }
+  ],
+  "meta": {
+    "city": "naberezhnie-chelni",
+    "date": "2026-03-02",
+    "fetched_at": "2026-03-02T12:00:00+03:00"
+  }
+}

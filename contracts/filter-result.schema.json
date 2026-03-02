@@ -1,0 +1,69 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "filter-result.schema.json",
+  "title": "FilterResult",
+  "version": "1.0.0",
+  "description": "Filtered movies matching taste threshold. Output of ct-filter, input of ct-format.",
+  "type": "object",
+  "required": ["filtered", "meta"],
+  "properties": {
+    "filtered": {
+      "type": "array",
+      "description": "Movies that passed filter",
+      "items": {
+        "type": "object",
+        "required": ["movie", "relevance_score", "recommendation"],
+        "properties": {
+          "movie": {
+            "type": "object",
+            "required": ["id", "title", "url"],
+            "properties": {
+              "id": { "type": "string" },
+              "title": { "type": "string" },
+              "original_title": { "type": "string" },
+              "director": { "type": "string" },
+              "actors": { "type": "array", "items": { "type": "string" } },
+              "genres": { "type": "array", "items": { "type": "string" } },
+              "year": { "type": ["integer", "null"] },
+              "source": { "type": "string" },
+              "url": { "type": "string" }
+            }
+          },
+          "relevance_score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "recommendation": {
+            "type": "string",
+            "enum": ["must_see", "recommended"]
+          },
+          "reasoning": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "meta": {
+      "type": "object",
+      "required": ["total_input", "matched", "thresholds"],
+      "properties": {
+        "total_input": { "type": "integer", "description": "Movies before filtering" },
+        "matched": { "type": "integer", "description": "Movies after filtering" },
+        "thresholds": {
+          "type": "object",
+          "properties": {
+            "recommendations": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Allowed recommendation types"
+            },
+            "min_score": { "type": "number", "description": "Minimum score threshold" }
+          }
+        },
+        "filtered_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "send-confirmation.schema.json",
+  "title": "SendConfirmation",
+  "version": "1.0.0",
+  "description": "Telegram delivery confirmation. Output of t2me.",
+  "type": "object",
+  "required": ["success", "meta"],
+  "properties": {
+    "success": {
+      "type": "boolean",
+      "description": "Whether send succeeded"
+    },
+    "message_id": {
+      "type": "integer",
+      "description": "Telegram message ID if successful"
+    },
+    "error": {
+      "type": "string",
+      "description": "Error message if failed"
+    },
+    "meta": {
+      "type": "object",
+      "required": ["sent_at"],
+      "properties": {
+        "sent_at": { "type": "string", "format": "date-time" },
+        "target": { "type": "string", "description": "Telegram target" },
+        "char_count": { "type": "integer", "description": "Message length" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

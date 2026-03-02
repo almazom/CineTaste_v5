@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "message-text.schema.json",
+  "title": "MessageText",
+  "version": "1.0.0",
+  "description": "Formatted Telegram message. Output of ct-format, input of t2me.",
+  "type": "object",
+  "required": ["text", "meta"],
+  "properties": {
+    "text": {
+      "type": "string",
+      "description": "Telegram markdown-formatted message"
+    },
+    "meta": {
+      "type": "object",
+      "required": ["template", "formatted_at"],
+      "properties": {
+        "template": { "type": "string", "description": "Template used" },
+        "city_display": { "type": "string", "description": "City name" },
+        "movie_count": { "type": "integer", "description": "Movies in message" },
+        "formatted_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,28 @@
+{
+  "analyzed": [
+    {
+      "movie": {
+        "id": "test-1",
+        "title": "Тестовый фильм",
+        "original_title": "Test Movie",
+        "director": "Тестовый режиссёр",
+        "actors": ["Актёр 1", "Актёр 2"],
+        "genres": ["драма", "комедия"],
+        "year": 2024,
+        "source": "kinoteatr.ru",
+        "url": "https://kinoteatr.ru/film/test-1/naberezhnie-chelni/"
+      },
+      "relevance_score": 85,
+      "confidence": 0.8,
+      "recommendation": "recommended",
+      "reasoning": "Хорошая драма с элементами комедии",
+      "key_matches": ["драма"],
+      "red_flags": []
+    }
+  ],
+  "meta": {
+    "analyzer": "test",
+    "analyzed_at": "2026-03-02T12:00:00+03:00",
+    "taste_profile": "1.0"
+  }
+}

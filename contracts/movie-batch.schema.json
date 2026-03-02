@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "movie-batch.schema.json",
+  "title": "MovieBatch",
+  "version": "1.0.0",
+  "description": "Raw movies fetched from cinema source. Output of ct-fetch, input of ct-analyze.",
+  "type": "object",
+  "required": ["movies", "meta"],
+  "properties": {
+    "movies": {
+      "type": "array",
+      "description": "List of movies from cinema",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "source"],
+        "properties": {
+          "id": { "type": "string", "description": "Unique identifier" },
+          "title": { "type": "string", "description": "Russian title" },
+          "original_title": { "type": "string", "description": "Original language title" },
+          "director": { "type": "string", "description": "Director name" },
+          "actors": { "type": "array", "items": { "type": "string" }, "description": "Cast list" },
+          "genres": { "type": "array", "items": { "type": "string" }, "description": "Genre tags" },
+          "year": { "type": ["integer", "null"], "description": "Release year" },
+          "duration_min": { "type": ["integer", "null"], "description": "Duration in minutes" },
+          "source": { "type": "string", "description": "Source identifier (e.g., kinoteatr.ru)" },
+          "url": { "type": "string", "format": "uri", "description": "Source URL" },
+          "raw_description": { "type": "string", "description": "Raw description text" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "meta": {
+      "type": "object",
+      "required": ["city", "date", "fetched_at"],
+      "properties": {
+        "city": { "type": "string", "description": "City code" },
+        "city_display": { "type": "string", "description": "City display name" },
+        "date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$", "description": "Fetch date" },
+        "source_url": { "type": "string", "format": "uri", "description": "Source URL" },
+        "fetched_at": { "type": "string", "format": "date-time", "description": "Timestamp" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
