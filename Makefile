@@ -1,13 +1,14 @@
-# CineTaste v5.1.0 Makefile
+# CineTaste v5.2.0 Makefile
 
 .PHONY: test run dry-run clean help
 
 # Default target
 help:
-	@echo "CineTaste v5.1.0 - Commands"
+	@echo "CineTaste v5.2.0 - Commands"
 	@echo ""
 	@echo "  make test        Run pytest test suite"
 	@echo "  make test-cov    Run tests with coverage"
+	@echo "  make test-net    Run optional live network tests"
 	@echo "  make run         Run full pipeline (production)"
 	@echo "  make dry-run     Run pipeline in preview mode"
 	@echo "  make clean       Clean temp files"
@@ -21,6 +22,10 @@ test:
 # Run tests with coverage
 test-cov:
 	python3 -m pytest tests/ --cov=tools --cov-report=term-missing
+
+# Run optional live-network tests
+test-net:
+	python3 -m pytest tests/ -m network -v
 
 # Run full pipeline
 run:
