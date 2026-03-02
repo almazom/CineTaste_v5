@@ -49,8 +49,9 @@ Examples:
 
     parser.add_argument(
         "--agent", "-a",
-        default="pi",
-        help="AI agent adapter to use (default: pi)"
+        default="auto",
+        choices=["auto", "kimi", "pi", "dry_run"],
+        help="AI agent to use: auto|kimi|pi|dry_run (default: auto)"
     )
 
     parser.add_argument(
@@ -111,7 +112,12 @@ def main():
             else:
                 print(f"Analyzing with {args.agent}...", file=sys.stderr)
 
-        analyzed, agent_meta = analyze_movies(movies, args.taste, dry_run=args.dry_run)
+        analyzed, agent_meta = analyze_movies(
+            movies,
+            args.taste,
+            dry_run=args.dry_run,
+            agent_name=args.agent,
+        )
 
         # Build output (merge meta from agent)
         output = {

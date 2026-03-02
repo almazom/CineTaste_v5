@@ -81,9 +81,22 @@ def preflight_check(agent: dict) -> bool:
         return False
 
 
-def select_agent() -> Optional[dict]:
-    """Select first available agent via preflight check."""
+def get_agent(name: str) -> Optional[dict]:
+    """Get configured agent by name."""
     for agent in AGENTS:
+        if agent["name"] == name:
+            return agent
+    return None
+
+
+def select_agent(candidates: Optional[list[str]] = None) -> Optional[dict]:
+    """Select first available agent via preflight check."""
+    if candidates:
+        pool = [a for a in AGENTS if a["name"] in candidates]
+    else:
+        pool = AGENTS
+
+    for agent in pool:
         if preflight_check(agent):
             return agent
     return None
@@ -229,36 +242,8 @@ def parse_ai_response(response: str) -> list:
 
 # ── Main API ───────────────────────────────────────────────────────────
 
-def analyze_movies(movies: list, taste_path: str, dry_run: bool = False) -> tuple[list, dict]:
-    """
-    Analyze movies against taste profile.
-
-    Args:
-        movies: List of movie dicts from movie-batch
-        taste_path: Path to taste/profile.yaml
-        dry_run: If True, return mock analysis without calling AI
-
-    Returns:
-        (analyzed_list, meta_dict) tuple
-    """
-    if dry_run:
-        return mock_analyze(movies)
-
-    # Select agent
-    agent = select_agent()
-    if agent is None:
-        print("[agent] No agent available — using dry_run", file=sys.stderr)
-        return mock_analyze(movies)
-
-    # Load taste and build prompt
-    taste = load_taste_profile(taste_path)
-    prompt = build_prompt(movies, taste, agent)
-
-    # Call agent
-    response = call_agent(prompt, agent)
-    analyses = parse_ai_response(response)
-
-    # Merge movie data with analysis
+def merge_analysis(movies: list, analyses: list, agent: dict) -> tuple[list, dict]:
+    """Merge model analysis entries with movie data and build output meta."""
     movie_map = {m["id"]: m for m in movies}
     result = []
 
@@ -293,8 +278,59 @@ def analyze_movies(movies: list, taste_path: str, dry_run: bool = False) -> tupl
         "agent": agent["name"],
         "web_search_used": agent.get("supports_web_search", False)
     }
-
     return result, meta
+
+
+def analyze_with_agent(movies: list, taste: dict, agent: dict) -> tuple[list, dict]:
+    """Run full analyze flow with a specific agent."""
+    prompt = build_prompt(movies, taste, agent)
+    response = call_agent(prompt, agent)
+    analyses = parse_ai_response(response)
+    return merge_analysis(movies, analyses, agent)
+
+
+def analyze_movies(
+    movies: list,
+    taste_path: str,
+    dry_run: bool = False,
+    agent_name: str = "auto",
+) -> tuple[list, dict]:
+    """
+    Analyze movies against taste profile.
+
+    Policy:
+      - dry_run=True or agent_name=dry_run -> mock output
+      - agent_name=auto -> fallback chain kimi -> pi -> dry_run
+      - agent_name=kimi|pi -> strict explicit mode (no fallback)
+    """
+    if dry_run or agent_name == "dry_run":
+        return mock_analyze(movies)
+
+    taste = load_taste_profile(taste_path)
+
+    if agent_name == "auto":
+        for agent in AGENTS:
+            if not preflight_check(agent):
+                continue
+            try:
+                return analyze_with_agent(movies, taste, agent)
+            except (RuntimeError, TimeoutError, ValueError) as e:
+                print(
+                    f"[agent] {agent['name']} failed ({e}); trying next fallback",
+                    file=sys.stderr,
+                )
+
+        print("[agent] No agent succeeded — using dry_run", file=sys.stderr)
+        return mock_analyze(movies)
+
+    agent = get_agent(agent_name)
+    if agent is None:
+        raise RuntimeError(f"Unknown agent: {agent_name}")
+
+    if not preflight_check(agent):
+        raise RuntimeError(f"Requested agent unavailable: {agent_name}")
+
+    return analyze_with_agent(movies, taste, agent)
 
 
 def mock_analyze(movies: list) -> tuple[list, dict]:

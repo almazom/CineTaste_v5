@@ -18,7 +18,7 @@
   },
 
   "cli": {
-    "usage": "ct-analyze --input <FILE> --taste <FILE> [--output <FILE>]",
+    "usage": "ct-analyze --input <FILE> --taste <FILE> [--agent <auto|kimi|pi|dry_run>] [--output <FILE>]",
     "flags": [
       {
         "name": "--input",
@@ -45,8 +45,8 @@
         "name": "--agent",
         "short": "-a",
         "type": "string",
-        "default": "pi",
-        "description": "AI agent adapter to use"
+        "default": "auto",
+        "description": "Agent policy: auto fallback (kimi→pi→dry_run) or strict explicit agent"
       },
       {
         "name": "--dry-run",
@@ -72,9 +72,19 @@
   },
 
   "adapters": {
+    "kimi": {
+      "file": "adapter_agents.py",
+      "description": "kimi CLI AI agent (strict mode or auto fallback primary)",
+      "status": "active"
+    },
     "pi": {
-      "file": "adapter_pi.py",
-      "description": "pi CLI AI agent",
+      "file": "adapter_agents.py",
+      "description": "pi CLI AI agent (strict mode or auto fallback secondary)",
+      "status": "active"
+    },
+    "dry_run": {
+      "file": "adapter_agents.py",
+      "description": "Mock analyzer fallback when agents unavailable",
       "status": "active"
     }
   },
@@ -83,7 +93,7 @@
     "required": [
       "main.py",
       "port.py",
-      "adapter_pi.py"
+      "adapter_agents.py"
     ],
     "optional": [
       "adapter_*.py"
@@ -91,8 +101,8 @@
   },
 
   "examples": {
-    "analyze": "ct-analyze --input movies.json --taste taste/profile.yaml",
-    "to_file": "ct-analyze --input movies.json --taste taste/profile.yaml --output analyzed.json",
+    "analyze_auto": "ct-analyze --input movies.json --taste taste/profile.yaml --agent auto",
+    "analyze_strict_pi": "ct-analyze --input movies.json --taste taste/profile.yaml --agent pi --output analyzed.json",
     "dry_run": "ct-analyze --input movies.json --taste taste/profile.yaml --dry-run"
   }
 }
