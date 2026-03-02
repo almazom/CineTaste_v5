@@ -1,0 +1,82 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "ct-filter/MANIFEST.json",
+  "title": "ct-filter Tool Manifest",
+  "version": "1.0.0",
+
+  "identity": {
+    "name": "ct-filter",
+    "verb": "filter",
+    "position": 3,
+    "description": "Filter movies by recommendation threshold",
+    "stateless": true,
+    "pure_function": true
+  },
+
+  "contracts": {
+    "input": "analysis-result@1.0.0",
+    "output": "filter-result@1.0.0"
+  },
+
+  "cli": {
+    "usage": "ct-filter --input <FILE> [--recommendation <TYPES>] [--output <FILE>]",
+    "flags": [
+      {
+        "name": "--input",
+        "short": "-i",
+        "type": "string",
+        "required": true,
+        "description": "Input analysis-result JSON file"
+      },
+      {
+        "name": "--recommendation",
+        "short": "-r",
+        "type": "string",
+        "default": "must_see,recommended",
+        "description": "Comma-separated recommendation types to keep"
+      },
+      {
+        "name": "--min-score",
+        "short": "-m",
+        "type": "number",
+        "default": 0,
+        "description": "Minimum relevance score (0-100)"
+      },
+      {
+        "name": "--output",
+        "short": "-o",
+        "type": "string",
+        "default": "stdout",
+        "description": "Output file path"
+      },
+      {
+        "name": "--help",
+        "short": "-h",
+        "type": "boolean",
+        "description": "Show help"
+      }
+    ],
+    "exit_codes": {
+      "0": "Success",
+      "1": "General error",
+      "2": "Invalid arguments",
+      "4": "Parse error"
+    }
+  },
+
+  "adapters": {},
+
+  "files": {
+    "required": [
+      "main.py",
+      "port.py"
+    ],
+    "optional": []
+  },
+
+  "examples": {
+    "filter": "ct-filter --input analyzed.json",
+    "must_see_only": "ct-filter --input analyzed.json --recommendation must_see",
+    "high_score": "ct-filter --input analyzed.json --min-score 70"
+  }
+}

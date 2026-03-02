@@ -1,0 +1,87 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "ct-format/MANIFEST.json",
+  "title": "ct-format Tool Manifest",
+  "version": "1.0.0",
+
+  "identity": {
+    "name": "ct-format",
+    "verb": "format",
+    "position": 4,
+    "description": "Render filtered movies to Telegram markdown",
+    "stateless": true
+  },
+
+  "contracts": {
+    "input": "filter-result@1.0.0",
+    "output": "message-text@1.0.0"
+  },
+
+  "cli": {
+    "usage": "ct-format --input <FILE> --template <NAME> [--city <NAME>] [--output <FILE>]",
+    "flags": [
+      {
+        "name": "--input",
+        "short": "-i",
+        "type": "string",
+        "required": true,
+        "description": "Input filter-result JSON file"
+      },
+      {
+        "name": "--template",
+        "short": "-t",
+        "type": "string",
+        "default": "telegram",
+        "description": "Template to use"
+      },
+      {
+        "name": "--city",
+        "short": "-c",
+        "type": "string",
+        "default": "",
+        "description": "City display name for header"
+      },
+      {
+        "name": "--output",
+        "short": "-o",
+        "type": "string",
+        "default": "stdout",
+        "description": "Output file path"
+      },
+      {
+        "name": "--help",
+        "short": "-h",
+        "type": "boolean",
+        "description": "Show help"
+      }
+    ],
+    "exit_codes": {
+      "0": "Success",
+      "1": "General error",
+      "2": "Invalid arguments",
+      "4": "Parse error"
+    }
+  },
+
+  "adapters": {
+    "telegram": {
+      "file": "adapter_telegram.py",
+      "description": "Telegram markdown renderer",
+      "status": "active"
+    }
+  },
+
+  "files": {
+    "required": [
+      "main.py",
+      "port.py",
+      "adapter_telegram.py"
+    ],
+    "optional": []
+  },
+
+  "examples": {
+    "format": "ct-format --input filtered.json --template telegram --city 'Набережные Челны'",
+    "to_file": "ct-format --input filtered.json --template telegram --output message.txt"
+  }
+}

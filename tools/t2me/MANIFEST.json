@@ -1,0 +1,72 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "t2me/MANIFEST.json",
+  "title": "t2me Tool Manifest",
+  "version": "1.0.0",
+
+  "identity": {
+    "name": "t2me",
+    "verb": "send",
+    "position": 5,
+    "description": "Deliver message to Telegram",
+    "stateless": false,
+    "external": true
+  },
+
+  "contracts": {
+    "input": "message-text@1.0.0",
+    "output": "send-confirmation@1.0.0"
+  },
+
+  "cli": {
+    "usage": "cat <FILE> | t2me send [--markdown] OR t2me send --file <FILE>",
+    "flags": [
+      {
+        "name": "--markdown",
+        "short": "-m",
+        "type": "boolean",
+        "default": true,
+        "description": "Parse as markdown"
+      },
+      {
+        "name": "--file",
+        "short": "-f",
+        "type": "string",
+        "description": "File to send (alternative to stdin)"
+      },
+      {
+        "name": "--help",
+        "short": "-h",
+        "type": "boolean",
+        "description": "Show help"
+      }
+    ],
+    "exit_codes": {
+      "0": "Success",
+      "1": "General error",
+      "2": "Invalid arguments",
+      "3": "Network error",
+      "4": "Auth error"
+    }
+  },
+
+  "adapters": {},
+
+  "files": {
+    "required": [],
+    "optional": [],
+    "note": "External tool, not part of this repository"
+  },
+
+  "examples": {
+    "pipe": "cat message.txt | t2me send --markdown",
+    "file": "t2me send --file message.txt --markdown"
+  },
+
+  "integration": {
+    "type": "external_cli",
+    "install": "pip install t2me || via TOOLS/p2me_cli",
+    "auth": "t2me auth",
+    "location": "/home/pets/TOOLS/p2me_cli/.venv-new/bin/t2me"
+  }
+}

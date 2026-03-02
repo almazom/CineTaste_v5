@@ -1,0 +1,98 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "ct-fetch/MANIFEST.json",
+  "title": "ct-fetch Tool Manifest",
+  "version": "1.0.0",
+
+  "identity": {
+    "name": "ct-fetch",
+    "verb": "fetch",
+    "position": 1,
+    "description": "Fetch movies from cinema source",
+    "stateless": true
+  },
+
+  "contracts": {
+    "input": null,
+    "output": "movie-batch@1.0.0"
+  },
+
+  "cli": {
+    "usage": "ct-fetch --city <CITY> [--when <DATE>] [--output <FILE>]",
+    "flags": [
+      {
+        "name": "--city",
+        "short": "-c",
+        "type": "string",
+        "required": true,
+        "description": "City code (e.g., naberezhnie-chelni)"
+      },
+      {
+        "name": "--when",
+        "short": "-w",
+        "type": "string",
+        "default": "now",
+        "description": "Date filter: 'now' or YYYY-MM-DD"
+      },
+      {
+        "name": "--output",
+        "short": "-o",
+        "type": "string",
+        "default": "stdout",
+        "description": "Output file path"
+      },
+      {
+        "name": "--source",
+        "short": "-s",
+        "type": "string",
+        "default": "kinoteatr",
+        "description": "Source adapter to use"
+      },
+      {
+        "name": "--dry-run",
+        "short": "-n",
+        "type": "boolean",
+        "default": false,
+        "description": "Skip actual fetch, return test data"
+      },
+      {
+        "name": "--help",
+        "short": "-h",
+        "type": "boolean",
+        "description": "Show help"
+      }
+    ],
+    "exit_codes": {
+      "0": "Success",
+      "1": "General error",
+      "2": "Invalid arguments",
+      "3": "Network error",
+      "4": "Parse error"
+    }
+  },
+
+  "adapters": {
+    "kinoteatr": {
+      "file": "adapter_kinoteatr.py",
+      "description": "kinoteatr.ru scraper",
+      "status": "active"
+    }
+  },
+
+  "files": {
+    "required": [
+      "main.py",
+      "port.py",
+      "adapter_kinoteatr.py"
+    ],
+    "optional": [
+      "adapter_*.py"
+    ]
+  },
+
+  "examples": {
+    "fetch_today": "ct-fetch --city naberezhnie-chelni --when now",
+    "fetch_date": "ct-fetch --city naberezhnie-chelni --when 2026-03-15",
+    "to_file": "ct-fetch --city naberezhnie-chelni --output movies.json"
+  }
+}

@@ -1,0 +1,98 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "ct-analyze/MANIFEST.json",
+  "title": "ct-analyze Tool Manifest",
+  "version": "1.0.0",
+
+  "identity": {
+    "name": "ct-analyze",
+    "verb": "analyze",
+    "position": 2,
+    "description": "AI cognitive analysis against taste profile",
+    "stateless": true
+  },
+
+  "contracts": {
+    "input": "movie-batch@1.0.0",
+    "output": "analysis-result@1.0.0"
+  },
+
+  "cli": {
+    "usage": "ct-analyze --input <FILE> --taste <FILE> [--output <FILE>]",
+    "flags": [
+      {
+        "name": "--input",
+        "short": "-i",
+        "type": "string",
+        "required": true,
+        "description": "Input movie-batch JSON file"
+      },
+      {
+        "name": "--taste",
+        "short": "-t",
+        "type": "string",
+        "required": true,
+        "description": "Taste profile YAML file"
+      },
+      {
+        "name": "--output",
+        "short": "-o",
+        "type": "string",
+        "default": "stdout",
+        "description": "Output file path"
+      },
+      {
+        "name": "--agent",
+        "short": "-a",
+        "type": "string",
+        "default": "pi",
+        "description": "AI agent adapter to use"
+      },
+      {
+        "name": "--dry-run",
+        "short": "-n",
+        "type": "boolean",
+        "default": false,
+        "description": "Skip AI call, return mock analysis"
+      },
+      {
+        "name": "--help",
+        "short": "-h",
+        "type": "boolean",
+        "description": "Show help"
+      }
+    ],
+    "exit_codes": {
+      "0": "Success",
+      "1": "General error",
+      "2": "Invalid arguments",
+      "3": "AI agent error",
+      "4": "Parse error"
+    }
+  },
+
+  "adapters": {
+    "pi": {
+      "file": "adapter_pi.py",
+      "description": "pi CLI AI agent",
+      "status": "active"
+    }
+  },
+
+  "files": {
+    "required": [
+      "main.py",
+      "port.py",
+      "adapter_pi.py"
+    ],
+    "optional": [
+      "adapter_*.py"
+    ]
+  },
+
+  "examples": {
+    "analyze": "ct-analyze --input movies.json --taste taste/profile.yaml",
+    "to_file": "ct-analyze --input movies.json --taste taste/profile.yaml --output analyzed.json",
+    "dry_run": "ct-analyze --input movies.json --taste taste/profile.yaml --dry-run"
+  }
+}
