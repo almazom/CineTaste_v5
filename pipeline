@@ -1,0 +1,285 @@
+#!/bin/bash
+# ═══════════════════════════════════════════════════════════════════
+# CineTaste v5 — Pipeline Orchestrator
+# ═══════════════════════════════════════════════════════════════════
+#
+# Contract-first, protocol-driven cinema recommendations.
+# Reads PROTOCOL.json for system topology.
+#
+# Usage:
+#   ./pipeline                    # Full pipeline + send
+#   ./pipeline --dry-run          # Preview without sending
+#   ./pipeline --resend FILE      # Resend existing message
+#
+# ═══════════════════════════════════════════════════════════════════
+
+set -euo pipefail
+
+# ─── Configuration ────────────────────────────────────────────────
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$ROOT"
+
+# Config (from PROTOCOL.json or defaults)
+CITY="naberezhnie-chelni"
+CITY_DISPLAY="Набережные Челны"
+WHEN="now"
+DRY_RUN=false
+VERBOSE=false
+RESEND_FILE=""
+INPUT_FILE=""
+
+# Tools
+CT_FETCH="python3 $ROOT/tools/ct-fetch/main.py"
+CT_ANALYZE="python3 $ROOT/tools/ct-analyze/main.py"
+CT_FILTER="python3 $ROOT/tools/ct-filter/main.py"
+CT_FORMAT="python3 $ROOT/tools/ct-format/main.py"
+T2ME="/home/pets/.local/bin/t2me"
+
+# Temp directory
+TMPDIR=$(mktemp -d)
+trap "rm -rf $TMPDIR" EXIT
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+# ─── Helper Functions ─────────────────────────────────────────────
+
+step() {
+    echo -e "${BLUE}▶ $1${NC}"
+}
+
+ok() {
+    echo -e "${GREEN}✓ $1${NC}"
+}
+
+warn() {
+    echo -e "${YELLOW}⚠ $1${NC}"
+}
+
+fail() {
+    echo -e "${RED}✗ $1${NC}"
+}
+
+die() {
+    fail "$1"
+    exit 1
+}
+
+log() {
+    if [[ "$VERBOSE" == "true" ]]; then
+        echo "  $1"
+    fi
+}
+
+usage() {
+    cat << EOF
+Usage: ./pipeline [OPTIONS]
+
+CineTaste v5 — Cinema recommendations to Telegram
+
+Options:
+  --dry-run, -n     Preview mode (don't send to Telegram)
+  --when DATE       Date filter: 'now' or YYYY-MM-DD (default: now)
+  --input FILE      Use cached analysis (skip fetch + analyze)
+  --resend FILE     Resend existing message file (skip all steps)
+  --verbose, -v     Show detailed output
+  --help, -h        Show this help
+
+Examples:
+  ./pipeline                    # Full run + send to Telegram
+  ./pipeline --dry-run          # Preview without sending
+  ./pipeline --resend msg.txt   # Resend existing message
+
+EOF
+    exit 0
+}
+
+# ─── Parse Arguments ──────────────────────────────────────────────
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --dry-run|-n)
+            DRY_RUN=true
+            shift
+            ;;
+        --when)
+            WHEN="$2"
+            shift 2
+            ;;
+        --input)
+            INPUT_FILE="$2"
+            shift 2
+            ;;
+        --resend)
+            RESEND_FILE="$2"
+            shift 2
+            ;;
+        --verbose|-v)
+            VERBOSE=true
+            shift
+            ;;
+        --help|-h)
+            usage
+            ;;
+        *)
+            die "Unknown option: $1"
+            ;;
+    esac
+done
+
+# ─── Resend Mode ──────────────────────────────────────────────────
+
+if [[ -n "$RESEND_FILE" ]]; then
+    step "Resending message from $RESEND_FILE"
+
+    if [[ ! -f "$RESEND_FILE" ]]; then
+        die "File not found: $RESEND_FILE"
+    fi
+
+    if cat "$RESEND_FILE" | $T2ME send --markdown; then
+        ok "Message sent to Telegram"
+        exit 0
+    else
+        die "Failed to send message"
+    fi
+fi
+
+# ─── Step 1: Fetch ─────────────────────────────────────────────────
+
+if [[ -z "$INPUT_FILE" ]]; then
+    step "Step 1/5: ct-fetch — Fetching movies..."
+
+    $CT_FETCH \
+        --city "$CITY" \
+        --when "$WHEN" \
+        --output "$TMPDIR/movies.json" \
+        $( [[ "$VERBOSE" == "true" ]] && echo "--verbose" )
+
+    MOVIE_COUNT=$(python3 -c "import json; print(len(json.load(open('$TMPDIR/movies.json'))['movies']))")
+    ok "Fetched $MOVIE_COUNT movies"
+else
+    step "Step 1/5: ct-fetch — Using cached input"
+    cp "$INPUT_FILE" "$TMPDIR/analyzed.json"
+    log "Copied from $INPUT_FILE"
+fi
+
+# ─── Step 2: Analyze ───────────────────────────────────────────────
+
+if [[ -z "$INPUT_FILE" ]]; then
+    step "Step 2/5: ct-analyze — AI analysis..."
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log "Dry-run mode: skipping AI call"
+        $CT_ANALYZE \
+            --input "$TMPDIR/movies.json" \
+            --taste "$ROOT/taste/profile.yaml" \
+            --dry-run \
+            --output "$TMPDIR/analyzed.json" \
+            $( [[ "$VERBOSE" == "true" ]] && echo "--verbose" )
+    else
+        log "Calling AI agent (may take 1-2 minutes)..."
+        $CT_ANALYZE \
+            --input "$TMPDIR/movies.json" \
+            --taste "$ROOT/taste/profile.yaml" \
+            --output "$TMPDIR/analyzed.json" \
+            $( [[ "$VERBOSE" == "true" ]] && echo "--verbose" )
+    fi
+
+    ANALYZED_COUNT=$(python3 -c "import json; print(len(json.load(open('$TMPDIR/analyzed.json'))['analyzed']))")
+    ok "Analyzed $ANALYZED_COUNT movies"
+else
+    step "Step 2/5: ct-analyze — Using cached analysis"
+    ANALYZED_COUNT=$(python3 -c "import json; print(len(json.load(open('$TMPDIR/analyzed.json'))['analyzed']))")
+    log "Loaded $ANALYZED_COUNT analyzed movies"
+fi
+
+# ─── Step 3: Filter ────────────────────────────────────────────────
+
+step "Step 3/5: ct-filter — Filtering by taste..."
+
+$CT_FILTER \
+    --input "$TMPDIR/analyzed.json" \
+    --recommendation must_see,recommended \
+    --output "$TMPDIR/filtered.json" \
+    $( [[ "$VERBOSE" == "true" ]] && echo "--verbose" )
+
+FILTERED_COUNT=$(python3 -c "import json; d=json.load(open('$TMPDIR/filtered.json')); print(d['meta']['matched'])")
+ok "Filtered to $FILTERED_COUNT movies"
+
+if [[ "$FILTERED_COUNT" -eq 0 ]]; then
+    warn "No movies matched taste profile"
+fi
+
+# ─── Step 4: Format ────────────────────────────────────────────────
+
+step "Step 4/5: ct-format — Formatting for Telegram..."
+
+$CT_FORMAT \
+    --input "$TMPDIR/filtered.json" \
+    --template telegram \
+    --city "$CITY_DISPLAY" \
+    --output "$TMPDIR/message.json" \
+    $( [[ "$VERBOSE" == "true" ]] && echo "--verbose" )
+
+# Extract text for sending
+python3 -c "import json; print(json.load(open('$TMPDIR/message.json'))['text'])" > "$TMPDIR/message.txt"
+
+MSG_LINES=$(wc -l < "$TMPDIR/message.txt")
+ok "Formatted message: $MSG_LINES lines"
+
+# ─── Step 5: Send ──────────────────────────────────────────────────
+
+if [[ "$DRY_RUN" == "true" ]]; then
+    step "Step 5/5: t2me — PREVIEW MODE (not sending)"
+    echo ""
+    echo "═══════════════════════════════════════════════════════════════"
+    echo "  PREVIEW (Telegram message will look like this):"
+    echo "═══════════════════════════════════════════════════════════════"
+    cat "$TMPDIR/message.txt"
+    echo "═══════════════════════════════════════════════════════════════"
+    echo "  (DRY RUN — message NOT sent)"
+    echo "═══════════════════════════════════════════════════════════════"
+else
+    step "Step 5/5: t2me — Sending to Telegram..."
+
+    if cat "$TMPDIR/message.txt" | $T2ME send --markdown; then
+        ok "Message sent to Telegram!"
+
+        # Log successful send
+        mkdir -p "$ROOT/logs"
+        echo "$(date -Iseconds) - Sent: $FILTERED_COUNT movies" >> "$ROOT/logs/sends.log"
+    else
+        fail "Telegram send failed"
+
+        # Log failure
+        mkdir -p "$ROOT/logs"
+        echo "$(date -Iseconds) - FAILED to send" >> "$ROOT/logs/errors.log"
+
+        # Preserve message for retry
+        cp "$TMPDIR/message.txt" "$ROOT/logs/failed_$(date +%Y%m%d_%H%M%S).txt"
+
+        exit 1
+    fi
+fi
+
+# ─── Summary ───────────────────────────────────────────────────────
+
+echo ""
+echo -e "${BLUE}════════════════════════════════════════════════════════════════${NC}"
+echo -e "${BLUE}  ✅ CineTaste v5 — Complete${NC}"
+echo -e "${BLUE}════════════════════════════════════════════════════════════════${NC}"
+echo ""
+echo "  📊 Summary:"
+echo "     • Movies fetched:    ${MOVIE_COUNT:-cached}"
+echo "     • Movies analyzed:   ${ANALYZED_COUNT:-cached}"
+echo "     • Movies matched:    $FILTERED_COUNT"
+echo "     • Destination:       Telegram"
+echo ""
+if [[ "$DRY_RUN" == "true" ]]; then
+    echo -e "${YELLOW}  (DRY RUN — no message sent)${NC}"
+fi
+echo ""
