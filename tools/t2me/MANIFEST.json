@@ -19,7 +19,7 @@
   },
 
   "cli": {
-    "usage": "cat <FILE> | t2me send [--markdown] OR t2me send --file <FILE>",
+    "usage": "cat <FILE> | t2me send --markdown",
     "flags": [
       {
         "name": "--markdown",
@@ -32,7 +32,7 @@
         "name": "--file",
         "short": "-f",
         "type": "string",
-        "description": "File to send (alternative to stdin)"
+        "description": "Deprecated for this project; prefer stdin pipe due timeout risk"
       },
       {
         "name": "--help",
@@ -59,8 +59,7 @@
   },
 
   "examples": {
-    "pipe": "cat message.txt | t2me send --markdown",
-    "file": "t2me send --file message.txt --markdown"
+    "pipe": "cat message.txt | t2me send --markdown"
   },
 
   "integration": {
