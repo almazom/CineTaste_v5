@@ -2,12 +2,12 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "PROTOCOL.json",
   "title": "CineTaste v5 System Protocol",
-  "version": "5.1.0",
+  "version": "5.2.0",
   "description": "Single source of truth for system topology: contracts, tools, data flow",
 
   "project": {
     "name": "CineTaste",
-    "version": "5.1.0",
+    "version": "5.2.0",
     "purpose": "AI-powered cinema recommendations delivered to Telegram",
     "paradigm": "contract-first, markdown-driven orchestration",
     "city": "naberezhnie-chelni",
@@ -124,7 +124,7 @@
   },
 
   "flow": {
-    "current_version": "1.0.0",
+    "current_version": "1.1.0",
     "file": "flows/latest/FLOW.md",
     "stages": ["ct-fetch", "ct-analyze", "ct-filter", "ct-format", "t2me"],
     "modes": {
@@ -162,11 +162,26 @@
     "commands": {
       "unit": "pytest tests/ -v",
       "coverage": "pytest tests/ --cov=tools --cov-report=term-missing",
-      "e2e": "./run --dry-run"
+      "e2e": "./run --dry-run",
+      "network_integration": "pytest tests/ -m network -v"
     }
   },
 
   "version_history": [
+    {
+      "version": "5.2.0",
+      "date": "2026-03-02",
+      "changes": [
+        "Pipeline runtime now parses PROTOCOL.json + flows/latest/FLOW.md at execution time",
+        "Added pipeline self-healing: halt/log/preserve artifacts/recovery instructions",
+        "Enforced ct-analyze --agent policy (auto fallback + strict explicit agents)",
+        "Enforced JSON Schema format checks (uri/date-time) in shared validator",
+        "Implemented ct-fetch --source and ct-format --template strict validation",
+        "Aligned ct-format output semantics to message-text JSON contract",
+        "Made default test suite deterministic (network tests marked and skipped by default)",
+        "Updated docs/manifests for SSOT consistency and t2me pipe guidance"
+      ]
+    },
     {
       "version": "5.1.0",
       "date": "2026-03-02",

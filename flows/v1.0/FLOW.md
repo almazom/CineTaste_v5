@@ -1,5 +1,5 @@
 # FLOW.md — Executable Pipeline Specification
-# Version: 1.0.0
+# Version: 1.1.0
 # Project: CineTaste v5
 # Paradigm: Contract-First, Protocol-Driven
 
@@ -14,7 +14,7 @@
 
 ```yaml
 name: CineTaste
-version: "5.0.0"
+version: "5.2.0"
 paradigm: contract-first
 architecture: ports-and-adapters
 root: ~/zoo/CineTaste_v5
@@ -84,6 +84,9 @@ ct-analyze \
 
 **Dry-run mode:**
 ```bash
+# @step: 2
+# @contract: analysis-result
+# @output: $TMPDIR/analyzed.json
 # @condition: DRY_RUN=true
 ct-analyze \
     --input "$TMPDIR/movies.json" \
@@ -118,13 +121,15 @@ ct-filter \
 ```bash
 # @step: 4
 # @contract: message-text
-# @output: $TMPDIR/message.txt
+# @output: $TMPDIR/message.json
 
 ct-format \
     --input "$TMPDIR/filtered.json" \
     --template telegram \
     --city "$CITY_DISPLAY" \
-    --output "$TMPDIR/message.txt"
+    --output "$TMPDIR/message.json"
+
+python3 -c "import json; print(json.load(open('$TMPDIR/message.json'))['text'])" > "$TMPDIR/message.txt"
 ```
 
 ---
@@ -136,17 +141,23 @@ ct-format \
 ```bash
 # @step: 5
 # @contract: send-confirmation
+# @output: $TMPDIR/send.log
 # @condition: DRY_RUN=false
 
-cat "$TMPDIR/message.txt" | t2me send --markdown
+cat "$TMPDIR/message.txt" | t2me send --markdown | tee "$TMPDIR/send.log"
 ```
 
 **Dry-run mode:**
 ```bash
+# @step: 5
+# @contract: send-confirmation
+# @output: $TMPDIR/send-preview.log
 # @condition: DRY_RUN=true
+{
 echo "=== PREVIEW (message NOT sent) ==="
 cat "$TMPDIR/message.txt"
 echo "=== END PREVIEW ==="
+} | tee "$TMPDIR/send-preview.log"
 ```
 
 ---
@@ -203,3 +214,10 @@ CineTaste_v5/
 - Initial v5 flow
 - Contract-first design
 - PROTOCOL.json as SSOT
+
+### [1.1.0] — 2026-03-02
+
+- Added complete step annotations (`@step`, `@contract`, `@output`) for parser execution
+- Aligned `ct-format` step to output `message-text` JSON (`message.json`) and extract `message.txt`
+- Added explicit step metadata to dry-run conditional blocks
+- Added send log artifacts for `t2me` step outputs
