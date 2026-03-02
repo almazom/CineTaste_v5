@@ -73,7 +73,20 @@
       }
     ],
     "DOING": [],
-    "DONE": [],
+    "DONE": [
+      {
+        "id": "add-pytest",
+        "task": "Add pytest with contract validation tests",
+        "completed": "2026-03-02T14:20:00+03:00",
+        "notes": "35 tests passing (ct-fetch: 9, ct-analyze: 13, ct-filter: 5, ct-format: 8)"
+      },
+      {
+        "id": "add-pytest-cov",
+        "task": "Add pytest-cov for coverage reporting",
+        "completed": "2026-03-02T14:20:00+03:00",
+        "notes": "Included in requirements.txt"
+      }
+    ],
     "BLOCKED": []
   },
 
