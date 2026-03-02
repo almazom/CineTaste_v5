@@ -11,8 +11,7 @@ from pathlib import Path
 from typing import Optional
 
 try:
-    import jsonschema
-    from jsonschema import validate, ValidationError
+    from jsonschema import Draft7Validator, FormatChecker, ValidationError
 except ImportError:
     print("ERROR: jsonschema not installed. Run: pip install jsonschema")
     raise
@@ -43,13 +42,21 @@ def validate_against_contract(data: dict, contract_name: str) -> tuple[bool, lis
     """
     try:
         schema = load_contract(contract_name)
-        validate(instance=data, schema=schema)
-        return True, []
+        validator = Draft7Validator(schema, format_checker=FormatChecker())
+        errors = sorted(validator.iter_errors(data), key=lambda e: list(e.absolute_path))
+
+        if not errors:
+            return True, []
+
+        formatted = []
+        for e in errors:
+            path = ".".join(str(p) for p in e.absolute_path) if e.absolute_path else "root"
+            formatted.append(f"{path}: {e.message}")
+        return False, formatted
+
     except ValidationError as e:
-        # Extract path for better error messages
         path = ".".join(str(p) for p in e.absolute_path) if e.absolute_path else "root"
-        error_msg = f"{path}: {e.message}"
-        return False, [error_msg]
+        return False, [f"{path}: {e.message}"]
     except Exception as e:
         return False, [str(e)]
 
