@@ -8,7 +8,7 @@
     "name": "ct-format",
     "verb": "format",
     "position": 4,
-    "description": "Render filtered movies to Telegram markdown",
+    "description": "Render filtered movies to message-text JSON for Telegram delivery",
     "stateless": true
   },
 
@@ -32,7 +32,7 @@
         "short": "-t",
         "type": "string",
         "default": "telegram",
-        "description": "Template to use"
+        "description": "Template to use (currently only 'telegram'; invalid values fail with exit code 2)"
       },
       {
         "name": "--city",
@@ -46,7 +46,7 @@
         "short": "-o",
         "type": "string",
         "default": "stdout",
-        "description": "Output file path"
+        "description": "Output file path for message-text JSON contract"
       },
       {
         "name": "--help",
@@ -82,6 +82,7 @@
 
   "examples": {
     "format": "ct-format --input filtered.json --template telegram --city 'Набережные Челны'",
-    "to_file": "ct-format --input filtered.json --template telegram --output message.txt"
+    "to_file": "ct-format --input filtered.json --template telegram --output message.json",
+    "extract_text": "python3 -c \"import json; print(json.load(open('message.json'))['text'])\" > message.txt"
   }
 }

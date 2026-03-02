@@ -11,9 +11,14 @@ import json
 import sys
 from datetime import datetime
 from pathlib import Path
+from typing import Callable
 
 from adapter_telegram import render_message
 from port import enforce_input, enforce_output
+
+SUPPORTED_TEMPLATES = {
+    "telegram": render_message,
+}
 
 
 def parse_args():
@@ -24,7 +29,7 @@ def parse_args():
         epilog="""
 Examples:
   ct-format --input filtered.json --template telegram
-  ct-format -i filtered.json -t telegram --city "Набережные Челны" -o message.txt
+  ct-format -i filtered.json -t telegram --city "Набережные Челны" -o message.json
 """
     )
 
@@ -74,11 +79,23 @@ def build_output(text: str, template: str, city_display: str, movie_count: int) 
     }
 
 
+def get_template_renderer(template: str) -> Callable[[list, str], str]:
+    """Resolve renderer from --template flag."""
+    renderer = SUPPORTED_TEMPLATES.get(template)
+    if renderer is None:
+        supported = ", ".join(sorted(SUPPORTED_TEMPLATES.keys()))
+        raise ValueError(f"Unknown template: {template}. Supported: {supported}")
+    return renderer
+
+
 def main():
     """Main entry point."""
     args = parse_args()
 
     try:
+        template = args.template.strip().lower()
+        renderer = get_template_renderer(template)
+
         # Load input
         if args.verbose:
             print(f"Loading filtered movies from {args.input}...", file=sys.stderr)
@@ -94,12 +111,12 @@ def main():
             print(f"Loaded {len(filtered)} filtered movies", file=sys.stderr)
 
         # Render message
-        text = render_message(filtered, args.city)
+        text = renderer(filtered, args.city)
 
         # Build output
         output = build_output(
             text=text,
-            template=args.template,
+            template=template,
             city_display=args.city,
             movie_count=len(filtered)
         )
@@ -108,15 +125,14 @@ def main():
         enforce_output(output)
 
         # Output
+        json_output = json.dumps(output, ensure_ascii=False, indent=2)
+
         if args.output == "-":
-            # Output just the text for piping to t2me
-            print(text)
+            print(json_output)
         else:
-            # Output full JSON for file
-            json_output = json.dumps(output, ensure_ascii=False, indent=2)
             Path(args.output).write_text(json_output, encoding="utf-8")
             if args.verbose:
-                print(f"Wrote message to {args.output}", file=sys.stderr)
+                print(f"Wrote message JSON to {args.output}", file=sys.stderr)
 
         if args.verbose:
             print(f"Formatted {len(filtered)} movies", file=sys.stderr)
