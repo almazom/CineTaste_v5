@@ -2,12 +2,12 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "PROTOCOL.json",
   "title": "CineTaste v5 System Protocol",
-  "version": "5.0.0",
+  "version": "5.1.0",
   "description": "Single source of truth for system topology: contracts, tools, data flow",
 
   "project": {
     "name": "CineTaste",
-    "version": "5.0.0",
+    "version": "5.1.0",
     "purpose": "AI-powered cinema recommendations delivered to Telegram",
     "paradigm": "contract-first, markdown-driven orchestration",
     "city": "naberezhnie-chelni",
@@ -150,11 +150,36 @@
       ".MEMORY/02-contracts.md",
       ".MEMORY/03-tools.md",
       ".MEMORY/04-taste.md",
-      ".MEMORY/05-troubleshooting.md"
+      ".MEMORY/05-troubleshooting.md",
+      ".MEMORY/06-ai-agents.md"
     ]
   },
 
+  "testing": {
+    "framework": "pytest",
+    "coverage_target": 80,
+    "e2e_dir": ".testrun/",
+    "commands": {
+      "unit": "pytest tests/ -v",
+      "coverage": "pytest tests/ --cov=tools --cov-report=term-missing",
+      "e2e": "./run --dry-run"
+    }
+  },
+
   "version_history": [
+    {
+      "version": "5.1.0",
+      "date": "2026-03-02",
+      "changes": [
+        "Added pytest test suite (35 tests)",
+        "Added kimi→pi→dry_run agent fallback chain",
+        "Fixed ct-fetch title extraction (regex-based)",
+        "Added .MEMORY/06-ai-agents.md",
+        "Updated contracts to allow null year/duration",
+        "Added AURA.md v2.2 with testing protocol",
+        "Fixed t2me path in pipeline"
+      ]
+    },
     {
       "version": "5.0.0",
       "date": "2026-03-02",
