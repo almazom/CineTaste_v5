@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "tools" / "_shared"))
 sys.path.insert(0, str(Path(__file__).parent.parent / "tools" / "ct-format"))
 
 from validate import validate_against_contract
-from adapter_telegram import render_message, render_movie_line
+from adapter_telegram import render_message, render_movie_line, render_detailed
 
 
 class TestTelegramRenderer:
@@ -57,6 +57,50 @@ class TestTelegramRenderer:
         assert "Test" in line
         assert "85%" in line
         assert "https://example.com" in line
+
+    def test_render_movie_line_without_url(self):
+        """Should render plain title when URL is missing."""
+        item = {
+            "movie": {"id": "1", "title": "Test"},
+            "relevance_score": 70,
+            "recommendation": "recommended"
+        }
+        line = render_movie_line(item, 2)
+        assert "Test" in line
+        assert "https://" not in line
+
+    def test_render_movie_line_over_20_index(self):
+        """Should fallback to numeric prefix for large indexes."""
+        item = {
+            "movie": {"id": "1", "title": "Test"},
+            "relevance_score": 70,
+            "recommendation": "recommended"
+        }
+        line = render_movie_line(item, 21)
+        assert line.startswith("21.")
+
+    def test_render_message_with_explicit_date(self):
+        """Should use provided date instead of current date."""
+        filtered = []
+        message = render_message(filtered, "Test City", date="10.03.2026")
+        assert "10.03.2026" in message
+
+    def test_render_detailed(self):
+        """Detailed renderer should include optional fields."""
+        item = {
+            "movie": {
+                "id": "1",
+                "title": "Detailed Movie",
+                "director": "Director",
+                "genres": ["drama"]
+            },
+            "relevance_score": 90,
+            "reasoning": "Strong match"
+        }
+        text = render_detailed(item)
+        assert "Detailed Movie" in text
+        assert "Director" in text
+        assert "Strong match" in text
 
     def test_render_empty_filtered(self):
         """Should handle empty filtered list."""
