@@ -1,0 +1,98 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "KANBAN-2026-03-02-1415.json",
+  "title": "CineTaste v5.1.0 — Get to 95%+ Confidence (Phase 2)",
+  "description": "Final polish: automated tests, documentation, versioning, cleanup",
+
+  "planning_session": {
+    "id": "KANBAN-2026-03-02-1415",
+    "created_at": "2026-03-02T14:15:00+03:00",
+    "author": "agent",
+    "goal": "Achieve 95%+ confidence through automated testing, documentation, and cleanup",
+    "target_version": "5.1.0",
+    "starting_confidence": 90
+  },
+
+  "states": ["TODO", "DOING", "DONE", "BLOCKED"],
+
+  "columns": {
+    "TODO": [
+      {
+        "id": "update-aura-v2.2",
+        "task": "Create AURA.md v2.2 with lessons learned",
+        "files": [".aura/v2.2/AURA.md"],
+        "contract_impact": [],
+        "priority": 3,
+        "estimated_complexity": "low",
+        "notes": "Document: kanban workflow, agent usage, testing patterns"
+      },
+      {
+        "id": "update-protocol",
+        "task": "Bump PROTOCOL.json to 5.1.0 with version history",
+        "files": ["PROTOCOL.json"],
+        "contract_impact": [],
+        "priority": 4,
+        "estimated_complexity": "low",
+        "notes": "Record all changes from 5.0.0 → 5.1.0"
+      },
+      {
+        "id": "update-readme",
+        "task": "Update README.md with v5.1.0 features",
+        "files": ["README.md"],
+        "contract_impact": [],
+        "priority": 5,
+        "estimated_complexity": "low",
+        "notes": "Document: kimi integration, testing, kanban workflow"
+      },
+      {
+        "id": "add-makefile",
+        "task": "Add Makefile with common commands",
+        "files": ["Makefile"],
+        "contract_impact": [],
+        "priority": 6,
+        "estimated_complexity": "low",
+        "notes": "make test, make run, make dry-run, make clean"
+      },
+      {
+        "id": "cleanup-old-kanban",
+        "task": "Archive old kanban files",
+        "files": [".aura/kanban/"],
+        "contract_impact": [],
+        "priority": 7,
+        "estimated_complexity": "low",
+        "notes": "Keep only latest 3 kanban files"
+      },
+      {
+        "id": "final-validation",
+        "task": "Run full test suite and verify all pass",
+        "files": [],
+        "contract_impact": [],
+        "priority": 8,
+        "estimated_complexity": "low",
+        "notes": "pytest + pipeline dry-run + production run"
+      }
+    ],
+    "DOING": [],
+    "DONE": [],
+    "BLOCKED": []
+  },
+
+  "acceptance_criteria": [
+    "pytest passes with >80% coverage",
+    "AURA.md v2.2 documents lessons learned",
+    "PROTOCOL.json version 5.1.0",
+    "README.md updated",
+    "Makefile with common commands",
+    "Full test suite green",
+    "Pipeline runs successfully with real data"
+  ],
+
+  "stats": {
+    "total": 8,
+    "todo": 8,
+    "doing": 0,
+    "done": 0,
+    "blocked": 0,
+    "progress_percent": 0
+  }
+}

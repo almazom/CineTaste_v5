@@ -1,0 +1,114 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "KANBAN.json",
+  "title": "CineTaste v5 — Active Kanban",
+  "description": "Current work plan. History: .aura/kanban/KANBAN-*.json",
+  "updated": "2026-03-02T11:35:00+03:00",
+
+  "planning_session": {
+    "id": "KANBAN-2026-03-02-113500",
+    "file": ".aura/kanban/KANBAN-2026-03-02-113500.json",
+    "started": "2026-03-02T10:50:00+03:00",
+    "completed": "2026-03-02T11:35:00+03:00"
+  },
+
+  "states": ["TODO", "DOING", "DONE"],
+
+  "columns": {
+    "TODO": [],
+    "DOING": [],
+    "DONE": [
+      {
+        "id": "create-protocol",
+        "task": "Create PROTOCOL.json (SSOT)",
+        "completed": "2026-03-02T10:50:00+03:00"
+      },
+      {
+        "id": "create-contracts",
+        "task": "Create all 5 contract schemas",
+        "contract_impact": ["all contracts"],
+        "completed": "2026-03-02T10:51:00+03:00"
+      },
+      {
+        "id": "create-manifests",
+        "task": "Create all tool MANIFEST.json files",
+        "completed": "2026-03-02T10:52:00+03:00"
+      },
+      {
+        "id": "create-flow",
+        "task": "Create FLOW.md pipeline spec",
+        "completed": "2026-03-02T10:53:00+03:00"
+      },
+      {
+        "id": "create-memory",
+        "task": "Create .MEMORY context cards",
+        "completed": "2026-03-02T10:54:00+03:00"
+      },
+      {
+        "id": "create-aura",
+        "task": "Create AURA.md v2.0",
+        "completed": "2026-03-02T10:55:00+03:00"
+      },
+      {
+        "id": "impl-ct-fetch",
+        "task": "Implement ct-fetch tool",
+        "contract_impact": ["movie-batch.schema.json"],
+        "completed": "2026-03-02T10:59:00+03:00"
+      },
+      {
+        "id": "impl-ct-analyze",
+        "task": "Implement ct-analyze tool",
+        "contract_impact": ["analysis-result.schema.json"],
+        "completed": "2026-03-02T11:02:00+03:00"
+      },
+      {
+        "id": "impl-ct-filter",
+        "task": "Implement ct-filter tool",
+        "contract_impact": ["filter-result.schema.json"],
+        "completed": "2026-03-02T11:04:00+03:00"
+      },
+      {
+        "id": "impl-ct-format",
+        "task": "Implement ct-format tool",
+        "contract_impact": ["message-text.schema.json"],
+        "completed": "2026-03-02T11:06:00+03:00"
+      },
+      {
+        "id": "impl-pipeline",
+        "task": "Create ./run orchestrator script",
+        "completed": "2026-03-02T11:10:00+03:00"
+      },
+      {
+        "id": "impl-templates",
+        "task": "Create Telegram template",
+        "completed": "2026-03-02T11:10:30+03:00"
+      },
+      {
+        "id": "test-e2e",
+        "task": "End-to-end test with --dry-run",
+        "completed": "2026-03-02T11:19:00+03:00"
+      },
+      {
+        "id": "test-production",
+        "task": "Production test (send to Telegram)",
+        "completed": "2026-03-02T11:35:00+03:00"
+      }
+    ]
+  },
+
+  "acceptance_criteria": [
+    "All contracts validated",
+    "All tools have MANIFEST.json",
+    "Pipeline runs with --dry-run",
+    "Production test sends to Telegram"
+  ],
+
+  "stats": {
+    "total": 14,
+    "todo": 0,
+    "doing": 0,
+    "done": 14,
+    "blocked": 0,
+    "progress_percent": 100
+  }
+}

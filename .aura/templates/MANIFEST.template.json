@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "MANIFEST.template.json",
+  "title": "Tool Manifest Template",
+  "version": "1.0.0",
+
+  "identity": {
+    "name": "ct-<verb>",
+    "verb": "<verb>",
+    "position": 0,
+    "description": "What this tool does",
+    "stateless": true
+  },
+
+  "contracts": {
+    "input": "<input-contract>@1.0.0 or null",
+    "output": "<output-contract>@1.0.0"
+  },
+
+  "cli": {
+    "usage": "ct-<verb> --input <FILE> [--output <FILE>]",
+    "flags": [
+      {
+        "name": "--input",
+        "short": "-i",
+        "type": "string",
+        "required": true,
+        "description": "Input file"
+      },
+      {
+        "name": "--output",
+        "short": "-o",
+        "type": "string",
+        "default": "stdout",
+        "description": "Output file"
+      },
+      {
+        "name": "--dry-run",
+        "short": "-n",
+        "type": "boolean",
+        "default": false,
+        "description": "Preview without changes"
+      },
+      {
+        "name": "--help",
+        "short": "-h",
+        "type": "boolean",
+        "description": "Show help"
+      }
+    ],
+    "exit_codes": {
+      "0": "Success",
+      "1": "General error",
+      "2": "Invalid arguments",
+      "3": "Network/external error",
+      "4": "Parse/validation error"
+    }
+  },
+
+  "adapters": {},
+
+  "files": {
+    "required": ["main.py", "port.py"],
+    "optional": ["adapter_*.py"]
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "CONTRACT.template.json",
+  "title": "Contract Schema Template",
+  "version": "1.0.0",
+  "description": "TEMPLATE: Description of what this contract represents",
+  "type": "object",
+  "required": ["field1", "field2"],
+  "properties": {
+    "field1": {
+      "type": "string",
+      "description": "Description of field1"
+    },
+    "field2": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Description of field2"
+    },
+    "optional_field": {
+      "type": ["string", "null"],
+      "description": "Optional field example"
+    }
+  },
+  "additionalProperties": false
+}

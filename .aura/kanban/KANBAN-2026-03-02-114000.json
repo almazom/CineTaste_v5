@@ -1,0 +1,74 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "KANBAN-2026-03-02-114000.json",
+  "title": "CineTaste v5 — Session: AURA v2.1 with Mandatory Kanban",
+  "updated": "2026-03-02T11:40:00+03:00",
+
+  "planning_session": {
+    "id": "KANBAN-2026-03-02-114000",
+    "created_at": "2026-03-02T11:40:00+03:00",
+    "author": "agent",
+    "goal": "Add mandatory kanban planning to AURA protocol"
+  },
+
+  "states": ["TODO", "DOING", "DONE"],
+
+  "columns": {
+    "TODO": [],
+    "DOING": [],
+    "DONE": [
+      {
+        "id": "create-aura-v2.1",
+        "task": "Create AURA.md v2.1 with mandatory kanban rules",
+        "completed": "2026-03-02T11:36:00+03:00"
+      },
+      {
+        "id": "create-kanban-folder",
+        "task": "Create .aura/kanban/ folder for timestamped plans",
+        "completed": "2026-03-02T11:37:00+03:00"
+      },
+      {
+        "id": "create-templates",
+        "task": "Create templates: KANBAN.template.json, CONTRACT.template.json, MANIFEST.template.json",
+        "completed": "2026-03-02T11:38:00+03:00"
+      },
+      {
+        "id": "update-symlinks",
+        "task": "Update .aura/latest symlink to v2.1",
+        "completed": "2026-03-02T11:39:00+03:00"
+      },
+      {
+        "id": "publish-aura-v2.1",
+        "task": "Publish AURA.md v2.1 to Simplenote/Telegram",
+        "completed": "2026-03-02T11:39:30+03:00",
+        "url": "https://simp.ly/p/PQzz8c"
+      },
+      {
+        "id": "publish-kanban-template",
+        "task": "Publish KANBAN.template.json to Simplenote/Telegram",
+        "completed": "2026-03-02T11:40:00+03:00",
+        "url": "https://simp.ly/p/rCBG0p"
+      }
+    ]
+  },
+
+  "acceptance_criteria": [
+    "AURA.md v2.1 exists in .aura/v2.1/",
+    "Templates exist in .aura/templates/",
+    "Kanban folder exists in .aura/kanban/",
+    "Symlink .aura/latest points to v2.1",
+    "Root AURA.md symlink works",
+    "All published to Simplenote"
+  ],
+
+  "contract_impact": [],
+
+  "stats": {
+    "total": 6,
+    "todo": 0,
+    "doing": 0,
+    "done": 6,
+    "blocked": 0,
+    "progress_percent": 100
+  }
+}

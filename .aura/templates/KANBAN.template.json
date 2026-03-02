@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "KANBAN.template.json",
+  "title": "Kanban Plan Template",
+  "description": "Template for creating new kanban plans. Copy to .aura/kanban/KANBAN-YYYY-MM-DD-HHMM.json",
+
+  "planning_session": {
+    "id": "KANBAN-YYYY-MM-DD-HHMM",
+    "created_at": "ISO-8601 timestamp",
+    "author": "agent or human",
+    "goal": "What this session aims to achieve"
+  },
+
+  "states": ["TODO", "DOING", "DONE", "BLOCKED"],
+
+  "columns": {
+    "TODO": [
+      {
+        "id": "task-id-1",
+        "task": "Description of task",
+        "contract_impact": ["which contracts affected"],
+        "priority": 1,
+        "estimated_complexity": "low|medium|high",
+        "notes": "Additional context"
+      }
+    ],
+    "DOING": [],
+    "DONE": [],
+    "BLOCKED": []
+  },
+
+  "acceptance_criteria": [
+    "All contracts validated",
+    "All tests pass",
+    "Pipeline runs with --dry-run",
+    "Production test successful"
+  ],
+
+  "stats": {
+    "total": 0,
+    "todo": 0,
+    "doing": 0,
+    "done": 0,
+    "blocked": 0,
+    "progress_percent": 0
+  }
+}

@@ -1,0 +1,164 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "PROTOCOL.json",
+  "title": "CineTaste v5 System Protocol",
+  "version": "5.0.0",
+  "description": "Single source of truth for system topology: contracts, tools, data flow",
+
+  "project": {
+    "name": "CineTaste",
+    "version": "5.0.0",
+    "purpose": "AI-powered cinema recommendations delivered to Telegram",
+    "paradigm": "contract-first, markdown-driven orchestration",
+    "city": "naberezhnie-chelni",
+    "city_display": "Набережные Челны"
+  },
+
+  "philosophy": {
+    "core_values": [
+      "Simple > Easy (artifact simplicity, not authoring convenience)",
+      "Uncomplect (one responsibility per tool)",
+      "Data > Logic (declarative over imperative)",
+      "Contract-first (schema before code)",
+      "Stateless tools (pure functions, effects at boundaries)"
+    ],
+    "anti_patterns": [
+      "Premature abstraction",
+      "Shared mutable state",
+      "Implicit dependencies",
+      "Magic numbers/strings",
+      "Deep nesting (use guard clauses)"
+    ]
+  },
+
+  "contracts": {
+    "movie-batch": {
+      "file": "contracts/movie-batch.schema.json",
+      "version": "1.0.0",
+      "description": "Raw movies from fetcher",
+      "produced_by": ["ct-fetch"],
+      "consumed_by": ["ct-analyze"]
+    },
+    "analysis-result": {
+      "file": "contracts/analysis-result.schema.json",
+      "version": "1.0.0",
+      "description": "AI-analyzed movies with scores",
+      "produced_by": ["ct-analyze"],
+      "consumed_by": ["ct-filter"]
+    },
+    "filter-result": {
+      "file": "contracts/filter-result.schema.json",
+      "version": "1.0.0",
+      "description": "Filtered movies matching taste",
+      "produced_by": ["ct-filter"],
+      "consumed_by": ["ct-format"]
+    },
+    "message-text": {
+      "file": "contracts/message-text.schema.json",
+      "version": "1.0.0",
+      "description": "Formatted Telegram message",
+      "produced_by": ["ct-format"],
+      "consumed_by": ["t2me"]
+    },
+    "send-confirmation": {
+      "file": "contracts/send-confirmation.schema.json",
+      "version": "1.0.0",
+      "description": "Telegram delivery confirmation",
+      "produced_by": ["t2me"],
+      "consumed_by": []
+    }
+  },
+
+  "tools": {
+    "ct-fetch": {
+      "manifest": "tools/ct-fetch/MANIFEST.json",
+      "verb": "fetch",
+      "position": 1,
+      "description": "Fetch movies from cinema source",
+      "input_contract": null,
+      "output_contract": "movie-batch",
+      "stateless": true,
+      "has_adapter": true
+    },
+    "ct-analyze": {
+      "manifest": "tools/ct-analyze/MANIFEST.json",
+      "verb": "analyze",
+      "position": 2,
+      "description": "AI cognitive analysis against taste profile",
+      "input_contract": "movie-batch",
+      "output_contract": "analysis-result",
+      "stateless": true,
+      "has_adapter": true
+    },
+    "ct-filter": {
+      "manifest": "tools/ct-filter/MANIFEST.json",
+      "verb": "filter",
+      "position": 3,
+      "description": "Filter by recommendation threshold",
+      "input_contract": "analysis-result",
+      "output_contract": "filter-result",
+      "stateless": true,
+      "has_adapter": false
+    },
+    "ct-format": {
+      "manifest": "tools/ct-format/MANIFEST.json",
+      "verb": "format",
+      "position": 4,
+      "description": "Render to Telegram markdown",
+      "input_contract": "filter-result",
+      "output_contract": "message-text",
+      "stateless": true,
+      "has_adapter": true
+    },
+    "t2me": {
+      "manifest": "tools/t2me/MANIFEST.json",
+      "verb": "send",
+      "position": 5,
+      "description": "Deliver to Telegram",
+      "input_contract": "message-text",
+      "output_contract": "send-confirmation",
+      "stateless": false,
+      "has_adapter": false,
+      "external": true
+    }
+  },
+
+  "flow": {
+    "current_version": "1.0.0",
+    "file": "flows/latest/FLOW.md",
+    "stages": ["ct-fetch", "ct-analyze", "ct-filter", "ct-format", "t2me"],
+    "modes": {
+      "production": {
+        "description": "Full pipeline, always sends to Telegram",
+        "flags": []
+      },
+      "dry-run": {
+        "description": "Preview without sending",
+        "flags": ["--dry-run"]
+      },
+      "resend": {
+        "description": "Resend existing message",
+        "flags": ["--resend", "<file>"]
+      }
+    }
+  },
+
+  "memory": {
+    "index": ".MEMORY/00-index.md",
+    "cards": [
+      ".MEMORY/01-architecture.md",
+      ".MEMORY/02-contracts.md",
+      ".MEMORY/03-tools.md",
+      ".MEMORY/04-taste.md",
+      ".MEMORY/05-troubleshooting.md"
+    ]
+  },
+
+  "version_history": [
+    {
+      "version": "5.0.0",
+      "date": "2026-03-02",
+      "changes": "Initial v5: PROTOCOL.json as SSOT, contract-first, simplification principles"
+    }
+  ]
+}

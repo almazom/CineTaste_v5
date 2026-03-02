@@ -1,0 +1,122 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "KANBAN-2026-03-02-1147.json",
+  "title": "CineTaste v5.1.0 — Get to 95%+ Confidence",
+  "description": "Refactor for production quality: remove duplication, add validation, wire real AI, add tests",
+
+  "planning_session": {
+    "id": "KANBAN-2026-03-02-1147",
+    "created_at": "2026-03-02T11:47:00+03:00",
+    "author": "agent",
+    "goal": "Achieve 95%+ architecture confidence through cleanup, validation, and testing",
+    "target_version": "5.1.0"
+  },
+
+  "states": ["TODO", "DOING", "DONE", "BLOCKED"],
+
+  "columns": {
+    "TODO": [
+      {
+        "id": "add-pytest",
+        "task": "Add pytest with contract validation tests",
+        "files": ["tests/", "pytest.ini", "requirements.txt"],
+        "contract_impact": [],
+        "priority": 6,
+        "estimated_complexity": "medium",
+        "notes": "Test each tool's I/O against schemas"
+      },
+      {
+        "id": "improve-error-handling",
+        "task": "Add proper error handling and exit codes to pipeline",
+        "files": ["pipeline"],
+        "contract_impact": [],
+        "priority": 7,
+        "estimated_complexity": "medium",
+        "notes": "Trap errors, meaningful messages, proper exit codes"
+      },
+      {
+        "id": "update-aura-v2.2",
+        "task": "Create AURA.md v2.2 with lessons learned",
+        "files": [".aura/v2.2/AURA.md"],
+        "contract_impact": [],
+        "priority": 8,
+        "estimated_complexity": "low",
+        "notes": "Document new patterns"
+      },
+      {
+        "id": "update-protocol",
+        "task": "Bump PROTOCOL.json to 5.1.0 with version history",
+        "files": ["PROTOCOL.json"],
+        "contract_impact": [],
+        "priority": 9,
+        "estimated_complexity": "low",
+        "notes": "Record all changes"
+      },
+      {
+        "id": "final-validation",
+        "task": "Run full pipeline with real AI and verify all tests pass",
+        "files": [],
+        "contract_impact": [],
+        "priority": 10,
+        "estimated_complexity": "low",
+        "notes": "End-to-end validation"
+      }
+    ],
+    "DOING": [],
+    "DONE": [
+      {
+        "id": "kanban-symlink",
+        "task": "Replace root KANBAN.json with .aura/kanban/latest.json symlink",
+        "completed": "2026-03-02T11:48:30+03:00"
+      },
+      {
+        "id": "merge-templates",
+        "task": "Move templates/telegram.md to .aura/templates/",
+        "completed": "2026-03-02T11:49:00+03:00"
+      },
+      {
+        "id": "clean-empty-folders",
+        "task": "Remove empty .aura/v2.0/ folder",
+        "completed": "2026-03-02T11:49:30+03:00"
+      },
+      {
+        "id": "add-schema-validation",
+        "task": "Add JSON Schema validation to each tool's port.py",
+        "completed": "2026-03-02T11:55:00+03:00",
+        "notes": "Created tools/_shared/validate.py with jsonschema"
+      },
+      {
+        "id": "wire-real-ai",
+        "task": "Replace mock AI with real kimi→pi fallback chain",
+        "completed": "2026-03-02T12:10:00+03:00",
+        "notes": "Created adapter_agents.py with preflight checks, web search via kimi"
+      },
+      {
+        "id": "add-memory-agents",
+        "task": "Create .MEMORY/06-ai-agents.md documentation",
+        "completed": "2026-03-02T12:05:00+03:00"
+      }
+    ],
+    "BLOCKED": []
+  },
+
+  "acceptance_criteria": [
+    "No duplicate files (KANBAN.json, templates/) ✓",
+    "All tools validate I/O against JSON schemas ✓",
+    "ct-analyze uses real AI (kimi→pi fallback) ✓",
+    "pytest passes with >80% coverage",
+    "Pipeline handles errors gracefully",
+    "AURA.md v2.2 documents patterns",
+    "PROTOCOL.json version 5.1.0",
+    "Full pipeline runs successfully with real data"
+  ],
+
+  "stats": {
+    "total": 11,
+    "todo": 5,
+    "doing": 0,
+    "done": 6,
+    "blocked": 0,
+    "progress_percent": 55
+  }
+}
