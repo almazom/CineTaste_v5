@@ -27,6 +27,7 @@ This project uses a **Memory Bank** (`.MEMORY/` folder) to maintain context acro
 | `03-tools.md` | Building/using tools |
 | `04-taste.md` | Modifying preferences |
 | `05-troubleshooting.md` | Something broke |
+| `06-ai-agents.md` | Working with `ct-analyze --agent` |
 
 ---
 
@@ -195,7 +196,7 @@ t2me send --file message.txt
 
 ```bash
 ./run --dry-run --verbose
-cat /tmp/ct-*/output.json
+ls -1 logs/failed_* | tail -n 1
 ```
 
 ---
@@ -210,4 +211,4 @@ cat /tmp/ct-*/output.json
 ---
 
 *Last updated: 2026-03-02*
-*Version: 5.0.0*
+*Version: 5.2.0*

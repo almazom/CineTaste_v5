@@ -71,7 +71,7 @@ nano taste/profile.yaml
 ./run --dry-run
 
 # Verify output
-cat /tmp/ct-format/message.txt
+ls -1 logs/failed_* | tail -n 1
 ```
 
 ## Best Practices

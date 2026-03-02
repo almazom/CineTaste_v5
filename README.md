@@ -1,24 +1,24 @@
-# CineTaste v5.1.0
+# CineTaste v5.2.0
 
 > AI-powered cinema recommendations delivered to Telegram
 
-## What's New in v5.1.0
+## What's New in v5.2.0
 
 | Feature | Description |
 |---------|-------------|
-| **kimi Integration** | Web search for unknown movies |
-| **Agent Fallback** | kimi → pi → dry_run chain |
-| **pytest Suite** | 35 automated tests |
-| **E2E Testing** | Full pipeline validation |
-| **AURA v2.2** | Testing protocol documentation |
+| **SSOT Runtime** | `./run` parses `PROTOCOL.json` + `flows/latest/FLOW.md` at execution |
+| **Self-Healing** | Any failure halts, logs, and preserves artifacts with recovery hints |
+| **Strict CLI Flags** | `ct-analyze --agent`, `ct-fetch --source`, `ct-format --template` now enforced |
+| **Contract Enforcement** | JSON Schema `format` (`uri`, `date-time`) checks are active |
+| **Deterministic Tests** | Network tests are marked and excluded by default (`-m "not network"`) |
 
 ## Quick Start
 
 ```bash
-# Preview recommendations (no AI, no Telegram)
+# Preview recommendations (dry-run path from FLOW, no Telegram send)
 ./run --dry-run
 
-# Full production run (kimi AI → Telegram)
+# Full production run
 ./run
 
 # Run tests
@@ -37,10 +37,10 @@ PROTOCOL.json (SSOT)
        │
        ├── tools/ ─────── CLI microservices
        │     ├── ct-fetch/      # Kinoteatr.ru scraper
-       │     ├── ct-analyze/    # AI analysis (kimi/pi)
+       │     ├── ct-analyze/    # AI analysis (auto|kimi|pi|dry_run)
        │     ├── ct-filter/     # Taste threshold filter
        │     ├── ct-format/     # Telegram markdown
-       │     └── _shared/       # Shared validation
+       │     └── _shared/       # Shared infra utilities (validation only)
        │
        └── flows/ ─────── Pipeline steps
              └── latest/FLOW.md
@@ -83,6 +83,12 @@ make test           # pytest tests/ -v
 # Coverage report
 make test-cov       # pytest --cov
 
+# Deterministic suite (default)
+make test
+
+# Optional network integration tests
+python3 -m pytest tests/ -m network -v
+
 # E2E dry-run
 make dry-run        # ./run --dry-run
 
@@ -118,4 +124,4 @@ Based on Rich Hickey's "Simple Made Easy":
 - [.MEMORY/06-ai-agents.md](.MEMORY/06-ai-agents.md) — AI agent guide
 
 ---
-*Version: 5.1.0*
+*Version: 5.2.0*

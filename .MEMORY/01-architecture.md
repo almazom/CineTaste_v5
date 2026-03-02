@@ -62,7 +62,7 @@ tools/ct-fetch/
 └── adapter_*.py       # External integrations
 ```
 
-**Zero shared code between tools.**
+**No shared domain logic between tools.** Shared infrastructure utilities are allowed in `tools/_shared`.
 
 ## Data Flow
 
@@ -103,7 +103,7 @@ CineTaste_v5/
 
 | Anti-Pattern | Why It's Bad |
 |--------------|--------------|
-| Shared `internal/` code | Creates hidden coupling |
+| Shared domain logic | Creates hidden coupling |
 | Mutable global state | Unpredictable behavior |
 | Magic strings/numbers | Unclear intent |
 | Deep nesting | Hard to reason about |

@@ -38,11 +38,11 @@
 
 ## 🎯 Current State
 
-- **Version**: 5.0.0
+- **Version**: 5.2.0
 - **Paradigm**: Contract-first, protocol-driven
 - **SSOT**: PROTOCOL.json
 - **City**: Набережные Челны (Cinema Park)
-- **Status**: 🟡 Planning complete, implementation pending
+- **Status**: 🟢 Architecture remediation in progress (SSOT runtime active)
 
 ## 🔑 Key Files
 
@@ -70,4 +70,4 @@ PROTOCOL.json (SSOT)
 
 ---
 *Last updated: 2026-03-02*
-*Version: 5.0.0*
+*Version: 5.2.0*

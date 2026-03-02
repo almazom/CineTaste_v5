@@ -5,7 +5,7 @@
 | Principle | Rule |
 |-----------|------|
 | **One verb per tool** | ct-fetch, ct-analyze, ct-filter, ct-format |
-| **Self-contained** | Each tool has its own folder, no shared code |
+| **Self-contained** | Each tool owns its domain logic; only infra utilities may be shared |
 | **Contract-bound** | Input/output validated against schemas |
 | **Stateless** | Data in → data out, no side effects (except t2me) |
 
@@ -14,7 +14,7 @@
 | Tool | Verb | Position | Input | Output | Adapter |
 |------|------|----------|-------|--------|---------|
 | ct-fetch | fetch | 1 | — | movie-batch | kinoteatr |
-| ct-analyze | analyze | 2 | movie-batch | analysis-result | pi |
+| ct-analyze | analyze | 2 | movie-batch | analysis-result | auto (kimi→pi→dry_run) |
 | ct-filter | filter | 3 | analysis-result | filter-result | — (pure) |
 | ct-format | format | 4 | filter-result | message-text | telegram |
 | t2me | send | 5 | message-text | send-confirmation | — (external) |
@@ -72,6 +72,11 @@ def fetch_movies(city: str, when: str) -> list[dict]:
 ```
 
 The main.py wires adapter → port → output.
+
+## Shared Module Rule
+
+`tools/_shared` is allowed only for infrastructure utilities (for example JSON Schema validation).
+Business/domain logic must remain tool-local to avoid hidden coupling.
 
 ---
 *Last updated: 2026-03-02*

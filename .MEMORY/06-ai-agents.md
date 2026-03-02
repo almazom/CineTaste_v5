@@ -1,6 +1,6 @@
 # 06-ai-agents.md — AI Agent Usage for CineTaste
 
-> **Purpose:** Guide for using kimi and pi CLI agents in ct-analyze
+> **Purpose:** Guide for using agent policies in ct-analyze (`--agent auto|kimi|pi|dry_run`)
 > **Updated:** 2026-03-02
 
 ---
@@ -95,6 +95,13 @@ AGENTS = [
 kimi (web search) → pi (fast reasoning) → dry_run (mock)
 ```
 
+### `ct-analyze --agent` Policy
+
+- `--agent auto` (default): fallback chain `kimi → pi → dry_run`
+- `--agent kimi`: strict explicit mode, no fallback
+- `--agent pi`: strict explicit mode, no fallback
+- `--agent dry_run`: always mock analysis
+
 ---
 
 ## Preflight Check
@@ -112,5 +119,5 @@ pi -p "1+2=...[ONLY NUMBER IN WORDS]" --no-tools
 ---
 
 ## Related Files
-- `tools/ct-analyze/adapter_pi.py` — current adapter (needs kimi support)
+- `tools/ct-analyze/adapter_agents.py` — active multi-agent adapter
 - `taste/profile.yaml` — taste data passed to agent
