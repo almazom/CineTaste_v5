@@ -1,0 +1,60 @@
+# CineTaste Taste Profile
+# Version: 1.0
+
+version: "1.0"
+user: "default"
+
+# What the user likes
+likes:
+  directors:
+    - "Tarkovsky"
+    - "Lynch"
+    - "Kubrick"
+    - "Anderson"
+    - "Nolan"
+  studios:
+    - "A24"
+    - "Criterion"
+  genres:
+    - "art-house"
+    - "anime"
+    - "indie"
+    - "science fiction"
+    - "drama"
+  keywords:
+    - "philosophical"
+    - "surreal"
+    - "atmospheric"
+    - "character-driven"
+
+# What the user dislikes
+dislikes:
+  genres:
+    - "horror"
+    - "slasher"
+    - "mainstream comedy"
+  keywords:
+    - "blockbuster"
+    - "franchise"
+    - "sequel"
+    - "remake"
+
+# Canon directors with weights
+canon:
+  - director: "Tarkovsky"
+    weight: 1.0
+  - director: "Kubrick"
+    weight: 0.9
+  - director: "Lynch"
+    weight: 0.9
+  - director: "Wes Anderson"
+    weight: 0.8
+  - director: "Nolan"
+    weight: 0.7
+
+# Recommendation thresholds
+thresholds:
+  must_see: 85      # Score >= 85: must include
+  recommended: 60   # Score >= 60: include if space
+  maybe: 40         # Score >= 40: optional
+  skip: 0           # Score < 40: exclude
