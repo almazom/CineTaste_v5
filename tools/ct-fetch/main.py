@@ -11,9 +11,14 @@ import json
 import sys
 from datetime import datetime
 from pathlib import Path
+from typing import Callable
 
 from adapter_kinoteatr import fetch_movies, CITY_URLS
 from port import enforce_output
+
+SUPPORTED_SOURCES = {
+    "kinoteatr": fetch_movies,
+}
 
 
 def parse_args():
@@ -68,18 +73,44 @@ Examples:
     return parser.parse_args()
 
 
-def build_output(movies: list, city: str, city_display: str) -> dict:
+def build_output(movies: list, city: str, city_display: str, when: str) -> dict:
     """Build output conforming to movie-batch@1.0.0 contract."""
+    date_value = datetime.now().strftime("%Y-%m-%d")
+    if when != "now":
+        date_value = when
+
     return {
         "movies": movies,
         "meta": {
             "city": city,
             "city_display": city_display,
-            "date": datetime.now().strftime("%Y-%m-%d"),
+            "date": date_value,
             "source_url": CITY_URLS.get(city, ""),
             "fetched_at": datetime.now().isoformat()
         }
     }
+
+
+def validate_when(when: str) -> str:
+    """Validate --when value and normalize it."""
+    if when == "now":
+        return when
+
+    try:
+        datetime.strptime(when, "%Y-%m-%d")
+    except ValueError:
+        raise ValueError("--when must be 'now' or YYYY-MM-DD")
+
+    return when
+
+
+def get_source_adapter(source: str) -> Callable[[str, str], list]:
+    """Resolve source adapter from --source value."""
+    adapter = SUPPORTED_SOURCES.get(source)
+    if adapter is None:
+        supported = ", ".join(sorted(SUPPORTED_SOURCES.keys()))
+        raise ValueError(f"Unknown source: {source}. Supported: {supported}")
+    return adapter
 
 
 def get_city_display(city: str) -> str:
@@ -129,6 +160,9 @@ def main():
     args = parse_args()
 
     try:
+        when = validate_when(args.when)
+        source_adapter = get_source_adapter(args.source)
+
         # Fetch or use dry-run data
         if args.dry_run:
             if args.verbose:
@@ -136,12 +170,15 @@ def main():
             movies = dry_run_data(args.city)
         else:
             if args.verbose:
-                print(f"Fetching movies for {args.city}...", file=sys.stderr)
-            movies = fetch_movies(args.city, args.when)
+                print(
+                    f"Fetching movies for {args.city} from {args.source} (when={when})...",
+                    file=sys.stderr,
+                )
+            movies = source_adapter(args.city, when)
 
         # Build output
         city_display = get_city_display(args.city)
-        output = build_output(movies, args.city, city_display)
+        output = build_output(movies, args.city, city_display, when)
 
         # Validate output against contract
         try:

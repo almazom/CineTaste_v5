@@ -18,7 +18,7 @@
   },
 
   "cli": {
-    "usage": "ct-fetch --city <CITY> [--when <DATE>] [--output <FILE>]",
+    "usage": "ct-fetch --city <CITY> [--when <DATE>] [--source kinoteatr] [--output <FILE>]",
     "flags": [
       {
         "name": "--city",
@@ -32,7 +32,7 @@
         "short": "-w",
         "type": "string",
         "default": "now",
-        "description": "Date filter: 'now' or YYYY-MM-DD"
+        "description": "Date filter: 'now' or YYYY-MM-DD; when date is provided, meta.date mirrors this value"
       },
       {
         "name": "--output",
@@ -46,7 +46,7 @@
         "short": "-s",
         "type": "string",
         "default": "kinoteatr",
-        "description": "Source adapter to use"
+        "description": "Source adapter (currently only 'kinoteatr'; invalid values fail with exit code 2)"
       },
       {
         "name": "--dry-run",
