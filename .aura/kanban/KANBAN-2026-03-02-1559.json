@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "KANBAN-2026-03-02-arch-remediation.json",
+  "title": "Kanban Plan — Architecture Review Remediation",
+  "description": "Implementation plan for KANBAN-2026-03-02-arch-review.md gaps AR-01..AR-12",
+  "planning_session": {
+    "id": "KANBAN-2026-03-02-arch-remediation",
+    "created_at": "2026-03-02T00:00:00Z",
+    "author": "codex",
+    "goal": "Implement all architecture review gaps with tests and docs alignment"
+  },
+  "states": ["TODO", "DOING", "DONE", "BLOCKED"],
+  "columns": {
+    "TODO": [
+      {"id": "AR-02", "task": "Align FLOW step contracts with tool behavior", "contract_impact": ["message-text"], "priority": 0, "estimated_complexity": "medium", "notes": "ct-format JSON semantics"},
+      {"id": "AR-03", "task": "Enforce ct-analyze --agent behavior", "contract_impact": ["analysis-result"], "priority": 0, "estimated_complexity": "medium", "notes": "auto/explicit policy"},
+      {"id": "AR-04", "task": "Implement self-healing on any pipeline failure", "contract_impact": [], "priority": 0, "estimated_complexity": "high", "notes": "halt/log/preserve/recover"},
+      {"id": "AR-05", "task": "Raise test coverage to >=80%", "contract_impact": [], "priority": 1, "estimated_complexity": "high", "notes": "deterministic coverage expansion"},
+      {"id": "AR-06", "task": "Implement/remove no-op flags", "contract_impact": [], "priority": 1, "estimated_complexity": "low", "notes": "ct-fetch --source, ct-format --template"},
+      {"id": "AR-07", "task": "Set ct-fetch meta.date from --when", "contract_impact": ["movie-batch"], "priority": 1, "estimated_complexity": "low", "notes": "respect requested date"},
+      {"id": "AR-08", "task": "Enforce JSON schema format checks", "contract_impact": ["all"], "priority": 1, "estimated_complexity": "low", "notes": "FormatChecker in shared validator"},
+      {"id": "AR-09", "task": "Resolve SSOT documentation drift", "contract_impact": [], "priority": 1, "estimated_complexity": "medium", "notes": "versions/state alignment"},
+      {"id": "AR-10", "task": "Reconcile shared module architecture principle", "contract_impact": [], "priority": 2, "estimated_complexity": "low", "notes": "document infra-only shared code"},
+      {"id": "AR-11", "task": "Make fetch tests deterministic", "contract_impact": [], "priority": 2, "estimated_complexity": "medium", "notes": "mock/integration split"},
+      {"id": "AR-12", "task": "Unify t2me send guidance", "contract_impact": ["message-text", "send-confirmation"], "priority": 2, "estimated_complexity": "low", "notes": "pipe method as canonical"}
+    ],
+    "DOING": [
+      {"id": "AR-01", "task": "Make pipeline runtime SSOT-driven", "contract_impact": [], "priority": 0, "estimated_complexity": "high", "notes": "parse PROTOCOL.json + flows/latest/FLOW.md"}
+    ],
+    "DONE": [],
+    "BLOCKED": []
+  },
+  "acceptance_criteria": [
+    "Pipeline execution order sourced from PROTOCOL+FLOW",
+    "All tool contracts validated including format checks",
+    "Self-healing artifacts preserved on any failure",
+    "Coverage >= 80%",
+    "Deterministic default test suite",
+    "Docs/manifests/version guidance aligned"
+  ],
+  "stats": {
+    "total": 12,
+    "todo": 11,
+    "doing": 1,
+    "done": 0,
+    "blocked": 0,
+    "progress_percent": 0
+  }
+}
