@@ -12,12 +12,13 @@ FLOW_FILE="$ROOT/flows/latest/FLOW.md"
 CITY="naberezhnie-chelni"
 CITY_DISPLAY="Набережные Челны"
 WHEN="now"
-DRY_RUN=false
 VERBOSE=false
 RESEND_FILE=""
 INPUT_FILE=""
 
 MOVIE_COUNT="cached"
+SCHEDULED_COUNT="cached"
+SCHEDULED_WITH="cached"
 ANALYZED_COUNT="cached"
 FILTERED_COUNT=0
 MSG_LINES=0
@@ -101,7 +102,7 @@ Artifacts preserved in:
 
 Recovery paths:
 1. Retry from analyzed artifact:
-   \`./run --input ${failed_dir}/analyzed.json --dry-run\`
+   \`./run --input ${failed_dir}/analyzed.json\`
 2. Resend prepared message:
    \`./run --resend ${failed_dir}/message.txt\`
 EOF
@@ -122,7 +123,6 @@ Usage: ./pipeline [OPTIONS]
 CineTaste v5 — Cinema recommendations to Telegram
 
 Options:
-  --dry-run, -n     Preview without sending
   --when DATE       Date filter: 'now' or YYYY-MM-DD (default: now)
   --input FILE      Skip fetch/analyze, use cached analysis-result JSON
   --resend FILE     Resend existing message file
@@ -169,6 +169,7 @@ ordered_tools = sorted(
     (
         {"name": name, "position": meta.get("position"), "manifest": meta.get("manifest", "")}
         for name, meta in tools.items()
+        if meta.get("status") != "legacy"
     ),
     key=lambda x: x["position"],
 )
@@ -200,10 +201,21 @@ while i < len(lines):
         heading_tool = heading_tail.split()[0].strip("`")
         i += 1
         continue
+    elif line.strip().startswith("## "):
+        # Leave step context on any non-step section heading.
+        heading_step = None
+        heading_tool = None
 
     if line.strip() == "```bash":
         if heading_tool is None:
-            raise SystemExit("FLOW parse error: bash block appears before any step heading")
+            # Non-step documentation block (for example CLI options): skip.
+            i += 1
+            while i < len(lines) and lines[i].strip() != "```":
+                i += 1
+            if i >= len(lines):
+                raise SystemExit("FLOW parse error: unterminated ```bash block")
+            i += 1
+            continue
 
         i += 1
         meta = {}
@@ -292,12 +304,11 @@ PY
 
 resolve_step_command() {
     local stage="$1"
-    python3 - "$SSOT_JSON" "$stage" "$DRY_RUN" << 'PY'
+    python3 - "$SSOT_JSON" "$stage" << 'PY'
 import json
-import re
 import sys
 
-ssot_path, stage, dry_run = sys.argv[1], sys.argv[2], sys.argv[3]
+ssot_path, stage = sys.argv[1], sys.argv[2]
 with open(ssot_path, encoding="utf-8") as f:
     data = json.load(f)
 
@@ -305,24 +316,12 @@ blocks = [b for b in data.get("blocks", []) if b.get("tool") == stage]
 if not blocks:
     raise SystemExit(f"No flow blocks found for stage '{stage}'")
 
-target = f"DRY_RUN={dry_run.lower()}"
-
-def norm(value: str) -> str:
-    return re.sub(r"\s+", "", (value or "")).upper()
-
-target_norm = norm(target)
-
+# Select the unconditional block (or the only block)
 selected = None
 for block in blocks:
-    if norm(block.get("condition", "")) == target_norm:
+    if not block.get("condition"):
         selected = block
         break
-
-if selected is None:
-    for block in blocks:
-        if not block.get("condition"):
-            selected = block
-            break
 
 if selected is None and len(blocks) == 1:
     selected = blocks[0]
@@ -330,7 +329,7 @@ if selected is None and len(blocks) == 1:
 if selected is None:
     conditions = [b.get("condition", "") for b in blocks]
     raise SystemExit(
-        f"No matching flow block for stage '{stage}' with DRY_RUN={dry_run}; "
+        f"No matching flow block for stage '{stage}'; "
         f"available conditions: {conditions}"
     )
 
@@ -341,7 +340,8 @@ PY
 stage_label() {
     case "$1" in
         ct-fetch) echo "Fetching movies" ;;
-        ct-analyze) echo "AI analysis" ;;
+        ct-schedule) echo "Building showtime schedule" ;;
+        ct-analyze|ct-cognize) echo "Cognitive analysis" ;;
         ct-filter) echo "Filtering by taste" ;;
         ct-format) echo "Formatting message" ;;
         t2me) echo "Sending to Telegram" ;;
@@ -376,10 +376,6 @@ run_stage() {
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --dry-run|-n)
-            DRY_RUN=true
-            shift
-            ;;
         --when)
             [[ $# -ge 2 ]] || die "--when requires a value"
             WHEN="$2"
@@ -409,7 +405,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 load_protocol_defaults
-export ROOT TMPDIR CITY CITY_DISPLAY WHEN DRY_RUN
+export ROOT TMPDIR CITY CITY_DISPLAY WHEN
 
 if [[ -n "$RESEND_FILE" ]]; then
     [[ -f "$RESEND_FILE" ]] || die "File not found: $RESEND_FILE"
@@ -447,7 +443,7 @@ for idx in "${!STAGES[@]}"; do
     stage="${STAGES[$idx]}"
     current=$((idx + 1))
 
-    if [[ -n "$INPUT_FILE" && ( "$stage" == "ct-fetch" || "$stage" == "ct-analyze" ) ]]; then
+    if [[ -n "$INPUT_FILE" && ( "$stage" == "ct-fetch" || "$stage" == "ct-schedule" || "$stage" == "ct-analyze" || "$stage" == "ct-cognize" ) ]]; then
         step "Step ${current}/${TOTAL_STAGES}: ${stage} — skipped (using --input)"
         continue
     fi
@@ -459,7 +455,12 @@ for idx in "${!STAGES[@]}"; do
             MOVIE_COUNT="$(python3 -c "import json; print(len(json.load(open('$TMPDIR/movies.json'))['movies']))")"
             ok "Fetched $MOVIE_COUNT movies"
             ;;
-        ct-analyze)
+        ct-schedule)
+            SCHEDULED_COUNT="$(python3 -c "import json; print(len(json.load(open('$TMPDIR/scheduled.json'))['movies']))")"
+            SCHEDULED_WITH="$(python3 -c "import json; print(json.load(open('$TMPDIR/scheduled.json'))['meta'].get('movies_with_showtimes', 0))")"
+            ok "Scheduled $SCHEDULED_WITH/$SCHEDULED_COUNT movies with showtimes"
+            ;;
+        ct-analyze|ct-cognize)
             ANALYZED_COUNT="$(python3 -c "import json; print(len(json.load(open('$TMPDIR/analyzed.json'))['analyzed']))")"
             ok "Analyzed $ANALYZED_COUNT movies"
             ;;
@@ -475,13 +476,18 @@ for idx in "${!STAGES[@]}"; do
             ok "Formatted message: $MSG_LINES lines"
             ;;
         t2me)
-            if [[ "$DRY_RUN" == "true" ]]; then
-                ok "Preview generated (message not sent)"
-            else
-                mkdir -p "$ROOT/logs"
-                echo "$(date -Iseconds) - Sent: $FILTERED_COUNT movies" >> "$ROOT/logs/sends.log"
-                ok "Message sent to Telegram"
+            SEND_SUCCESS="$(python3 -c "import json; print(str(json.load(open('$TMPDIR/send-confirmation.json')).get('success', False)).lower())")"
+            if [[ "$SEND_SUCCESS" != "true" ]]; then
+                SEND_ERROR="$(python3 -c "import json; print(json.load(open('$TMPDIR/send-confirmation.json')).get('error', 'unknown error'))")"
+                die "t2me send-confirmation indicates failure: ${SEND_ERROR}"
             fi
+            mkdir -p "$ROOT/logs"
+            echo "$(date -Iseconds) - Sent: $FILTERED_COUNT movies" >> "$ROOT/logs/sends.log"
+            ok "Message sent to Telegram"
+            echo ""
+            echo -e "${BLUE}── Message Sent ─────────────────────────────────────────────${NC}"
+            cat "$TMPDIR/message.txt"
+            echo -e "${BLUE}─────────────────────────────────────────────────────────────${NC}"
             ;;
     esac
 done
@@ -493,11 +499,9 @@ echo -e "${BLUE}═════════════════════�
 echo ""
 echo "  📊 Summary:"
 echo "     • Movies fetched:    ${MOVIE_COUNT}"
+echo "     • With schedule:     ${SCHEDULED_WITH}/${SCHEDULED_COUNT}"
 echo "     • Movies analyzed:   ${ANALYZED_COUNT}"
 echo "     • Movies matched:    ${FILTERED_COUNT}"
 echo "     • Destination:       Telegram"
 echo ""
-if [[ "$DRY_RUN" == "true" ]]; then
-    echo -e "${YELLOW}  (DRY RUN — no message sent)${NC}"
-fi
 echo ""
