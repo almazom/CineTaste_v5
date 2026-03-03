@@ -7,8 +7,10 @@ All tools should use this for I/O validation.
 """
 
 import json
+import re
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlparse
 
 try:
     from jsonschema import Draft7Validator, FormatChecker, ValidationError
@@ -18,6 +20,27 @@ except ImportError:
 
 # Base path for contracts
 CONTRACTS_DIR = Path(__file__).parent.parent.parent / "contracts"
+
+# Register deterministic format checks (do not depend on optional extras).
+RFC3339_RE = re.compile(
+    r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}"
+    r"(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$"
+)
+
+
+@FormatChecker.cls_checks("uri")
+def _check_uri(value: object) -> bool:
+    if not isinstance(value, str):
+        return True
+    parsed = urlparse(value)
+    return bool(parsed.scheme and parsed.netloc)
+
+
+@FormatChecker.cls_checks("date-time")
+def _check_datetime(value: object) -> bool:
+    if not isinstance(value, str):
+        return True
+    return bool(RFC3339_RE.match(value))
 
 
 def load_contract(contract_name: str) -> dict:
@@ -87,6 +110,9 @@ def enforce_contract(data: dict, contract_name: str, direction: str = "output") 
 def validate_movie_batch(data: dict) -> tuple[bool, list[str]]:
     return validate_against_contract(data, "movie-batch")
 
+def validate_movie_schedule(data: dict) -> tuple[bool, list[str]]:
+    return validate_against_contract(data, "movie-schedule")
+
 def validate_analysis_result(data: dict) -> tuple[bool, list[str]]:
     return validate_against_contract(data, "analysis-result")
 
@@ -105,7 +131,10 @@ if __name__ == "__main__":
 
     if len(sys.argv) < 3:
         print("Usage: python validate.py <contract_name> <file.json>")
-        print("Contracts: movie-batch, analysis-result, filter-result, message-text, send-confirmation")
+        print(
+            "Contracts: movie-batch, movie-schedule, analysis-result, "
+            "filter-result, message-text, send-confirmation"
+        )
         sys.exit(1)
 
     contract = sys.argv[1]
