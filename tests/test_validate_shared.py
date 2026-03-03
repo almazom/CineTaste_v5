@@ -18,6 +18,7 @@ from validate import (
     validate_filter_result,
     validate_message_text,
     validate_movie_batch,
+    validate_movie_schedule,
     validate_send_confirmation,
 )
 
@@ -35,6 +36,20 @@ class TestValidateShared:
         with pytest.raises(FileNotFoundError):
             load_contract("missing-contract")
 
+    def test_validate_format_uri_enforced(self):
+        movie_batch = load_sample("movie-batch")
+        movie_batch["movies"][0]["url"] = "not-a-uri"
+        ok, errors = validate_against_contract(movie_batch, "movie-batch")
+        assert not ok
+        assert any("uri" in err.lower() for err in errors)
+
+    def test_validate_format_datetime_enforced(self):
+        message_text = load_sample("message-text")
+        message_text["meta"]["formatted_at"] = "2026-03-03 10:30:00"
+        ok, errors = validate_against_contract(message_text, "message-text")
+        assert not ok
+        assert any("date-time" in err.lower() for err in errors)
+
     def test_enforce_contract_raises_with_context(self):
         data = {"bad": "shape"}
         with pytest.raises(ValueError) as exc:
@@ -48,6 +63,7 @@ class TestValidateShared:
 
     def test_convenience_wrappers(self):
         movie_batch = load_sample("movie-batch")
+        movie_schedule = load_sample("movie-schedule")
         analysis_result = load_sample("analysis-result")
         filter_result = load_sample("filter-result")
         message_text = load_sample("message-text")
@@ -59,6 +75,7 @@ class TestValidateShared:
         }
 
         assert validate_movie_batch(movie_batch)[0]
+        assert validate_movie_schedule(movie_schedule)[0]
         assert validate_analysis_result(analysis_result)[0]
         assert validate_filter_result(filter_result)[0]
         assert validate_message_text(message_text)[0]

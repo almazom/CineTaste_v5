@@ -141,7 +141,7 @@ class TestFormatIntegration:
 
     def test_full_format_produces_valid_contract(self):
         """Full format should produce valid message-text."""
-        from datetime import datetime
+        from datetime import datetime, timezone
 
         filtered = [
             {
@@ -159,7 +159,7 @@ class TestFormatIntegration:
                 "template": "telegram",
                 "city_display": "Test City",
                 "movie_count": 1,
-                "formatted_at": datetime.now().isoformat()
+                "formatted_at": datetime.now(timezone.utc).isoformat()
             }
         }
 

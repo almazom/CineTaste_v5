@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "tools" / "_shared"))
 sys.path.insert(0, str(Path(__file__).parent.parent / "tools" / "ct-fetch"))
 
 from validate import validate_against_contract
-from adapter_kinoteatr import fetch_movies, parse_html
+from adapter_kinoteatr import DOTENV_PATH, fetch_movies, parse_html
 
 
 class TestKinoteatrAdapter:
@@ -84,16 +84,16 @@ class TestFetchDeterministic:
         response.text = self.sample_html()
         response.raise_for_status = Mock()
 
-        captured = {}
+        captured = {"urls": []}
 
-        def fake_get(url, headers, timeout):
-            captured["url"] = url
+        def fake_get(url, **kwargs):
+            captured["urls"].append(url)
             return response
 
         monkeypatch.setattr("adapter_kinoteatr.requests.get", fake_get)
         movies = fetch_movies("naberezhnie-chelni", "2026-03-10")
 
-        assert "when=2026-03-10" in captured["url"]
+        assert "when=2026-03-10" in captured["urls"][0]
         assert len(movies) == 2
 
     def test_fetch_movies_request_exception(self, monkeypatch):
@@ -106,6 +106,19 @@ class TestFetchDeterministic:
 
         with pytest.raises(ConnectionError):
             fetch_movies("naberezhnie-chelni")
+
+    def test_parse_html_missing_anchor_keeps_url_missing(self):
+        html = """
+        <div data-gtm-list-item-filmName="Без ссылки" data-gtm-list-item-genre="драма"></div>
+        <span class="contentRating">16+</span>
+        """
+        movies = parse_html(html)
+        assert len(movies) == 1
+        assert "url" not in movies[0]
+
+    def test_dotenv_path_is_project_relative(self):
+        expected = (Path(__file__).resolve().parents[1] / ".env").resolve()
+        assert DOTENV_PATH.resolve() == expected
 
 
 class TestMovieBatchContract:
@@ -150,4 +163,3 @@ class TestFetchIntegration:
 
         is_valid, errors = validate_against_contract(data, "movie-batch")
         assert is_valid, f"Validation errors: {errors}"
-

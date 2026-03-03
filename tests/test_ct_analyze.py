@@ -283,14 +283,13 @@ class TestAnalyzeMovies:
         assert meta["agent"] == "pi"
         assert out
 
-    def test_analyze_movies_auto_all_fail_uses_mock(self, monkeypatch, tmp_path):
+    def test_analyze_movies_auto_all_fail_raises(self, monkeypatch, tmp_path):
         taste_file = tmp_path / "taste.yaml"
         taste_file.write_text("likes: {}\ndislikes: {}\n", encoding="utf-8")
 
         monkeypatch.setattr("adapter_agents.preflight_check", lambda agent: False)
-        out, meta = analyze_movies(self.sample_movies(), str(taste_file), dry_run=False, agent_name="auto")
-        assert meta["agent"] == "dry_run"
-        assert out
+        with pytest.raises(RuntimeError, match="No AI agent available"):
+            analyze_movies(self.sample_movies(), str(taste_file), dry_run=False, agent_name="auto")
 
     def test_analyze_movies_explicit_unavailable(self, monkeypatch, tmp_path):
         taste_file = tmp_path / "taste.yaml"
