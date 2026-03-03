@@ -1,11 +1,12 @@
-# CineTaste v5.2.0
+# CineTaste v5.3.0
 
 > AI-powered cinema recommendations delivered to Telegram
 
-## What's New in v5.2.0
+## What's New in v5.3.0
 
 | Feature | Description |
 |---------|-------------|
+| **New Stage** | Added `ct-schedule` with `movie-schedule` contract between fetch and analyze |
 | **SSOT Runtime** | `./run` parses `PROTOCOL.json` + `flows/latest/FLOW.md` at execution |
 | **Self-Healing** | Any failure halts, logs, and preserves artifacts with recovery hints |
 | **Strict CLI Flags** | `ct-analyze --agent`, `ct-fetch --source`, `ct-format --template` now enforced |
@@ -37,6 +38,7 @@ PROTOCOL.json (SSOT)
        │
        ├── tools/ ─────── CLI microservices
        │     ├── ct-fetch/      # Kinoteatr.ru scraper
+       │     ├── ct-schedule/   # Showtime enrichment stage
        │     ├── ct-analyze/    # AI analysis (auto|kimi|pi|dry_run)
        │     ├── ct-filter/     # Taste threshold filter
        │     ├── ct-format/     # Telegram markdown
@@ -49,11 +51,11 @@ PROTOCOL.json (SSOT)
 ## Pipeline
 
 ```
-ct-fetch → ct-analyze → ct-filter → ct-format → t2me
-    │           │           │           │        │
-    ▼           ▼           ▼           ▼        ▼
-movies      analyzed    filtered    message   Telegram
-(47)        (46)        (6)         (text)    (sent)
+ct-fetch → ct-schedule → ct-analyze → ct-filter → ct-format → t2me
+    │            │             │           │           │        │
+    ▼            ▼             ▼           ▼           ▼        ▼
+movies      scheduled      analyzed    filtered    message   Telegram
+(47)        (47)           (46)        (6)         (text)    (sent)
 ```
 
 ## AI Agents
@@ -124,4 +126,4 @@ Based on Rich Hickey's "Simple Made Easy":
 - [.MEMORY/06-ai-agents.md](.MEMORY/06-ai-agents.md) — AI agent guide
 
 ---
-*Version: 5.2.0*
+*Version: 5.3.0*

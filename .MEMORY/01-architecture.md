@@ -92,10 +92,10 @@ CineTaste_v5/
 │   ├── ct-format/MANIFEST.json
 │   └── t2me/MANIFEST.json
 ├── flows/                     # Pipeline versions
-│   └── v1.0/FLOW.md
+│   └── v1.2/FLOW.md
 ├── .MEMORY/                   # Context cards
 ├── taste/profile.yaml         # User preferences
-├── templates/                 # Output templates
+├── .aura/templates/           # Output templates
 └── logs/                      # Execution logs
 ```
 

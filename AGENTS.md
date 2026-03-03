@@ -18,6 +18,15 @@ This project uses a **Memory Bank** (`.MEMORY/` folder) to maintain context acro
 5. Execute
 ```
 
+## 🧭 How to Use `@aura.md`
+
+Treat `@aura.md` as the runtime protocol (`AURA.md` symlink in repo root).
+
+1. Read `@aura.md` first on every session.
+2. Before any code change, create `.aura/kanban/KANBAN-YYYY-MM-DD-HHMM.json`, update `.aura/kanban/latest`, and work in `TODO/DOING/DONE`.
+3. Use `PROTOCOL.json` as topology SSOT; use `@aura.md` for execution discipline (planning, order, testing).
+4. Follow AURA order strictly: `CONTRACT → KANBAN → TOOL → FLOW → TEST → VERSION`.
+
 ### Memory Cards
 
 | Card | When to Read |
@@ -105,8 +114,8 @@ CineTaste_v5/
 ├── AGENTS.md                  # This file
 │
 ├── .aura/                     # Versioned protocols
-│   ├── v2.0/AURA.md
-│   └── latest → v2.0/
+│   ├── v2.2/AURA.md
+│   └── latest → v2.2/
 │
 ├── .MEMORY/                   # Context cards
 │   ├── 00-index.md
@@ -131,11 +140,11 @@ CineTaste_v5/
 │   └── t2me/MANIFEST.json
 │
 ├── flows/                     # Pipeline versions
-│   ├── v1.0/FLOW.md
-│   └── latest → v1.0/
+│   ├── v1.2/FLOW.md
+│   └── latest → v1.2/
 │
 ├── taste/profile.yaml         # User preferences
-├── templates/                 # Output templates
+├── .aura/templates/           # Output templates
 └── logs/                      # Execution logs
 ```
 
