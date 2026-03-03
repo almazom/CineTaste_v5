@@ -9,9 +9,16 @@ Contract: movie-batch@1.0.0
 import argparse
 import json
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
+
+from dotenv import load_dotenv
+
+# Load .env from project root (before other imports)
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DOTENV_PATH = PROJECT_ROOT / ".env"
+load_dotenv(DOTENV_PATH)
 
 from adapter_kinoteatr import fetch_movies, CITY_URLS
 from port import enforce_output
@@ -86,7 +93,7 @@ def build_output(movies: list, city: str, city_display: str, when: str) -> dict:
             "city_display": city_display,
             "date": date_value,
             "source_url": CITY_URLS.get(city, ""),
-            "fetched_at": datetime.now().isoformat()
+            "fetched_at": datetime.now(timezone.utc).isoformat()
         }
     }
 

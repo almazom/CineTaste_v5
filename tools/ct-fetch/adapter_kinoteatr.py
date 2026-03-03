@@ -6,19 +6,25 @@ Fetches movie data from kinoteatr.ru for a given city.
 Uses regex-based extraction for robustness.
 """
 
+import os
 import re
-from datetime import datetime
+from pathlib import Path
 from typing import List, Dict, Any
 
 import requests
+from dotenv import load_dotenv
 
+# Load .env from project root
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DOTENV_PATH = PROJECT_ROOT / ".env"
+load_dotenv(DOTENV_PATH)
 
-BASE_URL = "https://kinoteatr.ru"
+# Single city: Набережные Челны (from .env)
+DEFAULT_CITY = os.getenv("DEFAULT_CITY", "naberezhnie-chelni")
+DEFAULT_CINEMA_URL = os.getenv("DEFAULT_CINEMA_URL", "https://kinoteatr.ru/kinoafisha/naberezhnie-chelni/")
 
 CITY_URLS = {
-    "naberezhnie-chelni": "https://kinoteatr.ru/kinoafisha/naberezhnie-chelni/",
-    "kazan": "https://kinoteatr.ru/kinoafisha/kazan/",
-    "moscow": "https://kinoteatr.ru/kinoafisha/moscow/",
+    DEFAULT_CITY: DEFAULT_CINEMA_URL,
 }
 
 
@@ -112,7 +118,7 @@ def parse_html(html: str) -> List[Dict[str, Any]]:
             continue
 
         # Get URL from anchors
-        url = anchors.get(title, "")
+        url = anchors.get(title)
 
         # Parse genres
         genres = []
@@ -135,12 +141,50 @@ def parse_html(html: str) -> List[Dict[str, Any]]:
             "year": None,
             "duration_min": None,
             "source": "kinoteatr.ru",
-            "url": url,
             "raw_description": f"{age}+, {', '.join(genres)}" if genres else f"{age}+"
         }
+        if url:
+            movie["url"] = url
 
         # Avoid duplicates
         if not any(m["title"] == title for m in movies):
             movies.append(movie)
 
+    # Enrich with director/actors from detail pages
+    _enrich_from_detail_pages(movies)
+
     return movies
+
+
+def _enrich_from_detail_pages(movies: List[Dict[str, Any]]) -> None:
+    """Fetch each movie's detail page to extract director and actors."""
+    for movie in movies:
+        url = movie.get("url")
+        if not url:
+            continue
+        try:
+            resp = requests.get(url, headers={
+                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+            }, timeout=10)
+            resp.raise_for_status()
+            html = resp.text
+
+            # Director via schema.org itemprop
+            d = re.search(
+                r'itemprop="director"[^>]*>.*?itemprop="name">([^<]+)',
+                html, re.DOTALL
+            )
+            if d:
+                movie["director"] = d.group(1).strip()
+
+            # Actors via schema.org itemprop inside movie_actors block
+            actors_block = re.search(
+                r'class="movie_actors">В ролях.*?<td[^>]*>(.*?)</td>',
+                html, re.DOTALL
+            )
+            if actors_block:
+                movie["actors"] = re.findall(
+                    r'itemprop="name">([^<]+)', actors_block.group(1)
+                )
+        except Exception:
+            pass  # best-effort enrichment
