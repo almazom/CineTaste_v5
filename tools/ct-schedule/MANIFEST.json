@@ -1,0 +1,102 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "ct-schedule/MANIFEST.json",
+  "title": "ct-schedule Tool Manifest",
+  "version": "1.0.0",
+
+  "identity": {
+    "name": "ct-schedule",
+    "verb": "schedule",
+    "position": 2,
+    "description": "Enrich movie list with showtime schedule",
+    "stateless": true
+  },
+
+  "contracts": {
+    "input": "movie-batch@1.0.0",
+    "output": "movie-schedule@1.0.0"
+  },
+
+  "cli": {
+    "usage": "ct-schedule --input <FILE> [--date <YYYY-MM-DD>] [--source kinoteatr] [--output <FILE>]",
+    "flags": [
+      {
+        "name": "--input",
+        "short": "-i",
+        "type": "string",
+        "required": true,
+        "description": "Input movie-batch JSON file"
+      },
+      {
+        "name": "--date",
+        "short": "-d",
+        "type": "string",
+        "description": "Schedule date override (YYYY-MM-DD); defaults to input meta.date"
+      },
+      {
+        "name": "--source",
+        "short": "-s",
+        "type": "string",
+        "default": "kinoteatr",
+        "description": "Schedule adapter (currently only 'kinoteatr'; invalid values fail with exit code 2)"
+      },
+      {
+        "name": "--output",
+        "short": "-o",
+        "type": "string",
+        "default": "stdout",
+        "description": "Output file path"
+      },
+      {
+        "name": "--dry-run",
+        "short": "-n",
+        "type": "boolean",
+        "default": false,
+        "description": "Skip network calls, generate deterministic mock showtimes"
+      },
+      {
+        "name": "--verbose",
+        "short": "-v",
+        "type": "boolean",
+        "default": false,
+        "description": "Verbose output"
+      },
+      {
+        "name": "--help",
+        "short": "-h",
+        "type": "boolean",
+        "description": "Show help"
+      }
+    ],
+    "exit_codes": {
+      "0": "Success",
+      "1": "General error",
+      "2": "Invalid arguments",
+      "3": "Network error",
+      "4": "Parse/contract error"
+    }
+  },
+
+  "adapters": {
+    "kinoteatr": {
+      "file": "adapter_showtimes.py",
+      "description": "kinoteatr.ru movie-page schedule extractor",
+      "status": "active"
+    }
+  },
+
+  "files": {
+    "required": [
+      "main.py",
+      "port.py",
+      "adapter_showtimes.py"
+    ],
+    "optional": []
+  },
+
+  "examples": {
+    "schedule": "ct-schedule --input movies.json",
+    "schedule_date": "ct-schedule --input movies.json --date 2026-03-03 --output scheduled.json",
+    "dry_run": "ct-schedule --input movies.json --dry-run"
+  }
+}
