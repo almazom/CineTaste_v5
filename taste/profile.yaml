@@ -12,6 +12,9 @@ likes:
     - "Kubrick"
     - "Anderson"
     - "Nolan"
+    - "Fellini"
+  actors:
+    - "Timothée Chalamet"
   studios:
     - "A24"
     - "Criterion"
@@ -49,6 +52,8 @@ canon:
     weight: 0.9
   - director: "Wes Anderson"
     weight: 0.8
+  - director: "Fellini"
+    weight: 1.0
   - director: "Nolan"
     weight: 0.7
 
