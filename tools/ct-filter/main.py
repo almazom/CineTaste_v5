@@ -11,7 +11,7 @@ Pure function: no external dependencies, no state.
 import argparse
 import json
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from port import enforce_input, enforce_output
@@ -138,7 +138,7 @@ def build_output(
                 "recommendations": allowed_recommendations,
                 "min_score": min_score
             },
-            "filtered_at": datetime.now().isoformat()
+            "filtered_at": datetime.now(timezone.utc).isoformat()
         }
     }
 

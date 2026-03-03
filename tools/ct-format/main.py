@@ -9,7 +9,7 @@ Contract: filter-result@1.0.0 → message-text@1.0.0
 import argparse
 import json
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
 
@@ -74,7 +74,7 @@ def build_output(text: str, template: str, city_display: str, movie_count: int) 
             "template": template,
             "city_display": city_display,
             "movie_count": movie_count,
-            "formatted_at": datetime.now().isoformat()
+            "formatted_at": datetime.now(timezone.utc).isoformat()
         }
     }
 
@@ -95,7 +95,11 @@ def main():
     try:
         template = args.template.strip().lower()
         renderer = get_template_renderer(template)
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(2)
 
+    try:
         # Load input
         if args.verbose:
             print(f"Loading filtered movies from {args.input}...", file=sys.stderr)
