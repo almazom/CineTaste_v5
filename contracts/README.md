@@ -5,17 +5,17 @@ Every data boundary in CineTaste is defined by a JSON Schema contract.
 ## Contract Chain
 
 ```
-ct-fetch ──→ movie-batch ──→ ct-analyze ──→ analysis-result ──→ ct-filter
-                                                              │
-                                                              ▼
-t2me ←── message-text ←── ct-format ←── filter-result ←──────┘
+ct-fetch ──→ movie-batch ──→ ct-schedule ──→ movie-schedule ──→ ct-analyze
+    ──→ analysis-result ──→ ct-filter ──→ filter-result ──→ ct-format
+    ──→ message-text ──→ t2me
 ```
 
 ## Contracts
 
 | Contract | Producer | Consumer | Description |
 |----------|----------|----------|-------------|
-| `movie-batch` | ct-fetch | ct-analyze | Raw movies from cinema |
+| `movie-batch` | ct-fetch | ct-schedule | Raw movies from cinema |
+| `movie-schedule` | ct-schedule | ct-analyze | Movies enriched with showtimes |
 | `analysis-result` | ct-analyze | ct-filter | AI-scored movies |
 | `filter-result` | ct-filter | ct-format | Filtered recommendations |
 | `message-text` | ct-format | t2me | Telegram markdown |
