@@ -2,7 +2,7 @@
 """
 ct-analyze/port.py — Validation Port (розетка)
 
-Validates input (movie-batch@1.0.0) and output (analysis-result@1.0.0).
+Validates input (movie-schedule@1.0.0) and output (analysis-result@1.0.0).
 Uses shared jsonschema validation.
 """
 
@@ -15,13 +15,13 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "_shared"))
 
 from validate import enforce_contract, validate_against_contract
 
-INPUT_CONTRACT = "movie-batch"
+INPUT_CONTRACT = "movie-schedule"
 OUTPUT_CONTRACT = "analysis-result"
 
 
 def enforce_input(data: dict) -> dict:
     """
-    Validate input data against movie-batch contract.
+    Validate input data against movie-schedule contract.
 
     Raises:
         ValueError: If validation fails
@@ -40,7 +40,7 @@ def enforce_output(data: dict) -> dict:
 
 
 def validate_input(data: dict) -> tuple[bool, list[str]]:
-    """Validate input against movie-batch contract."""
+    """Validate input against movie-schedule contract."""
     return validate_against_contract(data, INPUT_CONTRACT)
 
 

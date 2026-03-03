@@ -3,13 +3,13 @@
 ct-analyze/main.py — CLI Entry Point
 
 Analyzes movies against taste profile using AI.
-Contract: movie-batch@1.0.0 → analysis-result@1.0.0
+Contract: movie-schedule@1.0.0 → analysis-result@1.0.0
 """
 
 import argparse
 import json
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from adapter_agents import analyze_movies
@@ -23,16 +23,16 @@ def parse_args():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  ct-analyze --input movies.json --taste taste/profile.yaml
-  ct-analyze -i movies.json -t taste/profile.yaml --output analyzed.json
-  ct-analyze -i movies.json -t taste/profile.yaml --dry-run
+  ct-analyze --input scheduled.json --taste taste/profile.yaml
+  ct-analyze -i scheduled.json -t taste/profile.yaml --output analyzed.json
+  ct-analyze -i scheduled.json -t taste/profile.yaml --dry-run
 """
     )
 
     parser.add_argument(
         "--input", "-i",
         required=True,
-        help="Input movie-batch JSON file"
+        help="Input movie-schedule JSON file"
     )
 
     parser.add_argument(
@@ -50,8 +50,8 @@ Examples:
     parser.add_argument(
         "--agent", "-a",
         default="auto",
-        choices=["auto", "kimi", "pi", "dry_run"],
-        help="AI agent to use: auto|kimi|pi|dry_run (default: auto)"
+        choices=["auto", "kimi", "gemini", "qwen", "pi", "dry_run"],
+        help="AI agent to use: auto|kimi|gemini|qwen|pi|dry_run (default: auto)"
     )
 
     parser.add_argument(
@@ -75,7 +75,7 @@ def build_output(analyzed: list, analyzer: str) -> dict:
         "analyzed": analyzed,
         "meta": {
             "analyzer": analyzer,
-            "analyzed_at": datetime.now().isoformat(),
+            "analyzed_at": datetime.now(timezone.utc).isoformat(),
             "taste_profile": "1.0"
         }
     }

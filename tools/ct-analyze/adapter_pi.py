@@ -9,6 +9,7 @@ Pure function: movies + taste → analysis results.
 import json
 import re
 import subprocess
+import sys
 import yaml
 from pathlib import Path
 from typing import Optional
@@ -35,6 +36,7 @@ def build_prompt(movies: list, taste: dict) -> str:
 
 Нравится:
 - Режиссеры: {directors}
+- Актеры: {actors}
 - Жанры: {genres}
 - Ключевые слова: {keywords}
 
@@ -67,6 +69,7 @@ def build_prompt(movies: list, taste: dict) -> str:
 ]
 """.format(
         directors=", ".join(likes.get("directors", [])),
+        actors=", ".join(likes.get("actors", [])),
         genres=", ".join(likes.get("genres", [])),
         keywords=", ".join(likes.get("keywords", [])),
         dislike_genres=", ".join(dislikes.get("genres", [])),
@@ -84,6 +87,8 @@ def format_movies_for_prompt(movies: list) -> str:
         line = f"{i}. [{m.get('id', '?')}] {m.get('title', '?')}"
         if m.get("director"):
             line += f" | Реж: {m['director']}"
+        if m.get("actors"):
+            line += f" | В ролях: {', '.join(m['actors'][:4])}"
         if m.get("genres"):
             line += f" | Жанры: {', '.join(m['genres'])}"
         if m.get("year"):
@@ -178,7 +183,19 @@ def analyze_movies(movies: list, taste_path: str, dry_run: bool = False) -> list
 
     for analysis in analyses:
         movie_id = analysis.get("movie_id")
-        movie = movie_map.get(movie_id, {})
+        movie = movie_map.get(movie_id)
+
+        # Fuzzy fallback: AI may return slightly different IDs
+        if movie is None:
+            for mid, m in movie_map.items():
+                if mid in str(movie_id) or str(movie_id) in mid:
+                    print(f"[warn] fuzzy ID match: '{movie_id}' → '{mid}'", file=sys.stderr)
+                    movie = m
+                    break
+
+        if movie is None:
+            print(f"[warn] no movie found for ID: '{movie_id}'", file=sys.stderr)
+            movie = {}
 
         result.append({
             "movie": {

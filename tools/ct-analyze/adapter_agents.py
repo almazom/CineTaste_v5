@@ -2,12 +2,15 @@
 """
 ct-analyze/adapter_agents.py — Multi-Agent AI Adapter (вилка)
 
-Supports multiple agents with automatic fallback: kimi → pi → dry-run
+Supports multiple agents with automatic fallback: kimi → gemini → qwen → pi
 
 Agent Priority:
   1. kimi (preferred — web search capabilities)
-  2. pi (fallback — fast reasoning)
-  3. dry-run (last resort — mock analysis)
+  2. gemini (fallback — strong reasoning)
+  3. qwen (fallback — fast reasoning)
+  4. pi (fallback — fast reasoning)
+
+Pipeline aborts if no agent is available (cognitive layer is mandatory).
 """
 
 import json
@@ -16,7 +19,7 @@ import subprocess
 import shutil
 import sys
 import yaml
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -28,15 +31,32 @@ AGENTS = [
         "cmd": "kimi",
         "args": ["--print", "--final-message-only", "--thinking"],
         "uses_stdin": True,
-        "timeout": 300,  # 5 min (web search takes longer)
+        "timeout": 300,
         "supports_web_search": True
+    },
+    {
+        "name": "gemini",
+        "cmd": "gemini",
+        "args": ["--approval-mode", "plan"],
+        "uses_stdin": True,
+        "timeout": 120,
+        "supports_web_search": False,
+        "run_from_tmp": True
+    },
+    {
+        "name": "qwen",
+        "cmd": "qwen",
+        "args": ["--approval-mode", "plan"],
+        "uses_stdin": True,
+        "timeout": 120,
+        "supports_web_search": False
     },
     {
         "name": "pi",
         "cmd": "pi",
         "args": ["--print", "--no-tools", "--thinking", "high"],
         "uses_stdin": True,
-        "timeout": 120,  # 2 min
+        "timeout": 120,
         "supports_web_search": False
     },
 ]
@@ -51,21 +71,25 @@ def preflight_check(agent: dict) -> bool:
         print(f"[preflight] {cmd} not found in PATH", file=sys.stderr)
         return False
 
-    # Consistent preflight prompt for both agents
     preflight_prompt = "1+2=...[ONLY NUMBER IN WORDS]"
     valid_responses = ["three", "три"]
 
     try:
         if cmd == "kimi":
             test_args = ["--print", "--final-message-only", "-p", preflight_prompt]
+        elif cmd in ("gemini", "qwen"):
+            test_args = ["--approval-mode", "plan", "-p", preflight_prompt]
         else:  # pi
             test_args = ["--no-tools", "-p", preflight_prompt]
+
+        cwd = "/tmp" if agent.get("run_from_tmp") else None
 
         result = subprocess.run(
             [cmd] + test_args,
             capture_output=True,
             text=True,
             timeout=30,
+            cwd=cwd,
         )
         output = result.stdout.strip().lower()
 
@@ -187,6 +211,7 @@ def call_agent(prompt: str, agent: dict) -> str:
     """Call AI agent with prompt via stdin."""
     cmd = [agent["cmd"]] + agent["args"]
     timeout = agent.get("timeout", 120)
+    cwd = "/tmp" if agent.get("run_from_tmp") else None
 
     print(f"[agent] Using {agent['name']}...", file=sys.stderr)
 
@@ -197,6 +222,7 @@ def call_agent(prompt: str, agent: dict) -> str:
             capture_output=True,
             text=True,
             timeout=timeout,
+            cwd=cwd,
         )
 
         if result.returncode != 0:
@@ -249,7 +275,19 @@ def merge_analysis(movies: list, analyses: list, agent: dict) -> tuple[list, dic
 
     for analysis in analyses:
         movie_id = analysis.get("movie_id")
-        movie = movie_map.get(movie_id, {})
+        movie = movie_map.get(movie_id)
+
+        # Fuzzy fallback: AI may return slightly different IDs
+        if movie is None:
+            for mid, m in movie_map.items():
+                if mid in str(movie_id) or str(movie_id) in mid:
+                    print(f"[warn] fuzzy ID match: '{movie_id}' → '{mid}'", file=sys.stderr)
+                    movie = m
+                    break
+
+        if movie is None:
+            print(f"[warn] no movie found for ID: '{movie_id}'", file=sys.stderr)
+            movie = {}
 
         result.append({
             "movie": {
@@ -273,7 +311,7 @@ def merge_analysis(movies: list, analyses: list, agent: dict) -> tuple[list, dic
 
     meta = {
         "analyzer": f"agent:{agent['name']}",
-        "analyzed_at": datetime.now().isoformat(),
+        "analyzed_at": datetime.now(timezone.utc).isoformat(),
         "taste_profile": "1.0",
         "agent": agent["name"],
         "web_search_used": agent.get("supports_web_search", False)
@@ -320,8 +358,8 @@ def analyze_movies(
                     file=sys.stderr,
                 )
 
-        print("[agent] No agent succeeded — using dry_run", file=sys.stderr)
-        return mock_analyze(movies)
+        print("[agent] All agents failed — aborting", file=sys.stderr)
+        raise RuntimeError("No AI agent available. Pipeline cannot proceed without cognitive layer.")
 
     agent = get_agent(agent_name)
     if agent is None:
@@ -363,7 +401,7 @@ def mock_analyze(movies: list) -> tuple[list, dict]:
 
     meta = {
         "analyzer": "dry_run",
-        "analyzed_at": datetime.now().isoformat(),
+        "analyzed_at": datetime.now(timezone.utc).isoformat(),
         "taste_profile": "1.0",
         "agent": "dry_run",
         "web_search_used": False
