@@ -1,0 +1,110 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "KANBAN-2026-03-03-1012.json",
+  "title": "Kanban Plan — Consistency Remediation (CLI/Contracts/Markdown)",
+  "description": "SSOT execution plan to align CineTaste v5 with strict contract-first API docs, local CLI microservices, markdown-centered pipeline, and 3-state kanban discipline.",
+  "planning_session": {
+    "id": "KANBAN-2026-03-03-1012",
+    "created_at": "2026-03-03T10:12:00+03:00",
+    "author": "codex",
+    "goal": "Close consistency gaps across flow, protocol, contracts, manifests, wrappers, and docs"
+  },
+  "states": [
+    "TODO",
+    "DOING",
+    "DONE"
+  ],
+  "columns": {
+    "TODO": [],
+    "DOING": [],
+    "DONE": [
+      {
+        "id": "CS-01",
+        "task": "Normalize kanban policy to 3 states across active AURA/template/docs",
+        "contract_impact": [],
+        "priority": 0,
+        "estimated_complexity": "low",
+        "notes": "Remove BLOCKED from SSOT planning standard"
+      },
+      {
+        "id": "CS-02",
+        "task": "Fix FLOW parser fragility so non-step code blocks do not break run",
+        "contract_impact": [],
+        "priority": 0,
+        "estimated_complexity": "medium",
+        "notes": "./run --dry-run must parse FLOW successfully"
+      },
+      {
+        "id": "CS-03",
+        "task": "Add project-local executable wrappers for ct-* CLIs and use them in pipeline",
+        "contract_impact": [],
+        "priority": 0,
+        "estimated_complexity": "medium",
+        "notes": "No global PATH requirement; local repo executables only"
+      },
+      {
+        "id": "CS-04",
+        "task": "Implement t2me output mapping to send-confirmation contract with runtime validation",
+        "contract_impact": [
+          "send-confirmation",
+          "message-text"
+        ],
+        "priority": 0,
+        "estimated_complexity": "high",
+        "notes": "Step 5 must materialize contract payload, not raw logs only"
+      },
+      {
+        "id": "CS-05",
+        "task": "Align markdown template paths and references to .aura/templates",
+        "contract_impact": [
+          "message-text"
+        ],
+        "priority": 1,
+        "estimated_complexity": "low",
+        "notes": "Remove stale templates/ path references"
+      },
+      {
+        "id": "CS-06",
+        "task": "Synchronize MANIFEST CLI flags/exit semantics with actual tool behavior",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "medium",
+        "notes": "Document --verbose and invalid argument exit codes"
+      },
+      {
+        "id": "CS-07",
+        "task": "Expand tests for pipeline parse/run and send-confirmation stage",
+        "contract_impact": [
+          "send-confirmation"
+        ],
+        "priority": 1,
+        "estimated_complexity": "medium",
+        "notes": "Protect markdown-centered execution from regressions"
+      },
+      {
+        "id": "CS-08",
+        "task": "Run full test suite and record final consistency status",
+        "contract_impact": [],
+        "priority": 2,
+        "estimated_complexity": "low",
+        "notes": "All tests green after remediation"
+      }
+    ]
+  },
+  "acceptance_criteria": [
+    "KANBAN SSOT uses exactly 3 states (TODO/DOING/DONE)",
+    "./run --dry-run parses FLOW and executes stages in markdown order",
+    "ct-fetch/ct-analyze/ct-filter/ct-format are runnable from project folder as CLI commands",
+    "t2me stage emits send-confirmation JSON that validates against contract",
+    "Template/documentation references point to existing markdown template artifacts",
+    "MANIFEST CLI declarations match real tool behavior",
+    "Automated tests cover CLI tools + pipeline parsing/execution paths"
+  ],
+  "stats": {
+    "total": 8,
+    "todo": 0,
+    "doing": 0,
+    "done": 8,
+    "progress_percent": 100
+  }
+}

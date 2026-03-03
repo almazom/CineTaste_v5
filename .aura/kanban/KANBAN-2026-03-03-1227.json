@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "KANBAN-2026-03-03-1227.json",
+  "title": "Kanban Plan — AURA Usage Notes Across Agent Docs",
+  "description": "Add a short, consistent @aura.md usage section to AGENTS.md, CLAUDE.md, and GEMINI.md.",
+  "planning_session": {
+    "id": "KANBAN-2026-03-03-1227",
+    "created_at": "2026-03-03T12:27:02+03:00",
+    "author": "codex",
+    "goal": "Standardize how agents should consume @aura.md before execution"
+  },
+  "states": ["TODO", "DOING", "DONE"],
+  "columns": {
+    "TODO": [],
+    "DOING": [],
+    "DONE": [
+      {
+        "id": "AU-01",
+        "task": "Define concise @aura.md usage text aligned with AURA v2.2",
+        "contract_impact": [],
+        "priority": 0,
+        "estimated_complexity": "low",
+        "notes": "Keep wording portable across agent entry docs"
+      },
+      {
+        "id": "AU-02",
+        "task": "Insert @aura.md usage section in AGENTS.md",
+        "contract_impact": [],
+        "priority": 0,
+        "estimated_complexity": "low",
+        "notes": "Place near bootstrap sequence for visibility"
+      },
+      {
+        "id": "AU-03",
+        "task": "Create CLAUDE.md and GEMINI.md mirroring the short @aura.md usage guidance",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "low",
+        "notes": "Single source phrasing, minimal duplication"
+      },
+      {
+        "id": "AU-04",
+        "task": "Validate markdown and finish plan bookkeeping",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "low",
+        "notes": "No behavior changes; documentation only"
+      }
+    ]
+  },
+  "acceptance_criteria": [
+    "AGENTS.md contains a short section explicitly describing how to use @aura.md",
+    "CLAUDE.md exists with the same practical @aura.md instructions",
+    "GEMINI.md exists with the same practical @aura.md instructions",
+    "Guidance remains consistent with AURA v2.2 mandatory planning flow"
+  ],
+  "stats": {
+    "total": 4,
+    "todo": 0,
+    "doing": 0,
+    "done": 4,
+    "progress_percent": 100
+  }
+}

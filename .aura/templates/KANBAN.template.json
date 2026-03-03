@@ -11,7 +11,7 @@
     "goal": "What this session aims to achieve"
   },
 
-  "states": ["TODO", "DOING", "DONE", "BLOCKED"],
+  "states": ["TODO", "DOING", "DONE"],
 
   "columns": {
     "TODO": [
@@ -25,8 +25,7 @@
       }
     ],
     "DOING": [],
-    "DONE": [],
-    "BLOCKED": []
+    "DONE": []
   },
 
   "acceptance_criteria": [
@@ -41,7 +40,6 @@
     "todo": 0,
     "doing": 0,
     "done": 0,
-    "blocked": 0,
     "progress_percent": 0
   }
 }

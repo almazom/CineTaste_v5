@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "KANBAN-2026-03-03-1222.json",
+  "title": "Kanban Plan — ct-fetch Review Remediation",
+  "description": "Address review findings for URL fallback accuracy and environment loading portability in ct-fetch.",
+  "planning_session": {
+    "id": "KANBAN-2026-03-03-1222",
+    "created_at": "2026-03-03T12:22:46+03:00",
+    "author": "codex",
+    "goal": "Implement reviewer fixes without breaking movie-batch pipeline contracts"
+  },
+  "states": ["TODO", "DOING", "DONE"],
+  "columns": {
+    "TODO": [],
+    "DOING": [],
+    "DONE": [
+      {
+        "id": "RV-01",
+        "task": "Replace hardcoded .env path with project-relative resolution in ct-fetch adapter",
+        "contract_impact": ["movie-batch"],
+        "priority": 0,
+        "estimated_complexity": "low",
+        "notes": "Keep env-driven CITY_URLS working across clones/CI"
+      },
+      {
+        "id": "RV-02",
+        "task": "Preserve missing movie link state instead of substituting site root URL",
+        "contract_impact": ["movie-batch", "movie-schedule"],
+        "priority": 0,
+        "estimated_complexity": "medium",
+        "notes": "Avoid scraping/showing unrelated homepage showtimes/links"
+      },
+      {
+        "id": "RV-03",
+        "task": "Add/update deterministic tests for missing URL parsing and portable dotenv behavior",
+        "contract_impact": ["movie-batch"],
+        "priority": 1,
+        "estimated_complexity": "medium",
+        "notes": "Cover both regression points from review"
+      },
+      {
+        "id": "RV-04",
+        "task": "Run targeted tests and finalize remediation notes",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "low",
+        "notes": "Validate no behavioral regressions"
+      }
+    ]
+  },
+  "acceptance_criteria": [
+    "ct-fetch no longer uses an absolute machine-specific .env path",
+    "Missing kinoteatr movie anchors do not emit https://kinoteatr.ru fallback URLs",
+    "ct-fetch tests include coverage for missing-link parsing behavior",
+    "Relevant pytest suite passes"
+  ],
+  "stats": {
+    "total": 4,
+    "todo": 0,
+    "doing": 0,
+    "done": 4,
+    "progress_percent": 100
+  }
+}

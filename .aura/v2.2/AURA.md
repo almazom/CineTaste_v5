@@ -48,7 +48,6 @@ GOAL: Orchestrate CLI microservices via contracts, not assumptions.
 | TODO | Planned, not started |
 | DOING | Currently implementing |
 | DONE | Completed and verified |
-| BLOCKED | Waiting for dependency |
 
 ---
 

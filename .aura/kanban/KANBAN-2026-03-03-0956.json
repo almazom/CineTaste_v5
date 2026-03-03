@@ -1,0 +1,75 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "KANBAN-2026-03-03-0956.json",
+  "title": "Kanban Plan — Add ct-schedule Contract Stage",
+  "description": "Implement Variant B: ct-fetch -> ct-schedule -> ct-analyze with new movie-schedule contract",
+  "planning_session": {
+    "id": "KANBAN-2026-03-03-0956",
+    "created_at": "2026-03-03T09:56:00Z",
+    "author": "codex",
+    "goal": "Introduce schedule enrichment as a standalone contract-first pipeline stage"
+  },
+  "states": ["TODO", "DOING", "DONE", "BLOCKED"],
+  "columns": {
+    "TODO": [],
+    "DOING": [],
+    "DONE": [
+      {
+        "id": "SCH-01",
+        "task": "Define movie-schedule contract and sample",
+        "contract_impact": ["movie-schedule"],
+        "priority": 0,
+        "estimated_complexity": "medium",
+        "notes": "Completed: added schema + example + viz documentation"
+      },
+      {
+        "id": "SCH-02",
+        "task": "Implement new ct-schedule tool (main, adapter, port, manifest)",
+        "contract_impact": ["movie-batch", "movie-schedule"],
+        "priority": 0,
+        "estimated_complexity": "medium",
+        "notes": "Completed: dry-run deterministic + network best-effort extraction"
+      },
+      {
+        "id": "SCH-03",
+        "task": "Wire PROTOCOL/FLOW/pipeline for ct-schedule stage order",
+        "contract_impact": ["movie-batch", "movie-schedule", "analysis-result"],
+        "priority": 0,
+        "estimated_complexity": "medium",
+        "notes": "Completed: SSOT order and runtime flow updated"
+      },
+      {
+        "id": "SCH-04",
+        "task": "Update ct-analyze to consume movie-schedule input contract",
+        "contract_impact": ["movie-schedule", "analysis-result"],
+        "priority": 1,
+        "estimated_complexity": "low",
+        "notes": "Completed: port + manifest + CLI text switched to movie-schedule"
+      },
+      {
+        "id": "SCH-05",
+        "task": "Add tests/samples/docs for new contract stage",
+        "contract_impact": ["movie-schedule"],
+        "priority": 1,
+        "estimated_complexity": "medium",
+        "notes": "Completed: new tests + README/contracts docs + validator wrapper"
+      }
+    ],
+    "BLOCKED": []
+  },
+  "acceptance_criteria": [
+    "movie-schedule schema exists and validates sample payload",
+    "ct-schedule CLI validates input and emits movie-schedule output",
+    "PROTOCOL tools/contracts/flow order includes ct-schedule",
+    "pipeline dry-run executes ct-fetch -> ct-schedule -> ct-analyze chain",
+    "pytest deterministic suite passes"
+  ],
+  "stats": {
+    "total": 5,
+    "todo": 0,
+    "doing": 0,
+    "done": 5,
+    "blocked": 0,
+    "progress_percent": 100
+  }
+}
