@@ -18,10 +18,8 @@ import shutil
 import subprocess
 import sys
 import tempfile
-import yaml
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).parent))
@@ -38,7 +36,7 @@ AGENTS = [
         "run_args": ["--print", "--final-message-only", "--thinking"],
         "timeout": 300,
         "supports_web_search": True,
-        "file_mode": "stdin",  # kimi: prompt via stdin
+        "file_mode": "stdin",
     },
     {
         "name": "gemini",
@@ -47,7 +45,7 @@ AGENTS = [
         "run_args": ["--approval-mode", "plan"],
         "timeout": 180,
         "supports_web_search": False,
-        "file_mode": "cwd",  # gemini: reads files via tools from cwd
+        "file_mode": "cwd",
     },
     {
         "name": "qwen",
@@ -56,7 +54,7 @@ AGENTS = [
         "run_args": ["--approval-mode", "plan"],
         "timeout": 180,
         "supports_web_search": False,
-        "file_mode": "cwd",  # qwen: reads files via tools from cwd
+        "file_mode": "cwd",
     },
     {
         "name": "pi",
@@ -65,7 +63,7 @@ AGENTS = [
         "run_args": ["--print", "--no-tools", "--thinking", "high"],
         "timeout": 120,
         "supports_web_search": False,
-        "file_mode": "at_file",  # pi: @file syntax for context
+        "file_mode": "at_file",
     },
 ]
 
@@ -79,17 +77,14 @@ def preflight_check(agent: dict) -> bool:
         print(f"[preflight] {cmd} not found in PATH", file=sys.stderr)
         return False
 
-    prompt = "1+2=...[ONLY NUMBER IN WORDS]"
-    valid = ["three", "три"]
-
     try:
         result = subprocess.run(
-            [cmd] + agent["preflight_args"] + [prompt],
+            [cmd] + agent["preflight_args"] + ["1+2=...[ONLY NUMBER IN WORDS]"],
             capture_output=True, text=True, timeout=30,
             cwd="/tmp",
         )
         output = result.stdout.strip().lower()
-        if result.returncode == 0 and output in valid:
+        if result.returncode == 0 and output in ("three", "три"):
             print(f"[preflight] {cmd} ✓ ({output})", file=sys.stderr)
             return True
         print(f"[preflight] {cmd} ✗ (got: {output[:40]})", file=sys.stderr)
@@ -152,51 +147,45 @@ def call_agent(agent: dict, workdir: str) -> str:
     """
     Call AI agent with movies.json and taste.yaml in workdir.
 
-    Different agents handle files differently:
+    File modes:
       - cwd:     agent runs in workdir, reads files via its own tools
       - at_file: pi-style @file syntax to inject file content
-      - stdin:   prompt + data sent via stdin (legacy)
+      - stdin:   prompt + inline data sent via stdin
     """
     cmd_base = [agent["cmd"]] + agent["run_args"]
     timeout = agent["timeout"]
     mode = agent["file_mode"]
-
     movies_path = os.path.join(workdir, "movies.json")
     taste_path = os.path.join(workdir, "taste.yaml")
 
     print(f"[cognize] Using {agent['name']} ({mode} mode)...", file=sys.stderr)
 
     if mode == "cwd":
-        # gemini/qwen: run from workdir, agent reads files via tools
-        cmd = cmd_base + ["-p", INSTRUCTION]
         result = subprocess.run(
-            cmd, capture_output=True, text=True,
+            cmd_base + ["-p", INSTRUCTION],
+            capture_output=True, text=True,
             timeout=timeout, cwd=workdir,
         )
 
     elif mode == "at_file":
-        # pi: @file injects file content into context
-        cmd = cmd_base + [f"@{taste_path}", f"@{movies_path}"]
         result = subprocess.run(
-            cmd, input=INSTRUCTION, capture_output=True, text=True,
+            cmd_base + [f"@{taste_path}", f"@{movies_path}"],
+            input=INSTRUCTION, capture_output=True, text=True,
             timeout=timeout,
         )
 
     elif mode == "stdin":
-        # kimi: everything via stdin (include file paths in prompt)
         with open(movies_path, encoding="utf-8") as f:
             movies_text = f.read()
         with open(taste_path, encoding="utf-8") as f:
             taste_text = f.read()
         full_prompt = (
-            INSTRUCTION
-            + "\n\n--- taste.yaml ---\n" + taste_text
-            + "\n\n--- movies.json ---\n" + movies_text
+            f"{INSTRUCTION}\n\n--- taste.yaml ---\n{taste_text}"
+            f"\n\n--- movies.json ---\n{movies_text}"
         )
-        cmd = cmd_base
         result = subprocess.run(
-            cmd, input=full_prompt, capture_output=True, text=True,
-            timeout=timeout,
+            cmd_base, input=full_prompt,
+            capture_output=True, text=True, timeout=timeout,
         )
     else:
         raise RuntimeError(f"Unknown file_mode: {mode}")
@@ -239,28 +228,31 @@ def parse_response(response: str) -> list:
 
 # ── Merge ──────────────────────────────────────────────────────────────
 
+def _find_movie(movie_id: str, movie_map: dict) -> dict:
+    """Exact lookup with fuzzy substring fallback."""
+    movie = movie_map.get(movie_id)
+    if movie:
+        return movie
+
+    for mid, m in movie_map.items():
+        if mid in str(movie_id) or str(movie_id) in mid:
+            print(f"[warn] fuzzy ID match: '{movie_id}' → '{mid}'", file=sys.stderr)
+            return m
+
+    print(f"[warn] no movie found for ID: '{movie_id}'", file=sys.stderr)
+    return {}
+
+
 def merge(movies: list, analyses: list, agent: dict) -> dict:
     """Merge AI analyses with original movie data into analysis-result contract."""
     movie_map = {m["id"]: m for m in movies}
-    result = []
+    analyzed = []
 
     for analysis in analyses:
         movie_id = analysis.get("movie_id")
-        movie = movie_map.get(movie_id)
+        movie = _find_movie(movie_id, movie_map)
 
-        # Fuzzy fallback: AI may return slightly different IDs
-        if movie is None:
-            for mid, m in movie_map.items():
-                if mid in str(movie_id) or str(movie_id) in mid:
-                    print(f"[warn] fuzzy ID match: '{movie_id}' → '{mid}'", file=sys.stderr)
-                    movie = m
-                    break
-
-        if movie is None:
-            print(f"[warn] no movie found for ID: '{movie_id}'", file=sys.stderr)
-            movie = {}
-
-        result.append({
+        analyzed.append({
             "movie": {
                 "id": movie.get("id", movie_id),
                 "title": movie.get("title", "Unknown"),
@@ -280,51 +272,38 @@ def merge(movies: list, analyses: list, agent: dict) -> dict:
             "red_flags": analysis.get("red_flags", [])
         })
 
-    meta = {
-        "analyzer": f"cognize:{agent['name']}",
-        "analyzed_at": datetime.now(timezone.utc).isoformat(),
-        "taste_profile": "1.0",
-        "agent": agent["name"],
-        "web_search_used": agent.get("supports_web_search", False)
+    return {
+        "analyzed": analyzed,
+        "meta": {
+            "analyzer": f"cognize:{agent['name']}",
+            "analyzed_at": datetime.now(timezone.utc).isoformat(),
+            "taste_profile": "1.0",
+            "agent": agent["name"],
+            "web_search_used": agent.get("supports_web_search", False),
+        },
     }
-
-    return {"analyzed": result, "meta": meta}
 
 
 # ── Main ───────────────────────────────────────────────────────────────
 
 def cognize(movies_path: str, taste_path: str, agent_name: str = "auto") -> dict:
     """
-    Core cognize function.
-
-    1. Write movies + taste to temp workdir
-    2. Launch AI agent pointing at those files
-    3. Parse response, merge with movie data
+    Write movies + taste to temp workdir, launch AI agent, parse and merge response.
     """
-    # Load input data
     with open(movies_path, encoding="utf-8") as f:
         input_data = json.load(f)
     movies = input_data.get("movies", input_data.get("scheduled", []))
 
-    # Select agent
     agent = select_agent(agent_name)
 
-    # Create workdir with both files
     workdir = tempfile.mkdtemp(prefix="ct-cognize-")
     try:
-        # Write movies.json (full details for the agent)
-        work_movies = os.path.join(workdir, "movies.json")
-        with open(work_movies, "w", encoding="utf-8") as f:
+        with open(os.path.join(workdir, "movies.json"), "w", encoding="utf-8") as f:
             json.dump({"movies": movies}, f, ensure_ascii=False, indent=2)
+        shutil.copy2(taste_path, os.path.join(workdir, "taste.yaml"))
 
-        # Copy taste profile
-        work_taste = os.path.join(workdir, "taste.yaml")
-        shutil.copy2(taste_path, work_taste)
-
-        # Call agent
         response = call_agent(agent, workdir)
         analyses = parse_response(response)
-
         return merge(movies, analyses, agent)
     finally:
         shutil.rmtree(workdir, ignore_errors=True)

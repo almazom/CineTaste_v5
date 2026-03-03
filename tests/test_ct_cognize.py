@@ -7,7 +7,6 @@ import subprocess
 import pytest
 import sys
 from pathlib import Path
-from unittest.mock import patch
 
 # Add tools to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "tools" / "_shared"))
@@ -336,7 +335,10 @@ class TestCognizeIntegration:
         taste_file = tmp_path / "taste.yaml"
         taste_file.write_text("likes: {}\ndislikes: {}\n", encoding="utf-8")
 
-        monkeypatch.setattr("main.select_agent", lambda name: (_ for _ in ()).throw(RuntimeError("No AI agent available")))
+        def no_agent(name):
+            raise RuntimeError("No AI agent available")
+
+        monkeypatch.setattr("main.select_agent", no_agent)
 
         with pytest.raises(RuntimeError, match="No AI agent available"):
             cognize(str(movies_file), str(taste_file))
