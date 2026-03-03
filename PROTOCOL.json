@@ -2,12 +2,12 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "PROTOCOL.json",
   "title": "CineTaste v5 System Protocol",
-  "version": "5.2.0",
+  "version": "5.4.0",
   "description": "Single source of truth for system topology: contracts, tools, data flow",
 
   "project": {
     "name": "CineTaste",
-    "version": "5.2.0",
+    "version": "5.4.0",
     "purpose": "AI-powered cinema recommendations delivered to Telegram",
     "paradigm": "contract-first, markdown-driven orchestration",
     "city": "naberezhnie-chelni",
@@ -37,13 +37,20 @@
       "version": "1.0.0",
       "description": "Raw movies from fetcher",
       "produced_by": ["ct-fetch"],
-      "consumed_by": ["ct-analyze"]
+      "consumed_by": ["ct-schedule"]
+    },
+    "movie-schedule": {
+      "file": "contracts/movie-schedule.schema.json",
+      "version": "1.0.0",
+      "description": "Movies enriched with showtime schedule",
+      "produced_by": ["ct-schedule"],
+      "consumed_by": ["ct-cognize", "ct-analyze"]
     },
     "analysis-result": {
       "file": "contracts/analysis-result.schema.json",
       "version": "1.0.0",
       "description": "AI-analyzed movies with scores",
-      "produced_by": ["ct-analyze"],
+      "produced_by": ["ct-cognize", "ct-analyze"],
       "consumed_by": ["ct-filter"]
     },
     "filter-result": {
@@ -80,12 +87,33 @@
       "stateless": true,
       "has_adapter": true
     },
+    "ct-schedule": {
+      "manifest": "tools/ct-schedule/MANIFEST.json",
+      "verb": "schedule",
+      "position": 2,
+      "description": "Enrich movie list with showtime schedule",
+      "input_contract": "movie-batch",
+      "output_contract": "movie-schedule",
+      "stateless": true,
+      "has_adapter": true
+    },
     "ct-analyze": {
       "manifest": "tools/ct-analyze/MANIFEST.json",
       "verb": "analyze",
-      "position": 2,
-      "description": "AI cognitive analysis against taste profile",
-      "input_contract": "movie-batch",
+      "position": 3,
+      "description": "AI cognitive analysis against taste profile (legacy, use ct-cognize)",
+      "input_contract": "movie-schedule",
+      "output_contract": "analysis-result",
+      "stateless": true,
+      "has_adapter": true,
+      "status": "legacy"
+    },
+    "ct-cognize": {
+      "manifest": "tools/ct-cognize/MANIFEST.json",
+      "verb": "cognize",
+      "position": 3,
+      "description": "Human-level cognitive analysis — AI reads movie and taste files directly",
+      "input_contract": "movie-schedule",
       "output_contract": "analysis-result",
       "stateless": true,
       "has_adapter": true
@@ -93,7 +121,7 @@
     "ct-filter": {
       "manifest": "tools/ct-filter/MANIFEST.json",
       "verb": "filter",
-      "position": 3,
+      "position": 4,
       "description": "Filter by recommendation threshold",
       "input_contract": "analysis-result",
       "output_contract": "filter-result",
@@ -103,7 +131,7 @@
     "ct-format": {
       "manifest": "tools/ct-format/MANIFEST.json",
       "verb": "format",
-      "position": 4,
+      "position": 5,
       "description": "Render to Telegram markdown",
       "input_contract": "filter-result",
       "output_contract": "message-text",
@@ -113,7 +141,7 @@
     "t2me": {
       "manifest": "tools/t2me/MANIFEST.json",
       "verb": "send",
-      "position": 5,
+      "position": 6,
       "description": "Deliver to Telegram",
       "input_contract": "message-text",
       "output_contract": "send-confirmation",
@@ -124,17 +152,13 @@
   },
 
   "flow": {
-    "current_version": "1.1.0",
+    "current_version": "1.3.0",
     "file": "flows/latest/FLOW.md",
-    "stages": ["ct-fetch", "ct-analyze", "ct-filter", "ct-format", "t2me"],
+    "stages": ["ct-fetch", "ct-schedule", "ct-cognize", "ct-filter", "ct-format", "t2me"],
     "modes": {
       "production": {
-        "description": "Full pipeline, always sends to Telegram",
+        "description": "Full pipeline with cognitive layer, always sends to Telegram",
         "flags": []
-      },
-      "dry-run": {
-        "description": "Preview without sending",
-        "flags": ["--dry-run"]
       },
       "resend": {
         "description": "Resend existing message",
@@ -162,12 +186,35 @@
     "commands": {
       "unit": "pytest tests/ -v",
       "coverage": "pytest tests/ --cov=tools --cov-report=term-missing",
-      "e2e": "./run --dry-run",
+      "e2e": "./run",
       "network_integration": "pytest tests/ -m network -v"
     }
   },
 
   "version_history": [
+    {
+      "version": "5.4.0",
+      "date": "2026-03-03",
+      "changes": [
+        "Added ct-cognize: dedicated cognitive tool with file-based agent invocation",
+        "ct-cognize replaces ct-analyze in pipeline (ct-analyze marked legacy)",
+        "Updated flow to v1.3 with ct-cognize at position 3",
+        "Added gemini and qwen CLI agents to fallback chain",
+        "Added fuzzy ID matching in analysis merge to prevent Unknown titles",
+        "Pipeline aborts if all AI agents fail (no silent dry_run fallback)",
+        "Added detail page enrichment in ct-fetch (directors, actors via itemprop)"
+      ]
+    },
+    {
+      "version": "5.3.0",
+      "date": "2026-03-03",
+      "changes": [
+        "Added new contract stage: ct-schedule producing movie-schedule@1.0.0",
+        "Rewired pipeline chain to ct-fetch -> ct-schedule -> ct-analyze",
+        "Updated ct-analyze input boundary from movie-batch to movie-schedule",
+        "Added movie-schedule schema, samples, validator helper, and tool manifest"
+      ]
+    },
     {
       "version": "5.2.0",
       "date": "2026-03-02",
