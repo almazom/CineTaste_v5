@@ -17,6 +17,10 @@ htmlcov/
 # Logs (keep directory, ignore content)
 logs/*.log
 logs/*.txt
+logs/deep_run_*/
+
+# Conversation artifacts
+*_conversation-*.txt
 
 # IDE
 .idea/
