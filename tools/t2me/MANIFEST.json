@@ -7,7 +7,7 @@
   "identity": {
     "name": "t2me",
     "verb": "send",
-    "position": 5,
+    "position": 6,
     "description": "Deliver message to Telegram",
     "stateless": false,
     "external": true
@@ -19,7 +19,7 @@
   },
 
   "cli": {
-    "usage": "cat <FILE> | t2me send --markdown",
+    "usage": "cat <FILE> | t2me send --markdown [--dry-run]",
     "flags": [
       {
         "name": "--markdown",
@@ -33,6 +33,18 @@
         "short": "-f",
         "type": "string",
         "description": "Deprecated for this project; prefer stdin pipe due timeout risk"
+      },
+      {
+        "name": "--caption",
+        "short": "-c",
+        "type": "string",
+        "description": "Optional caption for --file mode"
+      },
+      {
+        "name": "--dry-run",
+        "type": "boolean",
+        "default": false,
+        "description": "Validate route/payload without sending message"
       },
       {
         "name": "--help",
@@ -50,16 +62,23 @@
     }
   },
 
-  "adapters": {},
+  "adapters": {
+    "send_confirmation_mapper": {
+      "file": "map_send_confirmation.py",
+      "description": "Map raw t2me JSON output into send-confirmation contract",
+      "status": "active"
+    }
+  },
 
   "files": {
     "required": [],
-    "optional": [],
-    "note": "External tool, not part of this repository"
+    "optional": ["map_send_confirmation.py"],
+    "note": "External send CLI + local mapper for contract alignment"
   },
 
   "examples": {
-    "pipe": "cat message.txt | t2me send --markdown"
+    "pipe": "cat message.txt | t2me send --markdown",
+    "pipe_dry_run": "cat message.txt | t2me send --markdown --dry-run"
   },
 
   "integration": {
