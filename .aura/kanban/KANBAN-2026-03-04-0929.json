@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "KANBAN-2026-03-04-0929",
+  "title": "Kanban Plan — Subagent Simplification Review Batch",
+  "planning_session": {
+    "id": "KANBAN-2026-03-04-0929",
+    "created_at": "2026-03-04T09:29:00+03:00",
+    "author": "pi-agent",
+    "goal": "Run 6 parallel subagents for simplification suggestions, collect detailed markdown reports in temp folder, then create a fusion Kanban SSOT plan report."
+  },
+  "states": [
+    "TODO",
+    "DOING",
+    "DONE"
+  ],
+  "columns": {
+    "TODO": [],
+    "DOING": [],
+    "DONE": [
+      {
+        "id": "task-1",
+        "task": "Prepare temp workspace and define subagent assignments with shared mindset prompt",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "low",
+        "notes": "No production contract changes; analysis/reporting only",
+        "status_note": "Completed in this session"
+      },
+      {
+        "id": "task-2",
+        "task": "Run 6 subagents in parallel to propose one simplification each",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "medium",
+        "notes": "Each report must be detailed and saved as markdown",
+        "status_note": "Completed in this session"
+      },
+      {
+        "id": "task-3",
+        "task": "Persist per-subagent markdown reports into temp folder",
+        "contract_impact": [],
+        "priority": 2,
+        "estimated_complexity": "low",
+        "notes": "One file per subagent",
+        "status_note": "Completed in this session"
+      },
+      {
+        "id": "task-4",
+        "task": "Run fusion subagent to synthesize suggestions into Kanban SSOT 3-state plan",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "medium",
+        "notes": "Output markdown + JSON-on-YAML style structure as requested",
+        "status_note": "Completed in this session"
+      }
+    ]
+  },
+  "acceptance_criteria": [
+    "Six parallel subagent outputs are collected",
+    "A detailed markdown report exists for each subagent in temp folder",
+    "A fusion markdown plan exists in temp folder",
+    "Fusion plan uses TODO/DOING/DONE Kanban SSOT structure"
+  ],
+  "stats": {
+    "total": 4,
+    "todo": 0,
+    "doing": 0,
+    "done": 4,
+    "progress_percent": 100
+  }
+}
