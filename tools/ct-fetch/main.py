@@ -162,6 +162,15 @@ def dry_run_data(city: str) -> list:
     ]
 
 
+def enforce_output_or_exit(output: dict) -> None:
+    """Enforce output contract and exit with code 4 on violation."""
+    try:
+        enforce_output(output)
+    except ValueError as e:
+        print(f"Contract violation: {e}", file=sys.stderr)
+        sys.exit(4)
+
+
 def main():
     """Main entry point."""
     args = parse_args()
@@ -188,11 +197,7 @@ def main():
         output = build_output(movies, args.city, city_display, when)
 
         # Validate output against contract
-        try:
-            enforce_output(output)
-        except ValueError as e:
-            print(f"Contract violation: {e}", file=sys.stderr)
-            sys.exit(4)
+        enforce_output_or_exit(output)
 
         # Output
         json_output = json.dumps(output, ensure_ascii=False, indent=2)
