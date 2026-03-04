@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "KANBAN-2026-03-03-2347.json",
+  "title": "Kanban Plan — Simplify ct-format main flow",
+  "description": "Refine tools/ct-format/main.py for clarity and maintainability while preserving exact behavior and contracts.",
+  "planning_session": {
+    "id": "KANBAN-2026-03-03-2347",
+    "created_at": "2026-03-03T23:47:00+03:00",
+    "author": "codex",
+    "goal": "Simplify one recently modified code area with no functional change"
+  },
+  "states": [
+    "TODO",
+    "DOING",
+    "DONE"
+  ],
+  "columns": {
+    "TODO": [],
+    "DOING": [],
+    "DONE": [
+      {
+        "id": "SF-01",
+        "task": "Review ct-format current control flow and isolate simplification target",
+        "contract_impact": [],
+        "priority": 0,
+        "estimated_complexity": "low",
+        "notes": "Focus only on recent code touchpoint"
+      },
+      {
+        "id": "SF-02",
+        "task": "Refactor main flow into explicit helper functions for load/write and streamline error handling",
+        "contract_impact": [],
+        "priority": 0,
+        "estimated_complexity": "medium",
+        "notes": "Keep exit codes, validation path, and output shape identical"
+      },
+      {
+        "id": "SF-03",
+        "task": "Run targeted tests and basic CLI execution checks",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "low",
+        "notes": "Use tests/test_ct_format.py and one CLI smoke run"
+      },
+      {
+        "id": "SF-04",
+        "task": "Prepare simplification report and send through t2me",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "low",
+        "notes": "Use pipe mode per project guidance"
+      }
+    ]
+  },
+  "acceptance_criteria": [
+    "tools/ct-format/main.py is simpler to read with behavior preserved",
+    "Exit codes and validation behavior remain unchanged",
+    "ct-format tests pass",
+    "A simplification report is sent via t2me using stdin pipe"
+  ],
+  "stats": {
+    "total": 4,
+    "todo": 0,
+    "doing": 0,
+    "done": 4,
+    "progress_percent": 100
+  }
+}

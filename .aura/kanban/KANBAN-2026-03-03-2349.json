@@ -1,0 +1,132 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "KANBAN-2026-03-03-2349.json",
+  "title": "Kanban Plan — Ongoing Simplification Rounds",
+  "description": "Continue behavior-preserving code simplification in recently touched areas using the same active kanban file.",
+  "planning_session": {
+    "id": "KANBAN-2026-03-03-2349",
+    "created_at": "2026-03-03T23:49:00+03:00",
+    "author": "codex",
+    "goal": "Iteratively simplify code for clarity while preserving exact functionality"
+  },
+  "states": [
+    "TODO",
+    "DOING",
+    "DONE"
+  ],
+  "columns": {
+    "TODO": [],
+    "DOING": [],
+    "DONE": [
+      {
+        "id": "SF2-01",
+        "task": "Review ct-filter control flow and identify low-risk simplification points",
+        "contract_impact": [],
+        "priority": 0,
+        "estimated_complexity": "low",
+        "notes": "Stay within current contract fields and output ordering"
+      },
+      {
+        "id": "SF2-02",
+        "task": "Refactor parsing/load/write/filter helpers to reduce repetition and improve readability",
+        "contract_impact": [],
+        "priority": 0,
+        "estimated_complexity": "medium",
+        "notes": "Keep same exit codes and warning behavior"
+      },
+      {
+        "id": "SF2-03",
+        "task": "Run targeted tests and a CLI smoke check for ct-filter",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "low",
+        "notes": "Use tests/test_ct_filter.py"
+      },
+      {
+        "id": "SF2-04",
+        "task": "Send simplification report via t2me",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "low",
+        "notes": "Use stdin pipe mode"
+      },
+      {
+        "id": "SF3-01",
+        "task": "Review tests/test_ct_format.py for safe readability simplification opportunities",
+        "contract_impact": [],
+        "priority": 0,
+        "estimated_complexity": "low",
+        "notes": "Only refactor test structure and duplication"
+      },
+      {
+        "id": "SF3-02",
+        "task": "Refactor repetitive test data setup into minimal shared helpers without altering assertions",
+        "contract_impact": [],
+        "priority": 0,
+        "estimated_complexity": "low",
+        "notes": "Keep same test intent and coverage"
+      },
+      {
+        "id": "SF3-03",
+        "task": "Run test_ct_format suite and report results",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "low",
+        "notes": "No production behavior impact"
+      },
+      {
+        "id": "SF3-04",
+        "task": "Send simplification report via t2me",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "low",
+        "notes": "Use pipe mode"
+      },
+      {
+        "id": "SF4-01",
+        "task": "Review tests/test_ct_filter.py for low-risk simplification opportunities",
+        "contract_impact": [],
+        "priority": 0,
+        "estimated_complexity": "low",
+        "notes": "Refactor duplication only"
+      },
+      {
+        "id": "SF4-02",
+        "task": "Introduce minimal helper(s) for repeated test payloads",
+        "contract_impact": [],
+        "priority": 0,
+        "estimated_complexity": "low",
+        "notes": "Keep all assertions and contract checks unchanged"
+      },
+      {
+        "id": "SF4-03",
+        "task": "Run tests/test_ct_filter.py and confirm no behavioral changes",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "low",
+        "notes": "Targeted suite only"
+      },
+      {
+        "id": "SF4-04",
+        "task": "Send simplification report via t2me",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "low",
+        "notes": "Use pipe mode"
+      }
+    ]
+  },
+  "acceptance_criteria": [
+    "Selected recently touched code is clearer and less repetitive",
+    "All behavior and assertions remain unchanged",
+    "Targeted tests pass",
+    "Report is sent via t2me"
+  ],
+  "stats": {
+    "total": 12,
+    "todo": 0,
+    "doing": 0,
+    "done": 12,
+    "progress_percent": 100
+  }
+}
