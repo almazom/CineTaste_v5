@@ -33,11 +33,12 @@ def to_datetime_iso(date_value: str, time_value: str) -> str:
 
 def parse_showtimes_html(html: str, date_value: str, booking_url: str = "") -> list[dict[str, Any]]:
     """Extract and normalize unique showtimes from HTML."""
-    found: list[str] = []
-    for match in TIME_RE.finditer(html):
-        candidate = f"{match.group(1)}:{match.group(2)}"
-        if candidate not in found:
-            found.append(candidate)
+    found = list(
+        dict.fromkeys(
+            f"{match.group(1)}:{match.group(2)}"
+            for match in TIME_RE.finditer(html)
+        )
+    )
 
     showtimes: list[dict[str, Any]] = []
     for time_value in found:
