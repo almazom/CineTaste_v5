@@ -120,5 +120,9 @@
     "doing": 0,
     "done": 6,
     "progress_percent": 100.0
-  }
+  },
+  "execution_notes": [
+    "Pipeline gate: ./run --dry-run is currently unsupported by ./run CLI (Unknown option: --dry-run).",
+    "A full production ./run execution occurred once during PR command quoting; pipeline completed successfully and sent Telegram message."
+  ]
 }
