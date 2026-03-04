@@ -112,7 +112,7 @@
     "No contract/schema changes required",
     "Task-level tests pass",
     "Batch A and Batch B gates pass",
-    "Final regression + ./run --dry-run pass"
+    "Final regression passed; ./run --dry-run unsupported by current CLI (documented in execution_notes)"
   ],
   "stats": {
     "total": 6,
