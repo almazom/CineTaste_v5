@@ -3,7 +3,6 @@ Test ct-filter tool contract validation.
 """
 
 import json
-import pytest
 import sys
 from pathlib import Path
 
@@ -12,6 +11,26 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "tools" / "_shared"))
 sys.path.insert(0, str(Path(__file__).parent.parent / "tools" / "ct-filter"))
 
 from validate import validate_against_contract
+
+
+def make_filter_result_item(
+    movie_id: str = "1",
+    title: str = "Test",
+    url: str | None = "https://example.com",
+    score: int = 85,
+    recommendation: str = "recommended",
+    **movie_overrides
+) -> dict:
+    """Create a minimal filter-result item for contract tests."""
+    movie = {"id": movie_id, "title": title}
+    if url is not None:
+        movie["url"] = url
+    movie.update(movie_overrides)
+    return {
+        "movie": movie,
+        "relevance_score": score,
+        "recommendation": recommendation
+    }
 
 
 class TestFilterResultContract:
@@ -34,13 +53,7 @@ class TestFilterResultContract:
     def test_invalid_recommendation(self):
         """Invalid recommendation should fail."""
         data = {
-            "filtered": [
-                {
-                    "movie": {"id": "1", "title": "Test", "url": "https://example.com"},
-                    "relevance_score": 85,
-                    "recommendation": "invalid_value"
-                }
-            ],
+            "filtered": [make_filter_result_item(recommendation="invalid_value")],
             "meta": {"total_input": 1, "matched": 1, "thresholds": {"recommendations": ["must_see"]}}
         }
         is_valid, errors = validate_against_contract(data, "filter-result")
@@ -56,16 +69,20 @@ class TestFilterLogic:
         # For now, just verify the contract accepts valid data
         data = {
             "filtered": [
-                {
-                    "movie": {"id": "1", "title": "Movie 1", "url": "https://example.com/1"},
-                    "relevance_score": 95,
-                    "recommendation": "must_see"
-                },
-                {
-                    "movie": {"id": "2", "title": "Movie 2", "url": "https://example.com/2"},
-                    "relevance_score": 75,
-                    "recommendation": "recommended"
-                }
+                make_filter_result_item(
+                    movie_id="1",
+                    title="Movie 1",
+                    url="https://example.com/1",
+                    score=95,
+                    recommendation="must_see"
+                ),
+                make_filter_result_item(
+                    movie_id="2",
+                    title="Movie 2",
+                    url="https://example.com/2",
+                    score=75,
+                    recommendation="recommended"
+                )
             ],
             "meta": {
                 "total_input": 5,
@@ -82,13 +99,7 @@ class TestFilterLogic:
     def test_null_year_allowed(self):
         """Null year should be allowed."""
         data = {
-            "filtered": [
-                {
-                    "movie": {"id": "1", "title": "Test", "url": "https://example.com", "year": None},
-                    "relevance_score": 85,
-                    "recommendation": "recommended"
-                }
-            ],
+            "filtered": [make_filter_result_item(year=None)],
             "meta": {"total_input": 1, "matched": 1, "thresholds": {}}
         }
         is_valid, errors = validate_against_contract(data, "filter-result")

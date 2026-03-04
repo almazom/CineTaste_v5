@@ -3,7 +3,6 @@ Test ct-format tool contract validation.
 """
 
 import json
-import pytest
 import sys
 from pathlib import Path
 
@@ -15,18 +14,32 @@ from validate import validate_against_contract
 from adapter_telegram import render_message, render_movie_line, render_detailed
 
 
+def make_filtered_item(
+    movie_id: str = "1",
+    title: str = "Test Movie",
+    url: str | None = "https://example.com",
+    score: int = 85,
+    recommendation: str = "recommended",
+    **movie_overrides
+) -> dict:
+    """Create a minimal filtered item for renderer tests."""
+    movie = {"id": movie_id, "title": title}
+    if url is not None:
+        movie["url"] = url
+    movie.update(movie_overrides)
+    return {
+        "movie": movie,
+        "relevance_score": score,
+        "recommendation": recommendation
+    }
+
+
 class TestTelegramRenderer:
     """Test Telegram markdown rendering."""
 
     def test_render_message_basic(self):
         """Should render basic message."""
-        filtered = [
-            {
-                "movie": {"id": "1", "title": "Test Movie", "url": "https://example.com"},
-                "relevance_score": 85,
-                "recommendation": "recommended"
-            }
-        ]
+        filtered = [make_filtered_item()]
         message = render_message(filtered, "Test City")
 
         assert "Test Movie" in message
@@ -34,24 +47,14 @@ class TestTelegramRenderer:
 
     def test_render_message_must_see(self):
         """Should render must_see section."""
-        filtered = [
-            {
-                "movie": {"id": "1", "title": "Must See", "url": "https://example.com"},
-                "relevance_score": 95,
-                "recommendation": "must_see"
-            }
-        ]
+        filtered = [make_filtered_item(title="Must See", score=95, recommendation="must_see")]
         message = render_message(filtered, "Test City")
 
         assert "ОБЯЗАТЕЛЬНО" in message
 
     def test_render_movie_line(self):
         """Should render movie line with markdown."""
-        item = {
-            "movie": {"id": "1", "title": "Test", "url": "https://example.com"},
-            "relevance_score": 85,
-            "recommendation": "recommended"
-        }
+        item = make_filtered_item(title="Test")
         line = render_movie_line(item, 1)
 
         assert "Test" in line
@@ -60,22 +63,14 @@ class TestTelegramRenderer:
 
     def test_render_movie_line_without_url(self):
         """Should render plain title when URL is missing."""
-        item = {
-            "movie": {"id": "1", "title": "Test"},
-            "relevance_score": 70,
-            "recommendation": "recommended"
-        }
+        item = make_filtered_item(title="Test", url=None, score=70)
         line = render_movie_line(item, 2)
         assert "Test" in line
         assert "https://" not in line
 
     def test_render_movie_line_over_20_index(self):
         """Should fallback to numeric prefix for large indexes."""
-        item = {
-            "movie": {"id": "1", "title": "Test"},
-            "relevance_score": 70,
-            "recommendation": "recommended"
-        }
+        item = make_filtered_item(title="Test", url=None, score=70)
         line = render_movie_line(item, 21)
         assert line.startswith("21.")
 
@@ -143,13 +138,7 @@ class TestFormatIntegration:
         """Full format should produce valid message-text."""
         from datetime import datetime, timezone
 
-        filtered = [
-            {
-                "movie": {"id": "1", "title": "Test Movie", "url": "https://example.com"},
-                "relevance_score": 85,
-                "recommendation": "recommended"
-            }
-        ]
+        filtered = [make_filtered_item()]
 
         text = render_message(filtered, "Test City")
 
