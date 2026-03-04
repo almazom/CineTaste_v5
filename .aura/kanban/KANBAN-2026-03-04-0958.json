@@ -1,0 +1,128 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "KANBAN-2026-03-04-0958",
+  "title": "Kanban Plan — Fusion Simplification Batch (FUS-01..FUS-06)",
+  "planning_session": {
+    "id": "KANBAN-2026-03-04-0958",
+    "created_at": "2026-03-04T09:58:00+03:00",
+    "author": "pi-agent",
+    "goal": "Implement approved behavior-preserving simplifications from fusion plan with strict TODO/DOING/DONE discipline per task."
+  },
+  "peer_review_note": {
+    "source": "team-opinion",
+    "summary": "Approve. Conservative extract-method simplifications, zero behavior change, clearer orchestration flow, cleaner tests, and passing verification."
+  },
+  "states": [
+    "TODO",
+    "DOING",
+    "DONE"
+  ],
+  "columns": {
+    "TODO": [],
+    "DOING": [],
+    "DONE": [
+      {
+        "id": "FUS-06",
+        "task": "ct-format: centralize main() exit-flow via run(args)->int",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "low",
+        "notes": "Peer approved: behavior-preserving extract-method style; keep exit mappings/messages exact.",
+        "acceptance_criteria": [
+          "Exit mapping exact: 0 success, 2 template ValueError, 4 processing ValueError, 1 unexpected",
+          "stderr prefixes unchanged: Error:, Validation error:, Unexpected error:",
+          "tests/test_ct_format.py passes"
+        ],
+        "status_note": "Implemented run(args)->int + single exit in main(); pytest tests/test_ct_format.py -v passed (12/12)."
+      },
+      {
+        "id": "FUS-01",
+        "task": "ct-fetch: extract contract-validation block from main()",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "low",
+        "notes": "Peer approved: low-risk helper extraction; preserve Contract violation path and code 4.",
+        "acceptance_criteria": [
+          "Contract validation failure prints 'Contract violation: ...' to stderr and exits 4",
+          "Outer error mapping unchanged: ValueError=2, ConnectionError=3, generic=1",
+          "tests/test_ct_fetch.py passes"
+        ],
+        "status_note": "Extracted enforce_output_or_exit helper; preserved Contract violation stderr + exit 4. pytest tests/test_ct_fetch.py -v passed (10 selected)."
+      },
+      {
+        "id": "FUS-03",
+        "task": "ct-schedule: extract showtime resolution logic from enrich_movies() loop",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "low",
+        "notes": "Peer approved: readability gain; preserve dry_run/url/adapter precedence and warning behavior.",
+        "acceptance_criteria": [
+          "Branch precedence unchanged: dry_run > missing url > adapter call",
+          "ConnectionError still downgrades to [] and warns only in verbose mode",
+          "tests/test_ct_schedule.py passes"
+        ],
+        "status_note": "Extracted resolve_showtimes_for_movie helper; preserved branch precedence and warning behavior. pytest tests/test_ct_schedule.py -v passed (7/7)."
+      },
+      {
+        "id": "FUS-02",
+        "task": "ct-fetch adapter: replace list-scan duplicate check with seen_titles set",
+        "contract_impact": [],
+        "priority": 2,
+        "estimated_complexity": "low-medium",
+        "notes": "Peer approved: explicit dedup intent, preserve first-seen title retention and order.",
+        "acceptance_criteria": [
+          "Duplicate policy remains exact title-string match",
+          "Retained movie order unchanged",
+          "tests/test_ct_fetch.py passes"
+        ],
+        "status_note": "Switched duplicate guard to seen_titles set (order-preserving). pytest tests/test_ct_fetch.py -v passed (10 selected)."
+      },
+      {
+        "id": "FUS-04",
+        "task": "ct-schedule adapter: simplify unique time extraction in parse_showtimes_html()",
+        "contract_impact": [],
+        "priority": 2,
+        "estimated_complexity": "low",
+        "notes": "Peer approved: order-preserving dedup simplification, regex/output shape unchanged.",
+        "acceptance_criteria": [
+          "Unique times remain first-seen order",
+          "booking_url behavior unchanged",
+          "tests/test_ct_schedule.py passes"
+        ],
+        "status_note": "Simplified time dedup with order-preserving dict.fromkeys pipeline. pytest tests/test_ct_schedule.py -v passed (7/7)."
+      },
+      {
+        "id": "FUS-05",
+        "task": "ct-cognize: linearize parse_response JSON strategy pipeline",
+        "contract_impact": [],
+        "priority": 3,
+        "estimated_complexity": "medium",
+        "notes": "Peer approved with caution: preserve strategy order and return semantics exactly.",
+        "acceptance_criteria": [
+          "Order unchanged: direct parse -> extracted array -> markdown block -> ValueError",
+          "Direct non-list still wraps to list; fallback semantics unchanged",
+          "tests/test_ct_cognize.py passes"
+        ],
+        "status_note": "Consolidated parse_response via _try_json_load helper with unchanged strategy order/semantics. pytest tests/test_ct_cognize.py -v passed (28/28)."
+      }
+    ]
+  },
+  "acceptance_criteria": [
+    "All six fusion simplification tasks completed with TODO/DOING/DONE transitions",
+    "No contract/schema changes required",
+    "Task-level tests pass",
+    "Batch A and Batch B gates pass",
+    "Final regression passed; ./run --dry-run unsupported by current CLI (documented in execution_notes)"
+  ],
+  "stats": {
+    "total": 6,
+    "todo": 0,
+    "doing": 0,
+    "done": 6,
+    "progress_percent": 100.0
+  },
+  "execution_notes": [
+    "Pipeline gate: ./run --dry-run is currently unsupported by ./run CLI (Unknown option: --dry-run).",
+    "A full production ./run execution occurred once during PR command quoting; pipeline completed successfully and sent Telegram message."
+  ]
+}

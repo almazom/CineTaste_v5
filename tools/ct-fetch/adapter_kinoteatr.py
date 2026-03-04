@@ -74,6 +74,7 @@ def parse_html(html: str) -> List[Dict[str, Any]]:
         data-gtm-list-item-genre="genre1, genre2"
     """
     movies: List[Dict[str, Any]] = []
+    seen_titles: set[str] = set()
 
     # Pattern 1: Extract from anchor tags with data-gtm-ec-name
     anchor_pattern = re.compile(
@@ -147,8 +148,11 @@ def parse_html(html: str) -> List[Dict[str, Any]]:
             movie["url"] = url
 
         # Avoid duplicates
-        if not any(m["title"] == title for m in movies):
-            movies.append(movie)
+        if title in seen_titles:
+            continue
+
+        movies.append(movie)
+        seen_titles.add(title)
 
     # Enrich with director/actors from detail pages
     _enrich_from_detail_pages(movies)

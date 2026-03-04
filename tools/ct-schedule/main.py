@@ -73,6 +73,29 @@ def resolve_source(source: str) -> Callable[[str, str], list[dict]]:
     return adapter
 
 
+def resolve_showtimes_for_movie(
+    movie_id: str,
+    url: str,
+    date_value: str,
+    source_adapter: Callable[[str, str], list[dict]],
+    dry_run: bool,
+    verbose: bool,
+) -> list[dict]:
+    """Resolve showtimes for one movie using configured source policy."""
+    if dry_run:
+        return dry_run_showtimes(movie_id, date_value)
+
+    if not url:
+        return []
+
+    try:
+        return source_adapter(url, date_value)
+    except ConnectionError as exc:
+        if verbose:
+            print(f"Warning: {exc}", file=sys.stderr)
+        return []
+
+
 def enrich_movies(
     movies: list[dict],
     date_value: str,
@@ -89,17 +112,14 @@ def enrich_movies(
         movie_id = str(movie.get("id", ""))
         url = str(movie.get("url", "")).strip()
 
-        if dry_run:
-            showtimes = dry_run_showtimes(movie_id, date_value)
-        elif not url:
-            showtimes = []
-        else:
-            try:
-                showtimes = source_adapter(url, date_value)
-            except ConnectionError as exc:
-                if verbose:
-                    print(f"Warning: {exc}", file=sys.stderr)
-                showtimes = []
+        showtimes = resolve_showtimes_for_movie(
+            movie_id=movie_id,
+            url=url,
+            date_value=date_value,
+            source_adapter=source_adapter,
+            dry_run=dry_run,
+            verbose=verbose,
+        )
 
         movie_data["showtimes"] = showtimes
         if showtimes:

@@ -117,15 +117,13 @@ def write_output(output: dict, output_path: str, verbose: bool) -> None:
         print(f"Wrote message JSON to {output_path}", file=sys.stderr)
 
 
-def main():
-    """Main entry point."""
-    args = parse_args()
-
+def run(args: argparse.Namespace) -> int:
+    """Execute formatting pipeline and return process exit code."""
     try:
         template, renderer = resolve_template(args.template)
     except ValueError as e:
         print(f"Error: {e}", file=sys.stderr)
-        sys.exit(2)
+        return 2
 
     try:
         data = load_input(args.input, args.verbose)
@@ -152,15 +150,21 @@ def main():
         if args.verbose:
             print(f"Formatted {len(filtered)} movies", file=sys.stderr)
 
-        sys.exit(0)
+        return 0
 
     except ValueError as e:
         print(f"Validation error: {e}", file=sys.stderr)
-        sys.exit(4)
+        return 4
 
     except Exception as e:
         print(f"Unexpected error: {e}", file=sys.stderr)
-        sys.exit(1)
+        return 1
+
+
+def main() -> None:
+    """Main entry point."""
+    args = parse_args()
+    sys.exit(run(args))
 
 
 if __name__ == "__main__":
