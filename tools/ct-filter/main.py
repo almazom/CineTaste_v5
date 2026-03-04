@@ -64,6 +64,54 @@ Examples:
     return parser.parse_args()
 
 
+def parse_recommendations(recommendation_arg: str) -> list:
+    """Parse comma-separated recommendations from CLI flag."""
+    return [item.strip() for item in recommendation_arg.split(",")]
+
+
+def load_input(input_path: str, verbose: bool) -> dict:
+    """Load input JSON payload from file."""
+    if verbose:
+        print(f"Loading analysis from {input_path}...", file=sys.stderr)
+
+    with open(input_path) as input_file:
+        return json.load(input_file)
+
+
+def build_filtered_item(item: dict, recommendation: str, score: int) -> dict:
+    """Build a filter-result item from analysis item."""
+    movie = item.get("movie", {})
+    return {
+        "movie": {
+            "id": movie.get("id", ""),
+            "title": movie.get("title", ""),
+            "original_title": movie.get("original_title", ""),
+            "director": movie.get("director", ""),
+            "actors": movie.get("actors", []),
+            "genres": movie.get("genres", []),
+            "year": movie.get("year"),
+            "source": movie.get("source", ""),
+            "url": movie.get("url", "")
+        },
+        "relevance_score": score,
+        "recommendation": recommendation,
+        "reasoning": item.get("reasoning", "")
+    }
+
+
+def write_output(output: dict, output_path: str, verbose: bool) -> None:
+    """Write output JSON either to stdout or a file."""
+    json_output = json.dumps(output, ensure_ascii=False, indent=2)
+
+    if output_path == "-":
+        print(json_output)
+        return
+
+    Path(output_path).write_text(json_output, encoding="utf-8")
+    if verbose:
+        print(f"Wrote filtered results to {output_path}", file=sys.stderr)
+
+
 def filter_movies(
     analyzed: list,
     allowed_recommendations: list,
@@ -96,25 +144,7 @@ def filter_movies(
         if score < min_score:
             continue
 
-        # Build filtered item (strip extra fields)
-        movie = item.get("movie", {})
-
-        filtered.append({
-            "movie": {
-                "id": movie.get("id", ""),
-                "title": movie.get("title", ""),
-                "original_title": movie.get("original_title", ""),
-                "director": movie.get("director", ""),
-                "actors": movie.get("actors", []),
-                "genres": movie.get("genres", []),
-                "year": movie.get("year"),
-                "source": movie.get("source", ""),
-                "url": movie.get("url", "")
-            },
-            "relevance_score": score,
-            "recommendation": rec,
-            "reasoning": item.get("reasoning", "")
-        })
+        filtered.append(build_filtered_item(item, rec, score))
 
     # Sort by score descending
     filtered.sort(key=lambda x: x["relevance_score"], reverse=True)
@@ -148,12 +178,7 @@ def main():
     args = parse_args()
 
     try:
-        # Load input
-        if args.verbose:
-            print(f"Loading analysis from {args.input}...", file=sys.stderr)
-
-        with open(args.input) as f:
-            data = json.load(f)
+        data = load_input(args.input, args.verbose)
 
         # Validate input
         enforce_input(data)
@@ -163,7 +188,7 @@ def main():
             print(f"Loaded {len(analyzed)} analyzed movies", file=sys.stderr)
 
         # Parse allowed recommendations
-        allowed_recs = [r.strip() for r in args.recommendation.split(",")]
+        allowed_recs = parse_recommendations(args.recommendation)
 
         # Filter
         filtered = filter_movies(analyzed, allowed_recs, args.min_score)
@@ -180,14 +205,7 @@ def main():
         enforce_output(output)
 
         # Output
-        json_output = json.dumps(output, ensure_ascii=False, indent=2)
-
-        if args.output == "-":
-            print(json_output)
-        else:
-            Path(args.output).write_text(json_output, encoding="utf-8")
-            if args.verbose:
-                print(f"Wrote filtered results to {args.output}", file=sys.stderr)
+        write_output(output, args.output, args.verbose)
 
         if args.verbose:
             print(f"Filtered: {len(analyzed)} → {len(filtered)} movies", file=sys.stderr)
