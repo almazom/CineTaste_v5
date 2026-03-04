@@ -198,30 +198,34 @@ def call_agent(agent: dict, workdir: str) -> str:
 
 # ── Response Parsing ───────────────────────────────────────────────────
 
+def _try_json_load(payload: str) -> tuple[bool, object]:
+    """Try to decode JSON payload."""
+    try:
+        return True, json.loads(payload)
+    except json.JSONDecodeError:
+        return False, None
+
+
 def parse_response(response: str) -> list:
     """Extract JSON array from AI response."""
     # Direct parse
-    try:
-        data = json.loads(response)
+    ok, data = _try_json_load(response)
+    if ok:
         return data if isinstance(data, list) else [data]
-    except json.JSONDecodeError:
-        pass
 
     # Extract JSON array
     match = re.search(r'\[\s*\{.*\}\s*\]', response, re.DOTALL)
     if match:
-        try:
-            return json.loads(match.group())
-        except json.JSONDecodeError:
-            pass
+        ok, data = _try_json_load(match.group())
+        if ok:
+            return data
 
     # Markdown code block
     code = re.search(r'```(?:json)?\s*([\s\S]*?)\s*```', response)
     if code:
-        try:
-            return json.loads(code.group(1))
-        except json.JSONDecodeError:
-            pass
+        ok, data = _try_json_load(code.group(1))
+        if ok:
+            return data
 
     raise ValueError(f"Could not parse JSON from AI response (len={len(response)})")
 
