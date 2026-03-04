@@ -88,36 +88,56 @@ def get_template_renderer(template: str) -> Callable[[list, str], str]:
     return renderer
 
 
+def resolve_template(template_arg: str) -> tuple[str, Callable[[list, str], str]]:
+    """Normalize template name and resolve renderer."""
+    normalized_template = template_arg.strip().lower()
+    renderer = get_template_renderer(normalized_template)
+    return normalized_template, renderer
+
+
+def load_input(input_path: str, verbose: bool) -> dict:
+    """Load input JSON payload from file."""
+    if verbose:
+        print(f"Loading filtered movies from {input_path}...", file=sys.stderr)
+
+    with open(input_path) as input_file:
+        return json.load(input_file)
+
+
+def write_output(output: dict, output_path: str, verbose: bool) -> None:
+    """Write output JSON either to stdout or a file."""
+    json_output = json.dumps(output, ensure_ascii=False, indent=2)
+
+    if output_path == "-":
+        print(json_output)
+        return
+
+    Path(output_path).write_text(json_output, encoding="utf-8")
+    if verbose:
+        print(f"Wrote message JSON to {output_path}", file=sys.stderr)
+
+
 def main():
     """Main entry point."""
     args = parse_args()
 
     try:
-        template = args.template.strip().lower()
-        renderer = get_template_renderer(template)
+        template, renderer = resolve_template(args.template)
     except ValueError as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(2)
 
     try:
-        # Load input
-        if args.verbose:
-            print(f"Loading filtered movies from {args.input}...", file=sys.stderr)
+        data = load_input(args.input, args.verbose)
 
-        with open(args.input) as f:
-            data = json.load(f)
-
-        # Validate input
         enforce_input(data)
 
         filtered = data.get("filtered", [])
         if args.verbose:
             print(f"Loaded {len(filtered)} filtered movies", file=sys.stderr)
 
-        # Render message
         text = renderer(filtered, args.city)
 
-        # Build output
         output = build_output(
             text=text,
             template=template,
@@ -125,18 +145,9 @@ def main():
             movie_count=len(filtered)
         )
 
-        # Validate output
         enforce_output(output)
 
-        # Output
-        json_output = json.dumps(output, ensure_ascii=False, indent=2)
-
-        if args.output == "-":
-            print(json_output)
-        else:
-            Path(args.output).write_text(json_output, encoding="utf-8")
-            if args.verbose:
-                print(f"Wrote message JSON to {args.output}", file=sys.stderr)
+        write_output(output, args.output, args.verbose)
 
         if args.verbose:
             print(f"Formatted {len(filtered)} movies", file=sys.stderr)
