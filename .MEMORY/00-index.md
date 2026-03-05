@@ -22,6 +22,7 @@
 | [04-taste.md](04-taste.md) | Taste profile structure | Modifying preferences |
 | [05-troubleshooting.md](05-troubleshooting.md) | Common issues | Something broke |
 | [06-ai-agents.md](06-ai-agents.md) | pi/kimi CLI usage | Working with ct-analyze |
+| [07-docs-template-preference.md](07-docs-template-preference.md) | Preferred premium HTML docs style | Publishing docs / HTML rendering |
 
 ## 🚀 Quick Start
 

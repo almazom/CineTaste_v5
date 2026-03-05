@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Золотой стандарт CineTaste</title>
+  <style>
+    :root {
+      --bg: #f4f1eb;
+      --paper: #fffdf8;
+      --ink: #1f1d1a;
+      --muted: #665f56;
+      --accent: #0f5e4f;
+      --rule: #e7ddcf;
+      --code-bg: #f3eee4;
+      --shadow: 0 18px 48px rgba(57, 46, 34, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 500px at 85% -8%, #ece6da 0%, transparent 70%),
+        radial-gradient(1000px 480px at 10% 110%, #ebe3d5 0%, transparent 70%),
+        var(--bg);
+      font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, "Times New Roman", serif;
+      line-height: 1.62;
+      letter-spacing: 0.01em;
+      padding: 4.2rem 1.2rem;
+    }
+
+    .sheet {
+      max-width: 980px;
+      margin: 0 auto;
+      background: var(--paper);
+      border: 1px solid var(--rule);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: clamp(1.25rem, 2.4vw, 3rem);
+    }
+
+    .kicker {
+      font-family: "Avenir Next", "Segoe UI", Arial, sans-serif;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--muted);
+      margin: 0 0 0.8rem;
+    }
+
+    h1 {
+      font-size: clamp(2.1rem, 4.3vw, 3.3rem);
+      line-height: 1.1;
+      margin: 0;
+      letter-spacing: -0.015em;
+    }
+
+    .subtitle {
+      margin-top: 0.95rem;
+      color: var(--muted);
+      font-family: "Avenir Next", "Segoe UI", Arial, sans-serif;
+      font-size: 0.96rem;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.72rem;
+      margin-top: 1rem;
+    }
+
+    .meta-item {
+      border: 1px solid var(--rule);
+      border-radius: 10px;
+      padding: 0.75rem 0.85rem;
+      background: #fff;
+    }
+
+    .meta-item strong {
+      display: block;
+      font-family: "Avenir Next", "Segoe UI", Arial, sans-serif;
+      font-size: 0.79rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.3rem;
+    }
+
+    nav.toc {
+      margin-top: 1.35rem;
+      padding: 0.95rem 1rem;
+      border: 1px solid var(--rule);
+      border-radius: 10px;
+      background: #fbf8f1;
+    }
+
+    nav.toc h2 {
+      margin: 0 0 0.45rem;
+      font-family: "Avenir Next", "Segoe UI", Arial, sans-serif;
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    nav.toc ol {
+      margin: 0;
+      padding-left: 1.1rem;
+    }
+
+    nav.toc a {
+      color: #245f56;
+      text-decoration: none;
+      border-bottom: 1px dotted rgba(36, 95, 86, 0.35);
+    }
+
+    nav.toc a:hover { border-bottom-style: solid; }
+
+    section {
+      margin-top: 2.2rem;
+      padding-top: 1.15rem;
+      border-top: 1px solid var(--rule);
+    }
+
+    h2 {
+      font-family: "Avenir Next", "Segoe UI", Arial, sans-serif;
+      font-size: 1.14rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin: 0 0 0.82rem;
+      color: var(--accent);
+    }
+
+    h3 {
+      font-size: 1.18rem;
+      margin: 1rem 0 0.5rem;
+      line-height: 1.35;
+    }
+
+    p, li { font-size: 1.02rem; }
+    ul, ol { margin: 0.45rem 0 0.92rem 1.2rem; }
+
+    .callout {
+      margin: 1rem 0;
+      padding: 0.88rem 0.98rem;
+      border-left: 4px solid var(--accent);
+      background: #f6f2e8;
+      border-radius: 8px;
+    }
+
+    code {
+      background: var(--code-bg);
+      border: 1px solid #e3d7c4;
+      border-radius: 4px;
+      padding: 0.08rem 0.34rem;
+      font-family: "IBM Plex Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+      font-size: 0.9em;
+    }
+
+    footer {
+      margin-top: 2.4rem;
+      font-family: "Avenir Next", "Segoe UI", Arial, sans-serif;
+      font-size: 0.86rem;
+      color: var(--muted);
+    }
+
+    @media (max-width: 760px) {
+      body { padding: 1.2rem 0.7rem; }
+      .sheet { border-radius: 12px; }
+      .meta-grid { grid-template-columns: 1fr; }
+      p, li { font-size: 1rem; }
+    }
+  </style>
+</head>
+<body>
+  <article class="sheet">
+    <p class="kicker">CineTaste Architecture Doctrine</p>
+    <h1>Золотой стандарт CineTaste</h1>
+    <p class="subtitle">Версия 1.1 · Активный R&amp;D baseline · Markdown-центричная инженерная модель</p>
+
+    <div class="meta-grid">
+      <div class="meta-item"><strong>Нормативный артефакт</strong><code>docs/golden-standard.md</code></div>
+      <div class="meta-item"><strong>Публикуемый артефакт</strong><code>docs/golden-standard.html</code></div>
+      <div class="meta-item"><strong>Последняя сверка</strong>PROTOCOL v5.4.0 + FLOW v1.3.0 (2026-03-04)</div>
+      <div class="meta-item"><strong>Область</strong>Внутренний архитектурный стандарт CineTaste</div>
+    </div>
+
+    <nav class="toc" aria-label="Оглавление">
+      <h2>Содержание</h2>
+      <ol>
+        <li><a href="#mission">Миссия</a></li>
+        <li><a href="#principles">Принципы золотого стандарта</a></li>
+        <li><a href="#boundary-model">Модель границ (Boundary Model)</a></li>
+        <li><a href="#change-model">Операционная модель изменений</a></li>
+        <li><a href="#llm-expectations">Ожидания к LLM</a></li>
+        <li><a href="#definition-of-done">Критерии готовности (Definition of Done)</a></li>
+        <li><a href="#anti-patterns">Анти-паттерны</a></li>
+        <li><a href="#severity-taxonomy">Шкала критичности (Severity Taxonomy, P0-P4)</a></li>
+        <li><a href="#summary">Итог</a></li>
+      </ol>
+    </nav>
+
+    <section id="mission">
+      <h2>1. Миссия</h2>
+      <p>CineTaste — внутренняя архитектурная лаборатория. Цель не в масштабировании потребительского продукта, а в валидации воспроизводимого золотого стандарта AI-assisted разработки.</p>
+      <ul>
+        <li>Executable markdown-оркестрация</li>
+        <li>Изолированные CLI-обёртки</li>
+        <li>Строгие контракты/протоколы/конвенции</li>
+        <li>Детерминированная дисциплина планирования и верификации</li>
+      </ul>
+      <p>Пользовательская польза важна, но вторична по отношению к архитектурной целостности и воспроизводимости.</p>
+    </section>
+
+    <section id="principles">
+      <h2>2. Принципы золотого стандарта</h2>
+
+      <h3>Принцип A: Executable Markdown — центр управления</h3>
+      <p><code>FLOW.md</code> исполняемый и версионируемый; runtime следует flow-спецификации, а <code>flows/latest</code> выбирает активную версию.</p>
+
+      <h3>Принцип B: Всё, что можно изолировать, должно быть CLI</h3>
+      <p>Каждая отделяемая ответственность оформляется как отдельный CLI в <code>tools/</code> с аргументами, <code>--help</code>, manifest API, проверкой входного контракта и детерминированной exit-таксономией (<code>0/1/2/3/4</code>).</p>
+
+      <h3>Принцип C: Contract-first / Protocol-first</h3>
+      <ol>
+        <li>Конвенции и протокол</li>
+        <li>Схемы контрактов</li>
+        <li>Манифесты API инструментов</li>
+        <li>Flow-спецификация</li>
+        <li>Имплементация</li>
+        <li>Верификация</li>
+      </ol>
+
+      <h3>Принцип D: Kanban JSON — planning SSOT</h3>
+      <p>Любая имплементация стартует с timestamped Kanban JSON и явных статусов <code>TODO/DOING/DONE</code>.</p>
+
+      <h3>Принцип E: Aura как runtime-дисциплина</h3>
+      <p><code>AURA.md</code> управляет дисциплиной исполнения (порядок работ, требования к тестам, ограничения поведения агентов, дисциплина изменений).</p>
+
+      <h3>Принцип F: Заменяемость через стабильный интерфейс</h3>
+      <p>Внутренняя реализация (включая язык) может меняться, если контракт, CLI API и flow-вызов остаются стабильными.</p>
+
+      <h3>Принцип G: Паритет публикации и целостность доктрины</h3>
+      <p>Markdown — нормативный источник. HTML — рендеринг. HTML не должен вводить правила, которых нет в Markdown; правки делаются сначала в Markdown, затем зеркалятся в HTML.</p>
+    </section>
+
+    <section id="boundary-model">
+      <h2>3. Модель границ (Boundary Model)</h2>
+      <ul>
+        <li><strong><code>PROFILE.md</code>:</strong> intent проекта, ценности, ограничения.</li>
+        <li><strong><code>AURA.md</code>:</strong> протокол исполнения и дисциплина работы.</li>
+        <li><strong><code>PROTOCOL.json</code>:</strong> topology SSOT (контракты, инструменты, версии, flow map).</li>
+        <li><strong><code>FLOW.md</code>:</strong> исполняемая runtime-последовательность.</li>
+        <li><strong><code>MANIFEST.json</code> + schemas:</strong> стабильные интерфейсные границы инструментов и данных.</li>
+      </ul>
+      <div class="callout">
+        Каноническое правило конфликтов: PROFILE задаёт intent и приоритеты; AURA — дисциплину исполнения; PROTOCOL — topology-факты; FLOW — runtime-порядок и семантику команд.
+      </div>
+    </section>
+
+    <section id="change-model">
+      <h2>4. Операционная модель изменений</h2>
+      <p>Каждое изменение должно явно фиксировать протокол, контракт, CLI-интерфейс, версию flow и способ верификации.</p>
+      <p>Обязательный governance-gate: consistency-checks должны проходить до merge и до runtime-запуска.</p>
+      <ol>
+        <li>Синхронизация порядка стадий (<code>PROTOCOL</code> vs <code>FLOW</code>)</li>
+        <li>Синхронизация active vs legacy статусов инструментов</li>
+        <li>Синхронизация producer/consumer маппинга контрактов</li>
+        <li>Синхронизация version metadata</li>
+      </ol>
+    </section>
+
+    <section id="llm-expectations">
+      <h2>5. Ожидания к LLM</h2>
+      <ol>
+        <li>Сохранять целостность протоколов и контрактов</li>
+        <li>Сохранять CLI-изоляцию и компонуемость</li>
+        <li>Сохранять трассируемость версий flow</li>
+        <li>Оптимизировать удобство имплементации только после структурной целостности</li>
+      </ol>
+      <p>Использовать bounded review loops: 3–5 проходов для нестабильных задач, фокусные оптики, severity-triage и явные stop-критерии.</p>
+    </section>
+
+    <section id="definition-of-done">
+      <h2>6. Критерии готовности (Definition of Done)</h2>
+      <ul>
+        <li>План Kanban существует и отслеживается по статусам.</li>
+        <li>Затронутые границы явно обновлены.</li>
+        <li>Инструменты остаются независимо исполняемыми.</li>
+        <li>Есть верификационные evidence-артефакты.</li>
+        <li>Проходит active-flow non-send E2E.</li>
+        <li>Выполнен coverage threshold (<code>&gt;= 80% total</code>).</li>
+        <li>Evidence включает сводку тестов, сводку покрытия и путь к run-артефактам.</li>
+      </ul>
+    </section>
+
+    <section id="anti-patterns">
+      <h2>7. Анти-паттерны</h2>
+      <ul>
+        <li>Implementation-first без обновления протоколов/контрактов.</li>
+        <li>Скрытое поведение вне flow и манифестов.</li>
+        <li>Неявная связность между инструментами.</li>
+        <li>Недокументированное CLI-поведение.</li>
+        <li>Неверсионируемые изменения оркестрации.</li>
+        <li>Устаревшие legacy-инструкции, противоречащие активной runtime-цепочке.</li>
+        <li>Противоречивые mode-semantics в управляющих документах.</li>
+      </ul>
+    </section>
+
+    <section id="severity-taxonomy">
+      <h2>8. Шкала критичности (Severity Taxonomy, P0-P4)</h2>
+      <ul>
+        <li><strong>P0:</strong> критический сбой корректности/безопасности; блокирует релиз.</li>
+        <li><strong>P1:</strong> высоко-значимый сбой в core-flow; исправляется до релиза.</li>
+        <li><strong>P2:</strong> существенный gap качества/надёжности; текущий или следующий цикл.</li>
+        <li><strong>P3:</strong> умеренное улучшение; backlog при отсутствии немедленного риска.</li>
+        <li><strong>P4:</strong> опциональная полировка.</li>
+      </ul>
+      <p>Базовое release-правило: релиз блокируется при открытых <code>P0</code>/<code>P1</code>.</p>
+    </section>
+
+    <section id="summary">
+      <h2>9. Итог</h2>
+      <p>Золотой стандарт CineTaste — markdown-центричная, contract-driven, CLI-компонуемая архитектурная дисциплина. Это не только pipeline рекомендаций, но и контролируемая среда для воспроизводимой AI-assisted инженерной практики.</p>
+    </section>
+
+    <footer>
+      Примечание: этот HTML должен оставаться семантически эквивалентным <code>docs/golden-standard.md</code>.
+    </footer>
+  </article>
+</body>
+</html>
