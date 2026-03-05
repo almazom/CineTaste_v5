@@ -13,6 +13,7 @@ likes:
     - "Anderson"
     - "Nolan"
     - "Fellini"
+    - "Франсуа Озон"
   actors:
     - "Timothée Chalamet"
   studios:
@@ -66,6 +67,8 @@ canon:
     weight: 1.0
   - director: "Nolan"
     weight: 0.7
+  - director: "Франсуа Озон"
+    weight: 0.85
 
 # Recommendation thresholds
 thresholds:
