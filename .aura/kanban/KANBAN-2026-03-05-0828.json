@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "KANBAN-2026-03-05-0828",
+  "title": "Kanban Plan — add Francois Ozon to taste profile",
+  "description": "Update taste/profile.yaml to include Франсуа Озон as a favorite director.",
+  "planning_session": {
+    "id": "KANBAN-2026-03-05-0828",
+    "created_at": "2026-03-05T08:28:00+03:00",
+    "author": "codex",
+    "goal": "Reflect updated favorite directors in production taste profile"
+  },
+  "states": ["TODO", "DOING", "DONE"],
+  "columns": {
+    "TODO": [],
+    "DOING": [],
+    "DONE": [
+      {
+        "id": "TASTE-1",
+        "task": "Add Франсуа Озон into likes.directors and canon with weight",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "low",
+        "notes": "Keep YAML structure intact"
+      }
+    ]
+  },
+  "acceptance_criteria": [
+    "taste/profile.yaml includes Франсуа Озон in likes.directors",
+    "taste/profile.yaml includes Франсуа Озон in canon",
+    "YAML parses successfully"
+  ],
+  "stats": {
+    "total": 1,
+    "todo": 0,
+    "doing": 0,
+    "done": 1,
+    "progress_percent": 100
+  }
+}
