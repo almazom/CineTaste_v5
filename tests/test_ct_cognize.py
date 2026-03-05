@@ -4,8 +4,10 @@ Test ct-cognize tool: port validation, response parsing, merge, and CLI.
 
 import json
 import subprocess
+import time
 import pytest
 import sys
+from types import SimpleNamespace
 from pathlib import Path
 
 # Add tools to path
@@ -13,7 +15,18 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "tools" / "_shared"))
 sys.path.insert(0, str(Path(__file__).parent.parent / "tools" / "ct-cognize"))
 
 from port import enforce_input, enforce_output, validate_input, validate_output
-from main import parse_response, merge, AGENTS, INSTRUCTION
+from main import (
+    parse_response,
+    merge,
+    AGENTS,
+    AGENT_NAMES,
+    INSTRUCTION,
+    main as cli_main,
+    _run_preflight,
+    parse_agent_list,
+    parallel_preflight,
+    select_agent_chain,
+)
 
 
 ROOT = Path(__file__).parent.parent
@@ -248,6 +261,93 @@ class TestAgentRegistry:
         assert len(INSTRUCTION) > 100
 
 
+class TestAgentSelectionAndFallback:
+    """Test parallel preflight ordering and auto fallback behavior."""
+
+    def test_parallel_preflight_returns_completion_order(self, monkeypatch):
+        agents = [
+            {"name": "slow", "cmd": "slow"},
+            {"name": "fast", "cmd": "fast"},
+        ]
+
+        def fake_run(agent):
+            delay = 0.03 if agent["name"] == "slow" else 0.01
+            time.sleep(delay)
+            return {
+                "agent": agent,
+                "ok": True,
+                "reply": "ok",
+                "elapsed": delay,
+                "error": "",
+            }
+
+        monkeypatch.setattr("main._run_preflight", fake_run)
+        results = parallel_preflight(agents)
+        ordered = [r["agent"]["name"] for r in results]
+
+        assert ordered == ["fast", "slow"]
+
+    def test_select_agent_chain_auto_uses_preflight_order(self, monkeypatch):
+        fast = {"name": "fast"}
+        slow = {"name": "slow"}
+
+        monkeypatch.setattr(
+            "main.parallel_preflight",
+            lambda _: [
+                {"agent": fast, "ok": True, "reply": "ok", "elapsed": 0.01, "error": ""},
+                {"agent": slow, "ok": True, "reply": "ok", "elapsed": 0.02, "error": ""},
+            ],
+        )
+
+        chain = select_agent_chain("auto")
+        assert [a["name"] for a in chain] == ["fast", "slow"]
+
+    def test_parse_agent_list_preserves_order_and_uniques(self):
+        parsed = parse_agent_list("pi, qwen,pi,gemini")
+        assert parsed == ["pi", "qwen", "gemini"]
+
+    def test_parse_agent_list_unknown_raises(self):
+        with pytest.raises(RuntimeError, match="Unknown agent"):
+            parse_agent_list("pi,unknown")
+
+    def test_preflight_accepts_ok_token_not_last(self, monkeypatch):
+        agent = {
+            "name": "pi",
+            "cmd": "pi",
+            "preflight_args": ["-p"],
+            "preflight_timeout": 5,
+        }
+        monkeypatch.setattr("main.shutil.which", lambda _: "/usr/bin/pi")
+        monkeypatch.setattr(
+            "main.subprocess.run",
+            lambda *a, **k: SimpleNamespace(
+                returncode=0,
+                stdout='Я ответил "ok" и продублировал это в Telegram. rewritten: true',
+                stderr="",
+            ),
+        )
+
+        result = _run_preflight(agent)
+        assert result["ok"] is True
+        assert result["reply"] == "ok"
+
+    def test_preflight_still_checks_exit_code(self, monkeypatch):
+        agent = {
+            "name": "pi",
+            "cmd": "pi",
+            "preflight_args": ["-p"],
+            "preflight_timeout": 5,
+        }
+        monkeypatch.setattr("main.shutil.which", lambda _: "/usr/bin/pi")
+        monkeypatch.setattr(
+            "main.subprocess.run",
+            lambda *a, **k: SimpleNamespace(returncode=1, stdout="ok", stderr=""),
+        )
+
+        result = _run_preflight(agent)
+        assert result["ok"] is False
+
+
 # ── CLI ────────────────────────────────────────────────────────────────
 
 
@@ -261,6 +361,29 @@ class TestCLI:
         )
         assert result.returncode == 0
         assert "ct-cognize" in result.stdout
+        assert "--input" in result.stdout
+        assert "--taste" in result.stdout
+        assert "--agents" in result.stdout
+        assert "--list-agents" in result.stdout
+
+    def test_list_agents(self):
+        result = subprocess.run(
+            [str(ROOT / "ct-cognize"), "--list-agents"],
+            capture_output=True, text=True, timeout=10,
+        )
+        assert result.returncode == 0
+        listed = {line.strip() for line in result.stdout.splitlines() if line.strip()}
+        assert set(AGENT_NAMES).issubset(listed)
+
+    def test_alias_help(self):
+        result = subprocess.run(
+            [str(ROOT / "ct-cognetive"), "--help"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        assert result.returncode == 0
+        assert "ct-cognetive" in result.stdout
         assert "--input" in result.stdout
         assert "--taste" in result.stdout
 
@@ -286,7 +409,7 @@ class TestCognizeIntegration:
     """Integration test with mocked subprocess (no real AI agent)."""
 
     def test_cognize_with_mock_agent(self, monkeypatch, tmp_path):
-        from main import cognize, select_agent
+        from main import cognize
 
         # Write input files
         movies_file = tmp_path / "movies.json"
@@ -304,7 +427,7 @@ class TestCognizeIntegration:
             "file_mode": "cwd",
             "supports_web_search": False,
         }
-        monkeypatch.setattr("main.select_agent", lambda name: mock_agent)
+        monkeypatch.setattr("main.select_agent_chain", lambda *args, **kwargs: [mock_agent])
 
         # Mock call_agent to return JSON
         mock_response = json.dumps([
@@ -326,6 +449,92 @@ class TestCognizeIntegration:
         is_valid, errors = validate_output(result)
         assert is_valid, f"Output validation failed: {errors}"
 
+    def test_cognize_auto_runtime_fallback(self, monkeypatch, tmp_path):
+        from main import cognize
+
+        movies_file = tmp_path / "movies.json"
+        movies_file.write_text(json.dumps({"movies": sample_movies()}), encoding="utf-8")
+
+        taste_file = tmp_path / "taste.yaml"
+        taste_file.write_text("likes: {}\ndislikes: {}\n", encoding="utf-8")
+
+        primary = {
+            "name": "primary",
+            "cmd": "primary",
+            "run_args": [],
+            "timeout": 10,
+            "file_mode": "cwd",
+            "supports_web_search": False,
+        }
+        fallback = {
+            "name": "fallback",
+            "cmd": "fallback",
+            "run_args": [],
+            "timeout": 10,
+            "file_mode": "cwd",
+            "supports_web_search": False,
+        }
+
+        monkeypatch.setattr("main.select_agent_chain", lambda *args, **kwargs: [primary, fallback])
+
+        def fake_call(agent, workdir):
+            if agent["name"] == "primary":
+                raise RuntimeError("primary timeout")
+            return json.dumps([
+                {
+                    "movie_id": "kt-test-movie",
+                    "relevance_score": 88,
+                    "recommendation": "recommended",
+                    "reasoning": "fallback used",
+                    "key_matches": ["drama"],
+                    "red_flags": [],
+                }
+            ])
+
+        monkeypatch.setattr("main.call_agent", fake_call)
+
+        result = cognize(str(movies_file), str(taste_file), agent_name="auto")
+        assert result["meta"]["agent"] == "fallback"
+        assert len(result["analyzed"]) == 1
+
+    def test_cognize_accepts_raw_movie_array(self, monkeypatch, tmp_path):
+        from main import cognize
+
+        movies_file = tmp_path / "movies.json"
+        movies_file.write_text(json.dumps(sample_movies()), encoding="utf-8")
+
+        taste_file = tmp_path / "taste.yaml"
+        taste_file.write_text("likes: {}\ndislikes: {}\n", encoding="utf-8")
+
+        agent = {
+            "name": "mock",
+            "cmd": "mock",
+            "run_args": [],
+            "timeout": 10,
+            "file_mode": "cwd",
+            "supports_web_search": False,
+        }
+        monkeypatch.setattr("main.select_agent_chain", lambda *args, **kwargs: [agent])
+        monkeypatch.setattr(
+            "main.call_agent",
+            lambda *args, **kwargs: json.dumps(
+                [
+                    {
+                        "movie_id": "kt-test-movie",
+                        "relevance_score": 80,
+                        "recommendation": "recommended",
+                        "reasoning": "raw array accepted",
+                        "key_matches": ["drama"],
+                        "red_flags": [],
+                    }
+                ]
+            ),
+        )
+
+        result = cognize(str(movies_file), str(taste_file), agent_name="auto")
+        assert len(result["analyzed"]) == 1
+        assert result["analyzed"][0]["movie"]["id"] == "kt-test-movie"
+
     def test_cognize_agent_failure_raises(self, monkeypatch, tmp_path):
         from main import cognize
 
@@ -335,10 +544,70 @@ class TestCognizeIntegration:
         taste_file = tmp_path / "taste.yaml"
         taste_file.write_text("likes: {}\ndislikes: {}\n", encoding="utf-8")
 
-        def no_agent(name):
+        def no_agent(*args, **kwargs):
             raise RuntimeError("No AI agent available")
 
-        monkeypatch.setattr("main.select_agent", no_agent)
+        monkeypatch.setattr("main.select_agent_chain", no_agent)
 
         with pytest.raises(RuntimeError, match="No AI agent available"):
             cognize(str(movies_file), str(taste_file))
+
+    def test_cli_positional_args(self, monkeypatch, tmp_path):
+        movies_file = tmp_path / "movies.json"
+        movies_file.write_text(json.dumps(sample_schedule_input()), encoding="utf-8")
+
+        taste_file = tmp_path / "taste.yaml"
+        taste_file.write_text("likes: {}\ndislikes: {}\n", encoding="utf-8")
+
+        output_file = tmp_path / "out.json"
+
+        monkeypatch.setattr(
+            "main.cognize",
+            lambda *args, **kwargs: sample_analysis_result(agent_name="mock"),
+        )
+        monkeypatch.setattr("main.enforce_output", lambda payload: payload)
+        monkeypatch.setattr(
+            "main.sys.argv",
+            [
+                "ct-cognize",
+                str(movies_file),
+                str(taste_file),
+                "--output",
+                str(output_file),
+            ],
+        )
+
+        cli_main()
+
+        payload = json.loads(output_file.read_text(encoding="utf-8"))
+        assert payload["meta"]["agent"] == "mock"
+
+    def test_cli_accepts_at_prefixed_paths(self, monkeypatch, tmp_path):
+        movies_file = tmp_path / "movies.json"
+        movies_file.write_text(json.dumps(sample_schedule_input()), encoding="utf-8")
+
+        taste_file = tmp_path / "taste.yaml"
+        taste_file.write_text("likes: {}\ndislikes: {}\n", encoding="utf-8")
+
+        output_file = tmp_path / "out.json"
+
+        monkeypatch.setattr(
+            "main.cognize",
+            lambda *args, **kwargs: sample_analysis_result(agent_name="mock"),
+        )
+        monkeypatch.setattr("main.enforce_output", lambda payload: payload)
+        monkeypatch.setattr(
+            "main.sys.argv",
+            [
+                "ct-cognize",
+                f"@{movies_file}",
+                f"@{taste_file}",
+                "--output",
+                str(output_file),
+            ],
+        )
+
+        cli_main()
+
+        payload = json.loads(output_file.read_text(encoding="utf-8"))
+        assert payload["meta"]["agent"] == "mock"

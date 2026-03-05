@@ -1,0 +1,347 @@
+[
+  {
+    "id": "kt-сказка-о-царе-салтане",
+    "title": "Сказка о царе Салтане",
+    "original_title": "",
+    "director": "Сарик Андреасян",
+    "actors": [
+      "Павел Прилучный",
+      "Алексей Онежен",
+      "Лиза Моряк",
+      "Алиса Кот",
+      "Владимир Сычев",
+      "Ольга Тумайкина",
+      "Антон Богданов",
+      "Федор Лавров",
+      "Валерия Богданова",
+      "Олег Комаров",
+      "Алиса Стасюк"
+    ],
+    "genres": [
+      "сказка",
+      "фэнтези"
+    ],
+    "year": null,
+    "duration_min": null,
+    "source": "kinoteatr.ru",
+    "raw_description": "6+, сказка, фэнтези",
+    "url": "https://kinoteatr.ru/film/skazka-o-care-saltane-5/naberezhnie-chelni/"
+  },
+  {
+    "id": "kt-царевна-лягушка-2",
+    "title": "Царевна-лягушка 2",
+    "original_title": "",
+    "director": "Александр Амиров",
+    "actors": [
+      "Валентина Ляпина",
+      "Александр Метёлкин",
+      "Роман Курцын",
+      "Дарья Блохина",
+      "Никита Кологривый",
+      "Алиса Руденко",
+      "Виктор Логинов"
+    ],
+    "genres": [
+      "приключения",
+      "комедия",
+      "семейный"
+    ],
+    "year": null,
+    "duration_min": null,
+    "source": "kinoteatr.ru",
+    "raw_description": "6+, приключения, комедия, семейный",
+    "url": "https://kinoteatr.ru/film/carevna-lyagushka-2-4/naberezhnie-chelni/"
+  },
+  {
+    "id": "kt-новая-тёща",
+    "title": "Новая тёща",
+    "original_title": "",
+    "director": "Аскар Узабаев",
+    "actors": [
+      "Гарик Харламов",
+      "Мария Аронова",
+      "Сергей Бурунов",
+      "Катерина Ковальчук",
+      "Владимир Епифанцев"
+    ],
+    "genres": [
+      "комедия"
+    ],
+    "year": null,
+    "duration_min": null,
+    "source": "kinoteatr.ru",
+    "raw_description": "16+, комедия",
+    "url": "https://kinoteatr.ru/film/novaya-tyoscha/naberezhnie-chelni/"
+  },
+  {
+    "id": "kt-к-себе-нежно",
+    "title": "К себе нежно",
+    "original_title": "",
+    "director": "Иван Китаев",
+    "actors": [
+      "Карина Разумовская",
+      "Артём Ткаченко",
+      "Пелагея Невзорова",
+      "Алиса Конашенкова",
+      "Ольга Медынич"
+    ],
+    "genres": [
+      "комедия",
+      "мелодрама"
+    ],
+    "year": null,
+    "duration_min": null,
+    "source": "kinoteatr.ru",
+    "raw_description": "12+, комедия, мелодрама",
+    "url": "https://kinoteatr.ru/film/k-sebe-nezhno-2/naberezhnie-chelni/"
+  },
+  {
+    "id": "kt-красавица",
+    "title": "Красавица",
+    "original_title": "",
+    "director": "Антон Богданов",
+    "actors": [
+      "Слава Копейкин",
+      "Юлия Пересильд",
+      "Стася Милославская",
+      "Виктор Сухоруков",
+      "Иван Добронравов"
+    ],
+    "genres": [
+      "история",
+      "драма"
+    ],
+    "year": null,
+    "duration_min": null,
+    "source": "kinoteatr.ru",
+    "raw_description": "16+, история, драма",
+    "url": "https://kinoteatr.ru/film/krasavica-2/naberezhnie-chelni/"
+  },
+  {
+    "id": "kt-тюльпаны",
+    "title": "Тюльпаны",
+    "original_title": "",
+    "director": "Анна Кузнецова",
+    "actors": [
+      "Елена Яковлева",
+      "Алексей Серебряков",
+      "Юлия Топольницкая",
+      "Вячеслав Чепурченко",
+      "Николай Коляда"
+    ],
+    "genres": [],
+    "year": null,
+    "duration_min": null,
+    "source": "kinoteatr.ru",
+    "raw_description": "18+",
+    "url": "https://kinoteatr.ru/film/tyulpany-2/naberezhnie-chelni/"
+  },
+  {
+    "id": "kt-наследник",
+    "title": "Наследник",
+    "original_title": "",
+    "director": "Джон Паттон Форд",
+    "actors": [
+      "Глен Пауэлл",
+      "Маргарет Куолли",
+      "Эд Харрис",
+      "Тофер Грейс"
+    ],
+    "genres": [
+      "комедия",
+      "триллер"
+    ],
+    "year": null,
+    "duration_min": null,
+    "source": "kinoteatr.ru",
+    "raw_description": "16+, комедия, триллер",
+    "url": "https://kinoteatr.ru/film/naslednik-6/naberezhnie-chelni/"
+  },
+  {
+    "id": "kt-малыш",
+    "title": "Малыш",
+    "original_title": "",
+    "director": "Андрей Симонов",
+    "actors": [
+      "Глеб Калюжный",
+      "Иван Алексеев",
+      "Олег Васильков"
+    ],
+    "genres": [
+      "драма",
+      "военный"
+    ],
+    "year": null,
+    "duration_min": null,
+    "source": "kinoteatr.ru",
+    "raw_description": "12+, драма, военный",
+    "url": "https://kinoteatr.ru/film/malysh-3/naberezhnie-chelni/"
+  },
+  {
+    "id": "kt-рай-под-ногами-матерей-2--письмо-матери",
+    "title": "Рай под ногами матерей 2. Письмо матери",
+    "original_title": "",
+    "director": "Руслан Акун",
+    "actors": [
+      "Эмиль Эсеналиев",
+      "Павел Майков",
+      "Алексей Щербаков",
+      "Станислав Бондаренко",
+      "Омар Алибутаев"
+    ],
+    "genres": [
+      "драма",
+      "роуд-муви",
+      "приключения"
+    ],
+    "year": null,
+    "duration_min": null,
+    "source": "kinoteatr.ru",
+    "raw_description": "18+, драма, роуд-муви, приключения",
+    "url": "https://kinoteatr.ru/film/ray-pod-nogami-materey-2-pismo-materi-2/naberezhnie-chelni/"
+  },
+  {
+    "id": "kt-король-и-шут--навсегда",
+    "title": "Король и Шут. Навсегда",
+    "original_title": "",
+    "director": "Рустам Мосафир",
+    "actors": [
+      "Константин Плотников",
+      "Влад Коноплёв",
+      "Дарья Мельникова",
+      "Вера Вольт",
+      "Илья Гришин",
+      "Илья Хвостиков"
+    ],
+    "genres": [
+      "сказка",
+      "фэнтези",
+      "приключения"
+    ],
+    "year": null,
+    "duration_min": null,
+    "source": "kinoteatr.ru",
+    "raw_description": "18+, сказка, фэнтези, приключения",
+    "url": "https://kinoteatr.ru/film/korol-i-shut-navsegda-2/naberezhnie-chelni/"
+  },
+  {
+    "id": "kt-возвращение-в-сайлент-хилл",
+    "title": "Возвращение в Сайлент Хилл",
+    "original_title": "",
+    "director": "Кристоф Ганс",
+    "actors": [
+      "Джереми Ирвин",
+      "Ханна Эмили Андерсон",
+      "Роберт Нэйрн"
+    ],
+    "genres": [
+      "хоррор"
+    ],
+    "year": null,
+    "duration_min": null,
+    "source": "kinoteatr.ru",
+    "raw_description": "18+, хоррор",
+    "url": "https://kinoteatr.ru/film/vozvraschenie-v-saylent-hill-2/naberezhnie-chelni/"
+  },
+  {
+    "id": "kt-два--три--призрак--приди-",
+    "title": "Два, три, призрак, приди!",
+    "original_title": "",
+    "director": "Сон Дон-ван",
+    "actors": [
+      "Ким Е‑рим",
+      "Ли Чхан‑хён",
+      "Со Дон‑хён"
+    ],
+    "genres": [
+      "хоррор"
+    ],
+    "year": null,
+    "duration_min": null,
+    "source": "kinoteatr.ru",
+    "raw_description": "6+, хоррор",
+    "url": "https://kinoteatr.ru/film/dva-tri-prizrak-pridi-2/naberezhnie-chelni/"
+  },
+  {
+    "id": "kt-драники",
+    "title": "Драники",
+    "original_title": "",
+    "director": "Максим Максимов",
+    "actors": [
+      "Ева Смирнова",
+      "Валентина Мазунина",
+      "Борис Дергачев",
+      "Ингрид Олеринская",
+      "Андрей Пынзару",
+      "Ирина Кобзева"
+    ],
+    "genres": [
+      "комедия"
+    ],
+    "year": null,
+    "duration_min": null,
+    "source": "kinoteatr.ru",
+    "raw_description": "18+, комедия",
+    "url": "https://kinoteatr.ru/film/draniki-2/naberezhnie-chelni/"
+  },
+  {
+    "id": "kt-посторонний",
+    "title": "Посторонний",
+    "original_title": "",
+    "director": "Франсуа Озон",
+    "actors": [
+      "Бенжамен Вуазен",
+      "Пьер Лоттен",
+      "Дени Лаван",
+      "Ребекка Мардер",
+      "Сванн Арло"
+    ],
+    "genres": [
+      "драма"
+    ],
+    "year": null,
+    "duration_min": null,
+    "source": "kinoteatr.ru",
+    "raw_description": "18+, драма",
+    "url": "https://kinoteatr.ru/film/postoronniy-2/naberezhnie-chelni/"
+  },
+  {
+    "id": "kt-убежище",
+    "title": "Убежище",
+    "original_title": "",
+    "director": "Рик Роман Во",
+    "actors": [
+      "Джейсон Стэйтем",
+      "Наоми Аки",
+      "Харриет Уолтер",
+      "Дэниэл Мейс",
+      "Бодхи Рэй Бритнах"
+    ],
+    "genres": [
+      "экшн"
+    ],
+    "year": null,
+    "duration_min": null,
+    "source": "kinoteatr.ru",
+    "raw_description": "18+, экшн",
+    "url": "https://kinoteatr.ru/film/ubezhische-3/naberezhnie-chelni/"
+  },
+  {
+    "id": "kt-свист",
+    "title": "Свист",
+    "original_title": "",
+    "director": "Корин Харди",
+    "actors": [
+      "Ник Фрост",
+      "Дафни Кин"
+    ],
+    "genres": [
+      "хоррор"
+    ],
+    "year": null,
+    "duration_min": null,
+    "source": "kinoteatr.ru",
+    "raw_description": "0+, хоррор",
+    "url": "https://kinoteatr.ru/film/svist/naberezhnie-chelni/"
+  }
+]

@@ -18,14 +18,14 @@
   },
 
   "cli": {
-    "usage": "ct-cognize --input <FILE> --taste <FILE> [--agent <auto|kimi|gemini|qwen|pi>] [--output <FILE>]",
+    "usage": "ct-cognize <movies.json> <taste.yaml> | ct-cognize --input <FILE> --taste <FILE> [--agent <auto|kimi|gemini|qwen|pi> | --agents <LIST>] [--output <FILE>] [--list-agents]",
     "flags": [
       {
         "name": "--input",
         "short": "-i",
         "type": "string",
         "required": true,
-        "description": "Input movie-schedule JSON file (full movie details)"
+        "description": "Input JSON: raw movie array or wrapped object with movies/scheduled key"
       },
       {
         "name": "--taste",
@@ -46,7 +46,19 @@
         "short": "-a",
         "type": "string",
         "default": "auto",
-        "description": "Agent: auto (fallback chain) or explicit agent name"
+        "description": "Single agent mode: auto (parallel preflight race + runtime fallback) or explicit agent name"
+      },
+      {
+        "name": "--agents",
+        "type": "string",
+        "required": false,
+        "description": "Comma-separated ordered fallback chain, e.g. pi,qwen,gemini"
+      },
+      {
+        "name": "--list-agents",
+        "type": "boolean",
+        "default": false,
+        "description": "Print supported AI agents and exit (one name per line, shell-friendly)"
       },
       {
         "name": "--verbose",
@@ -67,20 +79,24 @@
 
   "design": {
     "philosophy": "Human-level perception: agent reads two files (movies + taste) and thinks about each movie, just like a person would.",
-    "approach": "Write movies.json and taste.yaml to a temp workdir, launch AI agent with file-reading tools pointed at that workdir, parse JSON response."
+    "approach": "Write movies.json and taste.yaml to a temp workdir, run preflight probes to pick ready agents (auto race or user-defined ordered chain), launch AI agent with file-reading tools pointed at that workdir, parse JSON response, and fallback to remaining ready agents on runtime failure."
   },
 
   "adapters": {
     "kimi": { "status": "active", "description": "kimi CLI (web search capable)" },
-    "gemini": { "status": "active", "description": "gemini CLI (plan mode)" },
-    "qwen": { "status": "active", "description": "qwen CLI (plan mode)" },
+    "gemini": { "status": "active", "description": "gemini CLI (cwd file-reading mode)" },
+    "qwen": { "status": "active", "description": "qwen CLI (cwd file-reading mode)" },
     "pi": { "status": "active", "description": "pi CLI (@file context)" }
   },
 
   "examples": {
+    "positional": "ct-cognize scheduled.json taste/profile.yaml",
     "auto": "ct-cognize --input scheduled.json --taste taste/profile.yaml",
     "explicit": "ct-cognize --input scheduled.json --taste taste/profile.yaml --agent gemini",
-    "with_output": "ct-cognize --input scheduled.json --taste taste/profile.yaml --output analyzed.json"
+    "ordered_chain": "ct-cognize --input scheduled.json --taste taste/profile.yaml --agents pi,qwen,gemini",
+    "list_agents": "ct-cognize --list-agents",
+    "with_output": "ct-cognize --input scheduled.json --taste taste/profile.yaml --output analyzed.json",
+    "alias": "ct-cognetive scheduled.json taste/profile.yaml"
   },
 
   "files": {

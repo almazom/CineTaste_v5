@@ -18,6 +18,8 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -35,80 +37,254 @@ AGENTS = [
         "preflight_args": ["--print", "--final-message-only", "-p"],
         "run_args": ["--print", "--final-message-only", "--thinking"],
         "timeout": 300,
+        "preflight_timeout": 20,
         "supports_web_search": True,
         "file_mode": "stdin",
     },
     {
         "name": "gemini",
         "cmd": "gemini",
-        "preflight_args": ["--approval-mode", "plan", "-p"],
-        "run_args": ["--approval-mode", "plan"],
-        "timeout": 180,
+        "preflight_args": ["-p"],
+        "run_args": ["--approval-mode", "yolo"],
+        "timeout": 300,
+        "preflight_timeout": 20,
         "supports_web_search": False,
         "file_mode": "cwd",
     },
     {
         "name": "qwen",
         "cmd": "qwen",
-        "preflight_args": ["--approval-mode", "plan", "-p"],
-        "run_args": ["--approval-mode", "plan"],
-        "timeout": 180,
+        "preflight_args": ["-p"],
+        "run_args": ["--approval-mode", "yolo"],
+        "timeout": 300,
+        "preflight_timeout": 20,
         "supports_web_search": False,
         "file_mode": "cwd",
     },
     {
         "name": "pi",
         "cmd": "pi",
-        "preflight_args": ["--no-tools", "-p"],
+        "preflight_args": [
+            "--no-session",
+            "--provider",
+            "zai",
+            "--model",
+            "glm-5",
+            "--thinking",
+            "off",
+            "--no-tools",
+            "-p",
+        ],
         "run_args": ["--print", "--no-tools", "--thinking", "high"],
-        "timeout": 120,
+        "timeout": 240,
+        "preflight_timeout": 20,
         "supports_web_search": False,
         "file_mode": "at_file",
     },
 ]
 
+AGENT_NAMES = [agent["name"] for agent in AGENTS]
+AGENT_BY_NAME = {agent["name"]: agent for agent in AGENTS}
+
+PREFLIGHT_PROMPT = "Ответь одним словом: ok. Не используй инструменты."
+PREFLIGHT_OK_TOKENS = {"ok", "ок"}
+
 
 # ── Preflight ──────────────────────────────────────────────────────────
 
-def preflight_check(agent: dict) -> bool:
-    """Quick check: is the agent installed and responding?"""
+def _extract_alpha_tokens(text: str) -> list[str]:
+    """Extract lowercase alpha tokens from output text."""
+    return re.findall(r"[a-zа-яё]+", text.lower())
+
+
+def _compact_output(stdout: str, stderr: str, limit: int = 60) -> str:
+    """Create short preview from command output."""
+    raw = "\n".join(x for x in [stdout.strip(), stderr.strip()] if x).strip()
+    if not raw:
+        return "<empty>"
+    raw = raw.replace("\n", " ")
+    return raw[:limit]
+
+
+def _run_preflight(agent: dict) -> dict:
+    """Run one agent preflight probe and return structured result."""
     cmd = agent["cmd"]
+    started = time.perf_counter()
+
     if not shutil.which(cmd):
-        print(f"[preflight] {cmd} not found in PATH", file=sys.stderr)
-        return False
+        return {
+            "agent": agent,
+            "ok": False,
+            "reply": "",
+            "elapsed": time.perf_counter() - started,
+            "error": "not found in PATH",
+        }
 
     try:
         result = subprocess.run(
-            [cmd] + agent["preflight_args"] + ["1+2=...[ONLY NUMBER IN WORDS]"],
-            capture_output=True, text=True, timeout=30,
+            [cmd] + agent["preflight_args"] + [PREFLIGHT_PROMPT],
+            capture_output=True,
+            text=True,
+            timeout=agent.get("preflight_timeout", 20),
             cwd="/tmp",
         )
-        output = result.stdout.strip().lower()
-        if result.returncode == 0 and output in ("three", "три"):
-            print(f"[preflight] {cmd} ✓ ({output})", file=sys.stderr)
-            return True
-        print(f"[preflight] {cmd} ✗ (got: {output[:40]})", file=sys.stderr)
-        return False
+
+        preflight_tokens = _extract_alpha_tokens(
+            "\n".join(x for x in [result.stdout, result.stderr] if x)
+        )
+        token = next((t for t in preflight_tokens if t in PREFLIGHT_OK_TOKENS), "")
+        if not token and preflight_tokens:
+            token = preflight_tokens[-1]
+
+        ok = result.returncode == 0 and any(
+            t in PREFLIGHT_OK_TOKENS for t in preflight_tokens
+        )
+
+        if ok:
+            error = ""
+        else:
+            error = f"got: {_compact_output(result.stdout, result.stderr)}"
+
+        return {
+            "agent": agent,
+            "ok": ok,
+            "reply": token,
+            "elapsed": time.perf_counter() - started,
+            "error": error,
+        }
+
+    except subprocess.TimeoutExpired:
+        return {
+            "agent": agent,
+            "ok": False,
+            "reply": "",
+            "elapsed": time.perf_counter() - started,
+            "error": f"preflight timeout after {agent.get('preflight_timeout', 20)}s",
+        }
     except Exception as e:
-        print(f"[preflight] {cmd} ✗ ({e})", file=sys.stderr)
-        return False
+        return {
+            "agent": agent,
+            "ok": False,
+            "reply": "",
+            "elapsed": time.perf_counter() - started,
+            "error": str(e),
+        }
+
+
+def _log_preflight(result: dict) -> None:
+    """Emit standardized preflight log line."""
+    name = result["agent"]["name"]
+    if result["ok"]:
+        print(f"[preflight] {name} ✓ ({result['reply']} in {result['elapsed']:.2f}s)", file=sys.stderr)
+    else:
+        print(f"[preflight] {name} ✗ ({result['error']})", file=sys.stderr)
+
+
+def preflight_check(agent: dict) -> bool:
+    """Backward-compatible single-agent preflight check."""
+    result = _run_preflight(agent)
+    _log_preflight(result)
+    return result["ok"]
+
+
+def parallel_preflight(candidates: list[dict]) -> list[dict]:
+    """Run preflight checks in parallel; return results in completion order."""
+    if not candidates:
+        return []
+
+    results = []
+    with ThreadPoolExecutor(max_workers=len(candidates)) as executor:
+        futures = [executor.submit(_run_preflight, agent) for agent in candidates]
+        for future in as_completed(futures):
+            result = future.result()
+            results.append(result)
+            _log_preflight(result)
+
+    return results
+
+
+def parse_agent_list(spec: str) -> list[str]:
+    """Parse comma-separated agent list preserving order and removing duplicates."""
+    raw_items = [item.strip().lower() for item in spec.split(",")]
+    names = [item for item in raw_items if item]
+    if not names:
+        raise RuntimeError("Empty --agents list. Example: --agents pi,qwen,gemini")
+
+    unknown = [name for name in names if name not in AGENT_BY_NAME]
+    if unknown:
+        raise RuntimeError(
+            f"Unknown agent(s): {', '.join(unknown)}. Known: {', '.join(AGENT_NAMES)}"
+        )
+
+    unique_names = []
+    seen = set()
+    for name in names:
+        if name not in seen:
+            seen.add(name)
+            unique_names.append(name)
+
+    return unique_names
+
+
+def select_named_agent_chain(names: list[str]) -> list[dict]:
+    """Select user-defined ordered fallback chain from --agents."""
+    available = []
+    unavailable = []
+
+    for name in names:
+        agent = AGENT_BY_NAME[name]
+        result = _run_preflight(agent)
+        _log_preflight(result)
+        if result["ok"]:
+            available.append(agent)
+        else:
+            unavailable.append(name)
+
+    if unavailable:
+        print(
+            f"[cognize] requested agents unavailable: {', '.join(unavailable)}",
+            file=sys.stderr,
+        )
+
+    if not available:
+        raise RuntimeError(
+            f"No requested AI agent available from --agents: {', '.join(names)}"
+        )
+
+    return available
+
+
+def select_agent_chain(name: str = "auto", custom_names: list[str] | None = None) -> list[dict]:
+    """
+    Select ordered agent chain.
+
+    - explicit agent: strict mode, one-element list if preflight passes
+    - auto: parallel race, ordered by first successful response
+    - custom_names: user-defined ordered fallback chain from --agents
+    """
+    if custom_names is not None:
+        return select_named_agent_chain(custom_names)
+
+    if name != "auto":
+        for agent in AGENTS:
+            if agent["name"] == name:
+                if not preflight_check(agent):
+                    raise RuntimeError(f"Requested agent unavailable: {name}")
+                return [agent]
+        raise RuntimeError(f"Unknown agent: {name}")
+
+    results = parallel_preflight(AGENTS)
+    available = [r["agent"] for r in results if r["ok"]]
+
+    if not available:
+        raise RuntimeError("No AI agent available. Cognitive layer cannot proceed.")
+
+    return available
 
 
 def select_agent(name: str = "auto") -> dict:
-    """Select agent by name or auto-detect first available."""
-    if name != "auto":
-        for a in AGENTS:
-            if a["name"] == name:
-                if not preflight_check(a):
-                    raise RuntimeError(f"Requested agent unavailable: {name}")
-                return a
-        raise RuntimeError(f"Unknown agent: {name}")
-
-    for a in AGENTS:
-        if preflight_check(a):
-            return a
-
-    raise RuntimeError("No AI agent available. Cognitive layer cannot proceed.")
+    """Compatibility helper: return the first selected agent."""
+    return select_agent_chain(name)[0]
 
 
 # ── Prompt ─────────────────────────────────────────────────────────────
@@ -160,35 +336,48 @@ def call_agent(agent: dict, workdir: str) -> str:
 
     print(f"[cognize] Using {agent['name']} ({mode} mode)...", file=sys.stderr)
 
-    if mode == "cwd":
-        result = subprocess.run(
-            cmd_base + ["-p", INSTRUCTION],
-            capture_output=True, text=True,
-            timeout=timeout, cwd=workdir,
-        )
+    try:
+        if mode == "cwd":
+            result = subprocess.run(
+                cmd_base + ["-p", INSTRUCTION],
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                cwd=workdir,
+            )
 
-    elif mode == "at_file":
-        result = subprocess.run(
-            cmd_base + [f"@{taste_path}", f"@{movies_path}"],
-            input=INSTRUCTION, capture_output=True, text=True,
-            timeout=timeout,
-        )
+        elif mode == "at_file":
+            result = subprocess.run(
+                cmd_base + [f"@{taste_path}", f"@{movies_path}"],
+                input=INSTRUCTION,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+            )
 
-    elif mode == "stdin":
-        with open(movies_path, encoding="utf-8") as f:
-            movies_text = f.read()
-        with open(taste_path, encoding="utf-8") as f:
-            taste_text = f.read()
-        full_prompt = (
-            f"{INSTRUCTION}\n\n--- taste.yaml ---\n{taste_text}"
-            f"\n\n--- movies.json ---\n{movies_text}"
-        )
-        result = subprocess.run(
-            cmd_base, input=full_prompt,
-            capture_output=True, text=True, timeout=timeout,
-        )
-    else:
-        raise RuntimeError(f"Unknown file_mode: {mode}")
+        elif mode == "stdin":
+            with open(movies_path, encoding="utf-8") as f:
+                movies_text = f.read()
+            with open(taste_path, encoding="utf-8") as f:
+                taste_text = f.read()
+            full_prompt = (
+                f"{INSTRUCTION}\n\n--- taste.yaml ---\n{taste_text}"
+                f"\n\n--- movies.json ---\n{movies_text}"
+            )
+            result = subprocess.run(
+                cmd_base,
+                input=full_prompt,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+            )
+        else:
+            raise RuntimeError(f"Unknown file_mode: {mode}")
+
+    except subprocess.TimeoutExpired:
+        raise RuntimeError(f"{agent['name']} timeout after {timeout}s")
+    except FileNotFoundError:
+        raise RuntimeError(f"{agent['name']} not found: {agent['cmd']}")
 
     if result.returncode != 0:
         raise RuntimeError(f"{agent['name']} failed: {result.stderr[:300]}")
@@ -290,15 +479,28 @@ def merge(movies: list, analyses: list, agent: dict) -> dict:
 
 # ── Main ───────────────────────────────────────────────────────────────
 
-def cognize(movies_path: str, taste_path: str, agent_name: str = "auto") -> dict:
+def cognize(
+    movies_path: str,
+    taste_path: str,
+    agent_name: str = "auto",
+    custom_agents: list[str] | None = None,
+) -> dict:
     """
     Write movies + taste to temp workdir, launch AI agent, parse and merge response.
     """
     with open(movies_path, encoding="utf-8") as f:
         input_data = json.load(f)
-    movies = input_data.get("movies", input_data.get("scheduled", []))
+    if isinstance(input_data, list):
+        movies = input_data
+    elif isinstance(input_data, dict):
+        movies = input_data.get("movies", input_data.get("scheduled", []))
+    else:
+        raise ValueError(
+            "Invalid input JSON format: expected array of movies or object with movies/scheduled key"
+        )
 
-    agent = select_agent(agent_name)
+    agents = select_agent_chain(agent_name, custom_agents)
+    strict_single = custom_agents is None and agent_name != "auto"
 
     workdir = tempfile.mkdtemp(prefix="ct-cognize-")
     try:
@@ -306,31 +508,137 @@ def cognize(movies_path: str, taste_path: str, agent_name: str = "auto") -> dict
             json.dump({"movies": movies}, f, ensure_ascii=False, indent=2)
         shutil.copy2(taste_path, os.path.join(workdir, "taste.yaml"))
 
-        response = call_agent(agent, workdir)
-        analyses = parse_response(response)
-        return merge(movies, analyses, agent)
+        last_error = None
+        for idx, agent in enumerate(agents):
+            try:
+                response = call_agent(agent, workdir)
+                analyses = parse_response(response)
+                return merge(movies, analyses, agent)
+
+            except ValueError as e:
+                last_error = e
+                if strict_single:
+                    raise
+                remaining = len(agents) - idx - 1
+                if remaining > 0:
+                    print(
+                        f"[cognize] {agent['name']} parse failed ({e}); trying fallback ({remaining} left)...",
+                        file=sys.stderr,
+                    )
+
+            except RuntimeError as e:
+                last_error = e
+                if strict_single:
+                    raise
+                remaining = len(agents) - idx - 1
+                if remaining > 0:
+                    print(
+                        f"[cognize] {agent['name']} failed ({e}); trying fallback ({remaining} left)...",
+                        file=sys.stderr,
+                    )
+
+        if not strict_single:
+            raise RuntimeError(f"All selected AI agents failed: {last_error}")
+
+        if isinstance(last_error, ValueError):
+            raise last_error
+        raise RuntimeError(str(last_error) if last_error else "Cognitive analysis failed")
+
     finally:
         shutil.rmtree(workdir, ignore_errors=True)
 
 
 def main():
+    examples = f"""Examples:
+  # Positional mode (shortest form)
+  ct-cognize scheduled.json taste/profile.yaml
+
+  # Automatic preflight race + fallback
+  ct-cognize --input scheduled.json --taste taste/profile.yaml
+
+  # Force one concrete agent
+  ct-cognize --input scheduled.json --taste taste/profile.yaml --agent pi
+
+  # Ordered fallback chain for shell workflows
+  ct-cognize --input scheduled.json --taste taste/profile.yaml --agents pi,qwen,gemini
+
+  # Print available agents
+  ct-cognize --list-agents
+
+  # Alias command
+  ct-cognetive scheduled.json taste/profile.yaml
+"""
     parser = argparse.ArgumentParser(
-        description="ct-cognize — Human-level cognitive movie analysis"
+        prog=os.environ.get("CT_COGNIZE_PROG", "ct-cognize"),
+        description="ct-cognize — Human-level cognitive movie analysis",
+        epilog=examples,
+        formatter_class=argparse.RawTextHelpFormatter,
     )
-    parser.add_argument("--input", "-i", required=True, help="Movie data JSON file")
-    parser.add_argument("--taste", "-t", required=True, help="Taste profile YAML file")
-    parser.add_argument("--output", "-o", default="-", help="Output file (default: stdout)")
     parser.add_argument(
-        "--agent", "-a", default="auto",
-        choices=["auto", "kimi", "gemini", "qwen", "pi"],
-        help="AI agent (default: auto)"
+        "input_path",
+        nargs="?",
+        help="Movie data JSON file (array or object with movies/scheduled; positional alternative to --input)",
+    )
+    parser.add_argument("taste_path", nargs="?", help="Taste profile YAML file (positional alternative to --taste)")
+    parser.add_argument("--input", "-i", help="Movie data JSON file (array or object with movies/scheduled)")
+    parser.add_argument("--taste", "-t", help="Taste profile YAML file")
+    parser.add_argument("--output", "-o", default="-", help="Output file (default: stdout)")
+    parser.add_argument("--list-agents", action="store_true", help="Print supported AI agent names and exit")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
+        "--agent",
+        "-a",
+        default="auto",
+        choices=["auto"] + AGENT_NAMES,
+        help="Single agent mode: auto (race) or explicit agent name",
+    )
+    group.add_argument(
+        "--agents",
+        help="Comma-separated ordered fallback chain (example: pi,qwen,gemini)",
     )
     parser.add_argument("--verbose", "-v", action="store_true")
 
     args = parser.parse_args()
 
     try:
-        result = cognize(args.input, args.taste, args.agent)
+        if args.list_agents:
+            if args.verbose:
+                print("name\tcmd\tmode\ttimeout\tweb_search")
+                for agent in AGENTS:
+                    print(
+                        f"{agent['name']}\t{agent['cmd']}\t{agent['file_mode']}\t"
+                        f"{agent['timeout']}\t{str(agent.get('supports_web_search', False)).lower()}"
+                    )
+            else:
+                for name in AGENT_NAMES:
+                    print(name)
+            return
+
+        def normalize_cli_path(value: str | None) -> str | None:
+            """Allow optional @path syntax for convenience."""
+            if not value:
+                return value
+            return value[1:] if value.startswith("@") else value
+
+        input_path = normalize_cli_path(args.input or args.input_path)
+        taste_path = normalize_cli_path(args.taste or args.taste_path)
+
+        if args.input and args.input_path and args.input != args.input_path:
+            parser.error("conflicting input paths: use either --input or positional <input_json>")
+        if args.taste and args.taste_path and args.taste != args.taste_path:
+            parser.error("conflicting taste paths: use either --taste or positional <taste_yaml>")
+        if not input_path or not taste_path:
+            parser.error(
+                "missing required inputs: provide <input_json> <taste_yaml> or use --input/--taste"
+            )
+        if not os.path.isfile(input_path):
+            parser.error(f"input file not found: {input_path}")
+        if not os.path.isfile(taste_path):
+            parser.error(f"taste profile not found: {taste_path}")
+
+        custom_agents = parse_agent_list(args.agents) if args.agents else None
+
+        result = cognize(input_path, taste_path, args.agent, custom_agents)
 
         # Validate output contract
         enforce_output(result)

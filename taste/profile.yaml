@@ -1,7 +1,7 @@
 # CineTaste Taste Profile
-# Version: 1.0
+# Version: 1.1
 
-version: "1.0"
+version: "1.1"
 user: "default"
 
 # What the user likes
@@ -24,6 +24,9 @@ likes:
     - "indie"
     - "science fiction"
     - "drama"
+  eras:
+    - "Soviet cinema 1960s"
+    - "Soviet cinema 1970s"
   keywords:
     - "philosophical"
     - "surreal"
@@ -36,11 +39,18 @@ dislikes:
     - "horror"
     - "slasher"
     - "mainstream comedy"
+  regions:
+    - "modern russian cinema"
+  eras:
+    - "russian cinema post-1990"
   keywords:
     - "blockbuster"
     - "franchise"
     - "sequel"
     - "remake"
+  hard_rules:
+    - "Do not recommend modern Russian cinema (post-1990, especially 2020+)."
+    - "Russian/Soviet cinema is relevant only as retro period (1960s-1970s)."
 
 # Canon directors with weights
 canon:
