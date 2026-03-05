@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "KANBAN-2026-03-05-0742",
+  "title": "Kanban Plan — add ct-cognetive testing guides",
+  "description": "Add concise cognitive layer CLI testing instructions to MEMORY, AGENTS.md, and CLAUDE.md.",
+  "planning_session": {
+    "id": "KANBAN-2026-03-05-0742",
+    "created_at": "2026-03-05T07:42:13+03:00",
+    "author": "codex",
+    "goal": "Document one-command cognitive layer test flow with production taste profile"
+  },
+  "states": ["TODO", "DOING", "DONE"],
+  "columns": {
+    "TODO": [
+      {
+        "id": "DOC-2",
+        "task": "Add same guide block to AGENTS.md",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "low",
+        "notes": "Keep concise and executable"
+      },
+      {
+        "id": "DOC-3",
+        "task": "Add same guide block to CLAUDE.md",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "low",
+        "notes": "Keep aligned with AGENTS and MEMORY"
+      },
+      {
+        "id": "DOC-4",
+        "task": "Verify references and commands by reading updated files",
+        "contract_impact": [],
+        "priority": 2,
+        "estimated_complexity": "low",
+        "notes": "No runtime behavior changes"
+      }
+    ],
+    "DOING": [
+      {
+        "id": "DOC-1",
+        "task": "Add cognitive layer CLI testing tips in .MEMORY/06-ai-agents.md",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "low",
+        "notes": "Use production taste file path taste/profile.yaml"
+      }
+    ],
+    "DONE": []
+  },
+  "acceptance_criteria": [
+    "All three docs include ct-cognetive test command example",
+    "Guide uses production taste/profile.yaml path",
+    "Guide includes quick result-inspection command"
+  ],
+  "stats": {
+    "total": 4,
+    "todo": 3,
+    "doing": 1,
+    "done": 0,
+    "progress_percent": 0
+  }
+}

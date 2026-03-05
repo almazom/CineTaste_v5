@@ -1,0 +1,69 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "KANBAN-2026-03-05-0645",
+  "title": "Kanban Plan — ct-cognize CLI UX alignment",
+  "description": "Align ct-cognize UX with positional invocation expectation and add alias command while preserving compatibility.",
+  "planning_session": {
+    "id": "KANBAN-2026-03-05-0645",
+    "created_at": "2026-03-05T06:45:55+03:00",
+    "author": "codex",
+    "goal": "Support positional input/taste arguments and alias name ct-cognetive for isolated testing CLI"
+  },
+  "states": ["TODO", "DOING", "DONE"],
+  "columns": {
+    "TODO": [],
+    "DOING": [],
+    "DONE": [
+      {
+        "id": "COG-1",
+        "task": "Extend ct-cognize parser to accept positional input and taste file paths",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "medium",
+        "notes": "Flags should remain supported",
+        "status_note": "Completed: positional arguments are now accepted with conflict checks and file existence validation."
+      },
+      {
+        "id": "COG-2",
+        "task": "Add alias wrapper ct-cognetive pointing to ct-cognize implementation",
+        "contract_impact": [],
+        "priority": 2,
+        "estimated_complexity": "low",
+        "notes": "Keep ct-cognize as canonical for backward compatibility",
+        "status_note": "Completed: added executable root wrapper ct-cognetive delegating to tools/ct-cognize/main.py."
+      },
+      {
+        "id": "COG-3",
+        "task": "Update manifest/help docs to document positional usage and alias",
+        "contract_impact": [],
+        "priority": 2,
+        "estimated_complexity": "low",
+        "notes": "No contract schema change expected",
+        "status_note": "Completed: updated MANIFEST usage/examples and CLI help examples."
+      },
+      {
+        "id": "COG-4",
+        "task": "Add/adjust tests for positional invocation and alias help path",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "medium",
+        "notes": "Run targeted pytest",
+        "status_note": "Completed: added alias + positional tests; `pytest tests/test_ct_cognize.py` passed (38/38)."
+      }
+    ]
+  },
+  "acceptance_criteria": [
+    "ct-cognize accepts positional paths: ct-cognize <movies.json> <taste.yaml>",
+    "Legacy flag usage remains functional",
+    "Alias command ct-cognetive is executable and shows help",
+    "ct-cognize output remains validated against analysis-result schema",
+    "Targeted tests pass"
+  ],
+  "stats": {
+    "total": 4,
+    "todo": 0,
+    "doing": 0,
+    "done": 4,
+    "progress_percent": 100
+  }
+}

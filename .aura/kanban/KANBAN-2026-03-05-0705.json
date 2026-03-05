@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "KANBAN-2026-03-05-0705",
+  "title": "Kanban Plan — ct-cognetive CLI command UX",
+  "description": "Align CLI invocation UX with @path style and provide clean shell usage guidance.",
+  "planning_session": {
+    "id": "KANBAN-2026-03-05-0705",
+    "created_at": "2026-03-05T07:05:31+03:00",
+    "author": "codex",
+    "goal": "Support @path invocation style and validate command UX for isolated cognitive CLI runs"
+  },
+  "states": ["TODO", "DOING", "DONE"],
+  "columns": {
+    "TODO": [],
+    "DOING": [],
+    "DONE": [
+      {
+        "id": "UX-1",
+        "task": "Add optional @path parsing for input and taste arguments",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "low",
+        "notes": "Now both path and @path are accepted for positional/flag values",
+        "status_note": "Completed: implemented normalize_cli_path in ct-cognize main."
+      },
+      {
+        "id": "UX-2",
+        "task": "Add regression test for @path invocation flow",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "low",
+        "notes": "Ensure CLI still writes valid JSON output with @ prefixed paths",
+        "status_note": "Completed: added test_cli_accepts_at_prefixed_paths."
+      },
+      {
+        "id": "UX-3",
+        "task": "Run deterministic validation for ct-cognize CLI tests",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "low",
+        "notes": "Targeted test suite run",
+        "status_note": "Completed: pytest tests/test_ct_cognize.py => 40 passed."
+      }
+    ]
+  },
+  "acceptance_criteria": [
+    "ct-cognetive accepts @path syntax for two-file invocation style",
+    "Existing positional/flag usage remains backward compatible",
+    "ct-cognize tests pass after changes"
+  ],
+  "stats": {
+    "total": 3,
+    "todo": 0,
+    "doing": 0,
+    "done": 3,
+    "progress_percent": 100
+  }
+}

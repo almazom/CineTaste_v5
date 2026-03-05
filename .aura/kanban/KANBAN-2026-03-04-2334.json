@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "KANBAN-2026-03-04-2334",
+  "title": "Kanban Plan — Republish golden standard in Russian",
+  "description": "Translate golden-standard MD/HTML into Russian and republish the existing VPS page.",
+  "planning_session": {
+    "id": "KANBAN-2026-03-04-2334",
+    "created_at": "2026-03-04T23:34:45+03:00",
+    "author": "codex",
+    "goal": "Republish golden-standard page in Russian at the same public URL"
+  },
+  "states": ["TODO", "DOING", "DONE"],
+  "columns": {
+    "TODO": [],
+    "DOING": [],
+    "DONE": [
+      {
+        "id": "RU-1",
+        "task": "Translate docs/golden-standard.md to Russian while preserving structure and normative rules",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "medium",
+        "notes": "Keep section parity and policy semantics",
+        "status_note": "Completed: translated markdown doctrine with all sections and policy semantics preserved."
+      },
+      {
+        "id": "RU-2",
+        "task": "Translate docs/golden-standard.html to Russian with same premium template",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "medium",
+        "notes": "Keep typography/layout unchanged",
+        "status_note": "Completed: translated HTML content while preserving CSS, layout, hierarchy and manuscript style."
+      },
+      {
+        "id": "RU-3",
+        "task": "Republish translated page via publish_me and provide updated URL",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "low",
+        "notes": "Target existing golden-standard slug",
+        "status_note": "Completed: republished to existing golden-standard slug URL; markdown variant also published."
+      },
+      {
+        "id": "RU-4",
+        "task": "Close kanban and summarize output",
+        "contract_impact": [],
+        "priority": 2,
+        "estimated_complexity": "low",
+        "notes": "Doc-only change",
+        "status_note": "Completed: kanban closed and outputs prepared for user."
+      }
+    ]
+  },
+  "acceptance_criteria": [
+    "golden-standard.md is in Russian",
+    "golden-standard.html is in Russian and keeps visual template",
+    "published URL serves Russian content",
+    "kanban moved to DONE"
+  ],
+  "stats": {
+    "total": 4,
+    "todo": 0,
+    "doing": 0,
+    "done": 4,
+    "progress_percent": 100
+  }
+}

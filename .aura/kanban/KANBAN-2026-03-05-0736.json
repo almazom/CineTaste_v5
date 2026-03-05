@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "KANBAN-2026-03-05-0736",
+  "title": "Kanban Plan — update taste fixture from user feedback",
+  "description": "Apply user feedback: exclude modern Russian cinema and rerun ct-cognetive on real fetched fixture.",
+  "planning_session": {
+    "id": "KANBAN-2026-03-05-0736",
+    "created_at": "2026-03-05T07:36:45+03:00",
+    "author": "codex",
+    "goal": "Adjust taste YAML and verify recommendation output changes"
+  },
+  "states": ["TODO", "DOING", "DONE"],
+  "columns": {
+    "TODO": [
+      {
+        "id": "TASTE-2",
+        "task": "Run ct-cognetive with updated taste fixture and capture output JSON",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "medium",
+        "notes": "Use tests/fixtures/cognize_movies.raw.json as input"
+      },
+      {
+        "id": "TASTE-3",
+        "task": "Extract and report recommendation delta for movie 'Малыш' and top picks",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "low",
+        "notes": "Human-readable summary for user validation"
+      }
+    ],
+    "DOING": [
+      {
+        "id": "TASTE-1",
+        "task": "Update tests/fixtures/cognize_taste.sample.yaml with strict dislike for modern Russian cinema",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "low",
+        "notes": "Keep existing positive preferences and add explicit hard rules"
+      }
+    ],
+    "DONE": []
+  },
+  "acceptance_criteria": [
+    "taste fixture includes explicit modern Russian cinema exclusion",
+    "ct-cognetive rerun completed successfully",
+    "user sees updated JSON effect, including movie 'Малыш' treatment"
+  ],
+  "stats": {
+    "total": 3,
+    "todo": 2,
+    "doing": 1,
+    "done": 0,
+    "progress_percent": 0
+  }
+}

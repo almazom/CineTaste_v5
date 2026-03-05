@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "KANBAN-2026-03-04-2232",
+  "title": "Kanban Plan — ct-cognize shell API for multi-agent runs",
+  "description": "Extend isolated ct-cognize CLI to run with different AI agents from shell and document in --help.",
+  "planning_session": {
+    "id": "KANBAN-2026-03-04-2232",
+    "created_at": "2026-03-04T22:32:22+03:00",
+    "author": "codex",
+    "goal": "Make ct-cognize shell-friendly for explicit single/multi-agent execution"
+  },
+  "states": ["TODO", "DOING", "DONE"],
+  "columns": {
+    "TODO": [],
+    "DOING": [],
+    "DONE": [
+      {
+        "id": "CLI-1",
+        "task": "Implement ct-cognize CLI options for explicit agent list/order and agent discovery output",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "medium",
+        "notes": "Added --agents, --list-agents, dynamic agent registry, shell examples in help"
+      },
+      {
+        "id": "CLI-2",
+        "task": "Update manifest and tests for new CLI/help behavior",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "medium",
+        "notes": "Updated MANIFEST usage/flags/examples and ct-cognize tests"
+      },
+      {
+        "id": "CLI-3",
+        "task": "Run isolated ct-cognize tests and shell smoke runs with different agents",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "medium",
+        "notes": "Validated --agent pi and --agents qwen,gemini; full pytest green"
+      }
+    ]
+  },
+  "acceptance_criteria": [
+    "ct-cognize supports explicit shell-driven multi-agent order",
+    "ct-cognize --help documents single-agent and multi-agent usage",
+    "ct-cognize --list-agents provides machine/shell-friendly output",
+    "tests pass and isolated CLI runs succeed"
+  ],
+  "stats": {
+    "total": 3,
+    "todo": 0,
+    "doing": 0,
+    "done": 3,
+    "progress_percent": 100
+  }
+}

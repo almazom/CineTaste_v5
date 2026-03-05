@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "KANBAN-2026-03-04-2236",
+  "title": "Kanban Plan — Memory card for preferred HTML template",
+  "description": "Add a memory card capturing user's preferred premium HTML template style and link it from memory index.",
+  "planning_session": {
+    "id": "KANBAN-2026-03-04-2236",
+    "created_at": "2026-03-04T22:36:28+03:00",
+    "author": "codex",
+    "goal": "Persist template preference in .MEMORY for future docs/publishing tasks"
+  },
+  "states": ["TODO", "DOING", "DONE"],
+  "columns": {
+    "TODO": [],
+    "DOING": [],
+    "DONE": [
+      {
+        "id": "MEM-1",
+        "task": "Create new .MEMORY card describing preferred HTML template style and reference URL",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "low",
+        "notes": "Card should be directly usable as design guidance",
+        "status_note": "Created .MEMORY/07-docs-template-preference.md with reference URL and reusable style rules."
+      },
+      {
+        "id": "MEM-2",
+        "task": "Register new card in .MEMORY/00-index.md",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "low",
+        "notes": "Keep index navigation consistent",
+        "status_note": "Added memory card entry to .MEMORY/00-index.md memory cards table."
+      },
+      {
+        "id": "MEM-3",
+        "task": "Review files and close kanban",
+        "contract_impact": [],
+        "priority": 2,
+        "estimated_complexity": "low",
+        "notes": "Doc-only change",
+        "status_note": "Verified memory card content and index linkage; no code/contracts changed."
+      }
+    ]
+  },
+  "acceptance_criteria": [
+    "New memory card exists and captures preferred template characteristics",
+    "Memory index references the new card",
+    "Kanban is moved to DONE"
+  ],
+  "stats": {
+    "total": 3,
+    "todo": 0,
+    "doing": 0,
+    "done": 3,
+    "progress_percent": 100
+  }
+}

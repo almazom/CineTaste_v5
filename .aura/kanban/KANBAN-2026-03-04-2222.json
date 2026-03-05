@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "KANBAN-2026-03-04-2222",
+  "title": "Kanban Plan — ct-cognize fallback chain stabilization",
+  "description": "Fix ct-cognize full fallback chain failures and run full test cycle.",
+  "planning_session": {
+    "id": "KANBAN-2026-03-04-2222",
+    "created_at": "2026-03-04T22:22:23+03:00",
+    "author": "codex",
+    "goal": "Restore reliable Step 3 ct-cognize execution under full pipeline load"
+  },
+  "states": ["TODO", "DOING", "DONE"],
+  "columns": {
+    "TODO": [],
+    "DOING": [],
+    "DONE": [
+      {
+        "id": "COG-1",
+        "task": "Reproduce full fallback chain failure and collect concrete failure signatures",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "low",
+        "notes": "Reproduced: pi false-negative preflight + qwen/gemini runtime timeouts"
+      },
+      {
+        "id": "COG-2",
+        "task": "Adjust ct-cognize agent runtime/preflight behavior to avoid false-negative readiness and runtime hangs",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "medium",
+        "notes": "Implemented in tools/ct-cognize/main.py"
+      },
+      {
+        "id": "COG-3",
+        "task": "Run targeted ct-cognize tests and full test suite",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "medium",
+        "notes": "tests/test_ct_cognize.py + pytest tests/"
+      },
+      {
+        "id": "COG-4",
+        "task": "Run end-to-end pipeline up to ct-cognize and verify Step 3 success",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "medium",
+        "notes": "Isolated ct-cognize run succeeded on real scheduled.json"
+      }
+    ]
+  },
+  "acceptance_criteria": [
+    "ct-cognize auto mode no longer fails due to false preflight negatives",
+    "Fallback agents can complete analysis without 180s deadlock behavior",
+    "pytest tests pass",
+    "Step 3 ct-cognize succeeds on real scheduled input"
+  ],
+  "stats": {
+    "total": 4,
+    "todo": 0,
+    "doing": 0,
+    "done": 4,
+    "progress_percent": 100
+  }
+}

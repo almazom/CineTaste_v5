@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "KANBAN-2026-03-05-0711",
+  "title": "Kanban Plan — move cognize demo fixtures to tests folder",
+  "description": "Add dedicated ct-cognetive demo fixture files under tests/fixtures and stop recommending contracts/examples for manual runs.",
+  "planning_session": {
+    "id": "KANBAN-2026-03-05-0711",
+    "created_at": "2026-03-05T07:11:06+03:00",
+    "author": "codex",
+    "goal": "Provide clear test-folder fixture paths for isolated CLI runs"
+  },
+  "states": ["TODO", "DOING", "DONE"],
+  "columns": {
+    "TODO": [],
+    "DOING": [],
+    "DONE": [
+      {
+        "id": "FX-2",
+        "task": "Add taste fixture in tests/fixtures for fully local two-file command",
+        "contract_impact": [],
+        "priority": 2,
+        "estimated_complexity": "low",
+        "notes": "Keep existing taste/profile.yaml unchanged",
+        "status_note": "Completed: added tests/fixtures/cognize_taste.sample.yaml."
+      },
+      {
+        "id": "FX-3",
+        "task": "Validate ct-cognetive command using new tests fixtures",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "low",
+        "notes": "Run one CLI command and capture key result",
+        "status_note": "Completed: command executed successfully on tests fixtures, output saved to /tmp/cog.fixture.json (3 analyzed)."
+      },
+      {
+        "id": "FX-1",
+        "task": "Create raw movies fixture JSON in tests/fixtures for ct-cognetive demo",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "low",
+        "notes": "Array of movie objects with id/title/director/actors/genres/year/source/url",
+        "status_note": "Completed: added tests/fixtures/cognize_movies.raw.json."
+      }
+    ]
+  },
+  "acceptance_criteria": [
+    "There is a raw movies fixture in tests/fixtures",
+    "There is a taste fixture in tests/fixtures",
+    "ct-cognetive runs with two test fixture file paths and returns valid JSON"
+  ],
+  "stats": {
+    "total": 3,
+    "todo": 0,
+    "doing": 0,
+    "done": 3,
+    "progress_percent": 100
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "KANBAN-2026-03-04-2147",
+  "title": "Kanban Plan — ct-cognize parallel preflight + robust fallback",
+  "planning_session": {
+    "id": "KANBAN-2026-03-04-2147",
+    "created_at": "2026-03-04T21:47:14+03:00",
+    "author": "pi-agent",
+    "goal": "Fix ct-cognize agent auto-selection so preflight runs in parallel with minimal prompts and runtime failures fallback to next available agent."
+  },
+  "states": [
+    "TODO",
+    "DOING",
+    "DONE"
+  ],
+  "columns": {
+    "TODO": [],
+    "DOING": [],
+    "DONE": [
+      {
+        "id": "COG-01",
+        "task": "Implement parallel agent preflight race with minimal prompts and per-agent preflight args",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "medium",
+        "notes": "Auto mode should probe all agents concurrently and pick first successful response. Preflight prompt must explicitly require no tool usage.",
+        "status_note": "Implemented parallel_preflight() with completion-order selection and preflight prompt: \"Ответь одним словом: ok. Не используй инструменты.\"; updated per-agent minimal preflight args (pi includes --no-tools)."
+      },
+      {
+        "id": "COG-02",
+        "task": "Add runtime fallback chain after selected agent failure (including timeout)",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "medium",
+        "notes": "If first-picked agent fails, try remaining preflight-ready agents before abort.",
+        "status_note": "Implemented auto runtime fallback in cognize(): if primary agent fails (runtime/timeout/parse), tool retries remaining preflight-ready agents before aborting."
+      },
+      {
+        "id": "COG-03",
+        "task": "Add/adjust tests for parallel selection and runtime fallback",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "medium",
+        "notes": "Cover first-responder selection and fallback on RuntimeError/TimeoutExpired.",
+        "status_note": "Extended tests/test_ct_cognize.py: added preflight ordering tests and runtime fallback integration test; updated integration monkeypatches to select_agent_chain."
+      },
+      {
+        "id": "COG-04",
+        "task": "Run targeted test suite and CLI smoke checks",
+        "contract_impact": [],
+        "priority": 2,
+        "estimated_complexity": "low",
+        "notes": "pytest tests/test_ct_cognize.py plus focused CLI command verification.",
+        "status_note": "Verification passed: pytest tests/test_ct_cognize.py -q (31 passed), real CLI smoke with auto mode, plus deterministic fake-agent fallback smoke (gemini fail -> qwen success)."
+      }
+    ]
+  },
+  "acceptance_criteria": [
+    "ct-cognize auto mode preflight probes agents in parallel and selects first successful responder",
+    "ct-cognize retries remaining candidates if chosen agent fails at runtime",
+    "Timeout and runtime errors no longer stop auto mode before trying available fallbacks",
+    "tests/test_ct_cognize.py passes"
+  ],
+  "stats": {
+    "total": 4,
+    "todo": 0,
+    "doing": 0,
+    "done": 4,
+    "progress_percent": 100.0
+  }
+}

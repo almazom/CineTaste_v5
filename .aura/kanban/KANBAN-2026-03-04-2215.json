@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "KANBAN-2026-03-04-2215",
+  "title": "Kanban Plan — Parallel Superagent Review of Golden Standard",
+  "description": "Run six parallel expert subagents, collect six independent markdown reviews, synthesize priorities, and apply high-priority doc updates.",
+  "planning_session": {
+    "id": "KANBAN-2026-03-04-2215",
+    "created_at": "2026-03-04T22:15:08+03:00",
+    "author": "codex",
+    "goal": "Generate multi-expert critique and improve golden standard docs"
+  },
+  "states": ["TODO", "DOING", "DONE"],
+  "columns": {
+    "TODO": [],
+    "DOING": [],
+    "DONE": [
+      {
+        "id": "REV-1",
+        "task": "Spawn six parallel expert agents with different optics and fixed ownership of separate report files",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "medium",
+        "notes": "Each agent outputs one markdown review",
+        "status_note": "Completed: 6 worker agents ran in parallel and produced 6 independent reports in docs/reviews/."
+      },
+      {
+        "id": "REV-2",
+        "task": "Collect six reports and run separate synthesis agent for dedupe + priority clustering",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "medium",
+        "notes": "Output synthesis markdown",
+        "status_note": "Completed: dedicated synthesis agent produced docs/reviews/review-7-synthesis-priorities.md with overlap and priority map."
+      },
+      {
+        "id": "REV-3",
+        "task": "Apply high-priority updates to docs/golden-standard.md and docs/golden-standard.html",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "medium",
+        "notes": "Only high-signal improvements",
+        "status_note": "Completed: applied high-priority, cross-expert changes to MD and HTML (governance gate, DoD evidence/coverage/E2E, severity taxonomy, parity rules, anti-pattern extensions)."
+      },
+      {
+        "id": "REV-4",
+        "task": "Validate artifacts and finalize kanban statuses",
+        "contract_impact": [],
+        "priority": 2,
+        "estimated_complexity": "low",
+        "notes": "Summarize outputs for user",
+        "status_note": "Completed: artifacts verified, updated documents re-published via publish_me, kanban closed."
+      }
+    ]
+  },
+  "acceptance_criteria": [
+    "Six independent review markdown files exist",
+    "One synthesis markdown file exists with high/medium/low priorities and overlap analysis",
+    "golden-standard md and html updated from high-priority findings",
+    "final response includes file paths and what changed"
+  ],
+  "stats": {
+    "total": 4,
+    "todo": 0,
+    "doing": 0,
+    "done": 4,
+    "progress_percent": 100
+  }
+}

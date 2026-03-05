@@ -1,0 +1,78 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "KANBAN-2026-03-04-2208",
+  "title": "Kanban Plan — Golden Standard Documentation and Publication",
+  "description": "Create docs in MD+HTML describing CineTaste golden standard and publish via publish_me.",
+  "planning_session": {
+    "id": "KANBAN-2026-03-04-2208",
+    "created_at": "2026-03-04T22:08:57+03:00",
+    "author": "codex",
+    "goal": "Document golden standard principles and publish as premium HTML"
+  },
+  "states": ["TODO", "DOING", "DONE"],
+  "columns": {
+    "TODO": [],
+    "DOING": [],
+    "DONE": [
+      {
+        "id": "DOC-1",
+        "task": "Synthesize golden standard principles from PROFILE, AURA, PROTOCOL and flow structure",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "medium",
+        "notes": "Clarify boundaries: PROFILE vs AURA",
+        "status_note": "Completed with explicit boundary model and role separation between PROFILE.md, AURA.md, PROTOCOL.json, FLOW.md, manifests and contracts."
+      },
+      {
+        "id": "DOC-2",
+        "task": "Create docs markdown file with full principle set and operating rules",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "medium",
+        "notes": "New docs/ file",
+        "status_note": "Created docs/golden-standard.md with mission, principles, boundary model, change model, LLM expectations, DoD and anti-patterns."
+      },
+      {
+        "id": "DOC-3",
+        "task": "Create HTML companion with high-quality typography and readable layout",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "medium",
+        "notes": "New docs/ html file",
+        "status_note": "Created docs/golden-standard.html with premium typography, structured sections, responsive layout and visual hierarchy."
+      },
+      {
+        "id": "DOC-4",
+        "task": "Run publish_me --help then publish resulting document and capture link",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "medium",
+        "notes": "If tool is unavailable, report exact blocker",
+        "status_note": "Executed publish_me --help and published both HTML (--direct) and Markdown versions to VPS; links captured."
+      },
+      {
+        "id": "DOC-5",
+        "task": "Self-review artifacts and update kanban completion status",
+        "contract_impact": [],
+        "priority": 2,
+        "estimated_complexity": "low",
+        "notes": "Doc-only verification",
+        "status_note": "Completed review of generated files and publication outputs; kanban moved to DONE."
+      }
+    ]
+  },
+  "acceptance_criteria": [
+    "docs contains a markdown golden standard document",
+    "docs contains a styled HTML golden standard document",
+    "document explicitly covers executable markdown, CLI isolation, kanban planning, aura/profile boundary, and contract-first replacement safety",
+    "publish_me --help executed and publication attempted",
+    "final response includes publication result or concrete blocker"
+  ],
+  "stats": {
+    "total": 5,
+    "todo": 0,
+    "doing": 0,
+    "done": 5,
+    "progress_percent": 100
+  }
+}

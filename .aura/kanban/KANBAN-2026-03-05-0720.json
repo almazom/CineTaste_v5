@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "KANBAN-2026-03-05-0720",
+  "title": "Kanban Plan — regenerate cognize fixtures from real fetch",
+  "description": "Replace synthetic cognize movies fixture with real fetched movies data from Naberezhnye Chelny source configured in .env.",
+  "planning_session": {
+    "id": "KANBAN-2026-03-05-0720",
+    "created_at": "2026-03-05T07:20:23+03:00",
+    "author": "codex",
+    "goal": "Use live fetch output to build tests fixtures for ct-cognetive"
+  },
+  "states": ["TODO", "DOING", "DONE"],
+  "columns": {
+    "TODO": [],
+    "DOING": [],
+    "DONE": [
+      {
+        "id": "RF-2",
+        "task": "Write fetch meta fixture with source URL and fetched timestamp",
+        "contract_impact": [],
+        "priority": 2,
+        "estimated_complexity": "low",
+        "notes": "Companion file to raw movies fixture",
+        "status_note": "Completed: added tests/fixtures/cognize_movies.fetch.meta.json with source_url, fetched_at and movies_count."
+      },
+      {
+        "id": "RF-3",
+        "task": "Run ct-cognetive on regenerated fixture and verify JSON output",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "medium",
+        "notes": "Ensure fixture quality is suitable for isolated CLI test",
+        "status_note": "Completed: ct-cognetive ran successfully on updated fixture; output /tmp/cog.fixture.realfetch.json with 38 analyzed movies."
+      },
+      {
+        "id": "RF-1",
+        "task": "Fetch real movies for naberezhnie-chelni and replace tests/fixtures/cognize_movies.raw.json",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "medium",
+        "notes": "Source is .env DEFAULT_CINEMA_URL via ct-fetch",
+        "status_note": "Completed: regenerated fixture via ct-fetch --city naberezhnie-chelni --when now (38 movies)."
+      }
+    ]
+  },
+  "acceptance_criteria": [
+    "cognize_movies.raw.json is generated from live fetch output",
+    "fetch metadata fixture exists and records source URL",
+    "ct-cognetive command works on updated fixture"
+  ],
+  "stats": {
+    "total": 3,
+    "todo": 0,
+    "doing": 0,
+    "done": 3,
+    "progress_percent": 100
+  }
+}
