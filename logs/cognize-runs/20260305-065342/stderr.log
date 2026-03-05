@@ -1,0 +1,9 @@
+[preflight] pi ✓ (ok in 7.35s)
+[preflight] qwen ✓ (ok in 9.90s)
+[preflight] gemini ✓ (ok in 15.67s)
+[cognize] Using pi (at_file mode)...
+[cognize] 1 movies analyzed by pi
+elapsed=0:44.78 cpu=53% maxrss_kb=256324 exit=0
+Traceback (most recent call last):
+  File "<stdin>", line 2, in <module>
+IndexError: list index out of range

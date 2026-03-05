@@ -1,0 +1,38 @@
+{
+  "movies": [
+    {
+      "id": "test-1",
+      "title": "Тестовый фильм",
+      "original_title": "Test Movie",
+      "director": "Тестовый режиссёр",
+      "actors": ["Актёр 1", "Актёр 2"],
+      "genres": ["драма", "комедия"],
+      "year": 2024,
+      "duration_min": 120,
+      "source": "kinoteatr.ru",
+      "url": "https://kinoteatr.ru/film/test-1/naberezhnie-chelni/",
+      "showtimes": [
+        {
+          "time": "13:40",
+          "datetime_iso": "2026-03-03T13:40:00+03:00",
+          "hall": "Зал 2"
+        },
+        {
+          "time": "19:10",
+          "datetime_iso": "2026-03-03T19:10:00+03:00"
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "city": "naberezhnie-chelni",
+    "city_display": "Набережные Челны",
+    "date": "2026-03-03",
+    "source_url": "https://kinoteatr.ru/kinoafisha/naberezhnie-chelni/",
+    "fetched_at": "2026-03-03T09:00:00+03:00",
+    "scheduled_at": "2026-03-03T09:30:00+03:00",
+    "schedule_source": "kinoteatr.ru",
+    "movies_total": 1,
+    "movies_with_showtimes": 1
+  }
+}
