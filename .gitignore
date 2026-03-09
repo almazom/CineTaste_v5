@@ -19,6 +19,30 @@ logs/*.log
 logs/*.txt
 logs/deep_run_*/
 
+# Runtime artifacts
+logs/failed_*/
+runs/
+reports/
+ssot/
+# t2me binary (but not t2me/ directory)
+/t2me
+bio/
+cards/
+colony_memory/
+final/
+
+# Kanban and temporary files
+.aura/kanban/KANBAN-*.json
+.aura/kanban/KANBAN-*.md
+.aura/full_agents/
+aura/
+
+# Generated files
+*.pyc
+__pycache__/
+*.py[cod]
+*.so
+
 # Conversation artifacts
 *_conversation-*.txt
 

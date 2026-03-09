@@ -1,10 +1,10 @@
-# CineTaste v5.2.0 Makefile
+# CineTaste v5.4.0 Makefile
 
 .PHONY: test run dry-run clean help
 
 # Default target
 help:
-	@echo "CineTaste v5.2.0 - Commands"
+	@echo "CineTaste v5.4.0 - Commands"
 	@echo ""
 	@echo "  make test        Run pytest test suite"
 	@echo "  make test-cov    Run tests with coverage"
