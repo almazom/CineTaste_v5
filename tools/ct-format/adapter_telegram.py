@@ -34,7 +34,7 @@ def render_message(
     # Header
     lines.append(f"📅 {date}")
     lines.append("")
-    lines.append(f"┏━━ СЕГОДНЯ ━━┓")
+    lines.append("┏━━ СЕГОДНЯ ━━┓")
     lines.append("")
 
     # Group by recommendation
