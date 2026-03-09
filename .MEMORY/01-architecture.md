@@ -1,113 +1,62 @@
-# 🏗️ Architecture — CineTaste v5
+# Architecture — CineTaste v5
 
-## Design Philosophy
-
-Based on Rich Hickey's "Simple Made Easy":
+## Design Principles
 
 | Principle | Application |
 |-----------|-------------|
-| **Simple ≠ Easy** | Choose simple artifacts over easy authoring |
-| **Uncomplect** | Each tool has ONE responsibility |
-| **Data > Logic** | PROTOCOL.json declares, code executes |
-| **MVS** | Minimum Viable Solution — no premature abstraction |
-| **Stateless** | Pure functions, effects at boundaries only |
+| Contract-first | Define schema boundaries before implementation |
+| Simple > Easy | Keep artifacts deterministic and inspectable |
+| Stateless tools | Data in → data out, effects only at boundaries |
+| SSOT runtime | `PROTOCOL.json` and `flows/latest/FLOW.md` drive execution |
 
-## Core Patterns
+## Core Pattern: PROTOCOL.json as SSOT
 
-### 1. PROTOCOL.json as SSOT
+`PROTOCOL.json` declares:
 
-Single file declares the entire system:
+- contracts (data boundaries),
+- tools (CLI interfaces),
+- flow (active stage ordering and modes).
 
-```json
-{
-  "contracts": { ... },  // Data boundaries
-  "tools": { ... },      // CLI interfaces
-  "flow": { ... }        // Pipeline stages
-}
-```
+No tool/runtime assumptions are valid unless they match `PROTOCOL.json`.
 
-**Rule:** Read PROTOCOL.json FIRST. It defines what exists.
-
-### 2. Contract-First Development
+## Current Data Flow
 
 ```
-DEFINE contract → SPECIFY tool → DESCRIBE flow → TEST → VERSION
+ct-fetch -> movie-batch
+ct-schedule -> movie-schedule
+ct-cognize -> analysis-result
+ct-filter -> filter-result
+ct-format -> message-text
+t2me -> send-confirmation
 ```
 
-Never write code without a contract.
-
-### 3. Ports & Adapters (Вилка-Розетка)
+## Tool Boundary Model (Ports & Adapters)
 
 ```
-┌─────────────────────────────────────────┐
-│              ct-fetch                    │
-│                                          │
-│  adapter_kinoteatr.py ─→ main.py ─→ port.py
-│  (plug / вилка)          (wiring)  (socket / розетка)
-│                                          │
-│  Adapter: HOW to get data                │
-│  Port:    WHAT shape data must be        │
-└─────────────────────────────────────────┘
+adapter_* (integration) -> main.py (wiring/CLI) -> port.py (contract gate)
 ```
 
-### 4. Vertical Slicing
+Shared domain logic across tools is avoided. Shared infra utilities are limited to `tools/_shared` (for example contract validation).
 
-Each tool is self-contained:
-
-```
-tools/ct-fetch/
-├── MANIFEST.json      # Specification
-├── main.py            # CLI entry
-├── port.py            # Validation
-└── adapter_*.py       # External integrations
-```
-
-**No shared domain logic between tools.** Shared infrastructure utilities are allowed in `tools/_shared`.
-
-## Data Flow
+## Active Runtime Topology
 
 ```
-ct-fetch ──→ movie-batch ──→ ct-analyze ──→ analysis-result
-                                         │
-                                         ▼
-t2me ←── message-text ←── ct-format ←── filter-result
+ct-fetch -> ct-schedule -> ct-cognize -> ct-filter -> ct-format -> t2me
 ```
+
+- `ct-analyze` remains in repository as a legacy compatibility tool.
+- Active flow stage at position 3 is `ct-cognize`.
+- Pipeline supports `--dry-run`: the full flow still runs, and Step 6 validates delivery via `t2me --dry-run` without live send.
 
 ## File Map
 
 ```
-CineTaste_v5/
-├── AURA.md                    # Agent directives
-├── PROTOCOL.json              # ★ SSOT — system manifest
-├── contracts/                 # JSON Schema boundaries
-│   ├── movie-batch.schema.json
-│   ├── analysis-result.schema.json
-│   ├── filter-result.schema.json
-│   ├── message-text.schema.json
-│   └── send-confirmation.schema.json
-├── tools/                     # CLI microservices
-│   ├── ct-fetch/MANIFEST.json
-│   ├── ct-analyze/MANIFEST.json
-│   ├── ct-filter/MANIFEST.json
-│   ├── ct-format/MANIFEST.json
-│   └── t2me/MANIFEST.json
-├── flows/                     # Pipeline versions
-│   └── v1.2/FLOW.md
-├── .MEMORY/                   # Context cards
-├── taste/profile.yaml         # User preferences
-├── .aura/templates/           # Output templates
-└── logs/                      # Execution logs
+PROTOCOL.json             # Topology SSOT
+contracts/*.schema.json   # Contract boundaries
+tools/*/MANIFEST.json     # Tool specs + CLI API
+flows/latest/FLOW.md      # Executable pipeline definition
+.aura/kanban/latest       # Current implementation plan
 ```
 
-## Anti-Patterns (Avoid)
-
-| Anti-Pattern | Why It's Bad |
-|--------------|--------------|
-| Shared domain logic | Creates hidden coupling |
-| Mutable global state | Unpredictable behavior |
-| Magic strings/numbers | Unclear intent |
-| Deep nesting | Hard to reason about |
-| Premature abstraction | Adds complexity without value |
-
 ---
-*Last updated: 2026-03-02*
+*Last updated: 2026-03-05*

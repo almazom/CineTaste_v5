@@ -1,43 +1,28 @@
-# 🎬 Taste Profile — CineTaste v5
+# Taste Profile — CineTaste v5
 
-## What is the Taste Profile?
+## What It Is
 
-A YAML file that defines user preferences for movie recommendations.
+`taste/profile.yaml` defines user preferences used by `ct-cognize` to score movies.
 
-**Location:** `taste/profile.yaml`
-
-## Structure
+## Core Structure
 
 ```yaml
 version: "1.0"
 user: "default"
 
 likes:
-  directors:
-    - "Tarkovsky"
-    - "Lynch"
-    - "A24"
-  genres:
-    - "art-house"
-    - "anime"
-    - "indie"
-  keywords:
-    - "philosophical"
-    - "surreal"
+  directors: []
+  genres: []
+  keywords: []
 
 dislikes:
   directors: []
-  genres:
-    - "horror"
-    - "blockbuster"
-  keywords:
-    - "mainstream"
+  genres: []
+  keywords: []
 
 canon:
-  - director: "Tarkovsky"
+  - director: "Name"
     weight: 1.0
-  - director: "Kubrick"
-    weight: 0.9
 
 thresholds:
   must_see: 85
@@ -45,41 +30,38 @@ thresholds:
   maybe: 40
 ```
 
-## How It Works
+## Runtime Use
 
-1. **ct-analyze** reads `taste/profile.yaml`
-2. AI compares each movie against likes/dislikes
-3. Score calculated based on matches and weights
-4. Recommendation assigned: `must_see`, `recommended`, `maybe`, `skip`
+1. `ct-cognize` loads validated `movie-schedule` input.
+2. Agent reads `movies.json` and `taste.yaml` from working directory.
+3. Agent returns per-movie recommendation JSON.
+4. Output is enforced against `analysis-result` contract.
 
-## Recommendation Categories
+## Recommendation Buckets
 
-| Category | Score Range | Action |
-|----------|-------------|--------|
-| `must_see` | 85-100 | Always include |
-| `recommended` | 60-84 | Include if space |
-| `maybe` | 40-59 | Optional |
-| `skip` | 0-39 | Exclude |
+| Category | Typical Score Band |
+|----------|--------------------|
+| `must_see` | 85-100 |
+| `recommended` | 60-84 |
+| `maybe` | 40-59 |
+| `skip` | 0-39 |
 
-## Modifying Taste
+## Editing Workflow
 
 ```bash
-# Edit the profile
+# Edit profile
 nano taste/profile.yaml
 
-# Test changes
-./run --dry-run
-
-# Verify output
-ls -1 logs/failed_* | tail -n 1
+# Validate pipeline with cached analysis replay
+./run --input contracts/examples/analysis-result.sample.json
 ```
 
-## Best Practices
+## Practical Guidance
 
-1. **Be specific** — Named directors > generic genres
-2. **Use weights** — Some preferences are stronger
-3. **Review periodically** — Taste evolves
-4. **Test before production** — Always use --dry-run first
+1. Prefer specific directors/actors over broad labels.
+2. Keep dislikes explicit to reduce false positives.
+3. Revisit thresholds only after reviewing several daily runs.
+4. Track recommendation drift via pipeline logs.
 
 ---
-*Last updated: 2026-03-02*
+*Last updated: 2026-03-05*

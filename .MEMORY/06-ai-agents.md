@@ -1,123 +1,65 @@
-# 06-ai-agents.md — AI Agent Usage for CineTaste
+# AI Agents — `ct-cognize`
 
-> **Purpose:** Guide for using agent policies in ct-analyze (`--agent auto|kimi|pi|dry_run`)
-> **Updated:** 2026-03-02
+> Purpose: runtime behavior of cognitive analysis stage (`ct-cognize`)
+> Updated: 2026-03-05
 
----
+## Active Agents
 
-## Quick Reference
+| Agent | CLI | Mode | Notes |
+|------|-----|------|-------|
+| kimi | `kimi` | stdin | strongest for unknown movies / web search |
+| gemini | `gemini` | cwd | file-reading in workdir |
+| qwen | `qwen` | cwd | file-reading in workdir |
+| pi | `pi` | @file | deterministic fallback path |
 
-| Agent | Status | Best For | Command |
-|-------|--------|----------|---------|
-| **kimi** | ✅ Active | Web search, research | `kimi -p "prompt" --print --final-message-only --thinking` |
-| **pi** | ✅ Active | LLM reasoning, no web | `pi -p "prompt" --no-tools --thinking high` |
+## Selection Policy
 
----
+- `--agent auto` (default):
+  - parallel preflight checks the configured agents for readiness;
+  - runtime fallback order follows the first-ready agents discovered at preflight;
+  - if all agents fail, the command exits with agent failure (no silent dry-run fallback).
+- `--agent <name>`:
+  - strict single-agent mode.
+- `--agents a,b,c`:
+  - user-defined ordered fallback chain.
 
-## kimi CLI — Primary Agent (Web Search!)
+## Contract Gate
 
-### Status: ✅ WORKING
-```bash
-# Preflight test
-kimi -p "1+2=...[ONLY NUMBER IN WORDS]" --print --final-message-only
-# Output: three ✓
-```
+`ct-cognize` validates `movie-schedule@1.0.0` input before any preflight/agent call.
+Invalid payloads fail fast with contract error exit code.
 
-### Recommended Command
-```bash
-kimi -p "PROMPT" --print --final-message-only --thinking
-```
+## Non-Interactive Runtime Semantics
 
-### Key Flags for CineTaste
+Agent subprocesses run with CI-safe defaults:
 
-| Flag | Purpose | Required |
-|------|---------|----------|
-| `-p` / `--prompt` | Non-interactive prompt | ✅ Yes |
-| `--print` | Non-interactive mode | ✅ Yes |
-| `--final-message-only` | Clean output (no UI) | ✅ Yes |
-| `--thinking` | Better reasoning | ⚠️ Recommended |
+- `CI=1`
+- `NO_COLOR=1`
+- `TERM=dumb`
 
-### Example: Movie Analysis
-```bash
-kimi -p "Analyze these movies and research them online: [list]. Return JSON." --print --final-message-only --thinking
-```
+This prevents interactive UI output in automation pipelines.
 
-### Strengths
-- **Web search capabilities** — can research unknown movies
-- Better for films not in training data
-- Can fetch ratings/reviews
-- Good reasoning with `--thinking`
-
-### Weaknesses
-- Slower than pi (30-60s)
-- May timeout on large batches
-- CLI changed from v4 expectations
-
----
-
-## pi CLI — Fallback Agent
-
-### Recommended Command
-```bash
-pi -p "PROMPT" --no-tools --thinking high
-```
-
-### Key Flags
-
-| Flag | Purpose | Required |
-|------|---------|----------|
-| `-p` / `--print` | Non-interactive mode | ✅ Yes |
-| `--no-tools` | Disable file tools (safety) | ✅ Yes |
-| `--thinking high` | Better reasoning quality | ⚠️ Recommended |
-
-### Strengths
-- Fast response (10-30s)
-- Reliable CLI interface
-- Good JSON extraction
-
-### Weaknesses
-- **No web search** — can't research movies
-- May hallucinate movie details
-
----
-
-## Agent Priority for v5
-
-```python
-AGENTS = [
-    {"name": "kimi", "cmd": "kimi", "args": ["--print", "--final-message-only", "--thinking"], "uses_stdin": True},
-    {"name": "pi", "cmd": "pi", "args": ["--print", "--no-tools", "--thinking", "high"], "uses_stdin": True},
-]
-```
-
-### Fallback Chain
-```
-kimi (web search) → pi (fast reasoning) → dry_run (mock)
-```
-
-### `ct-analyze --agent` Policy
-
-- `--agent auto` (default): fallback chain `kimi → pi → dry_run`
-- `--agent kimi`: strict explicit mode, no fallback
-- `--agent pi`: strict explicit mode, no fallback
-- `--agent dry_run`: always mock analysis
-
----
-
-## Preflight Check
+## Quick Commands
 
 ```bash
-# Test kimi
-kimi -p "1+2=...[ONLY NUMBER IN WORDS]" --print --final-message-only
-# Expected: three ✓
+# Supported agents
+ct-cognize --list-agents
 
-# Test pi
-pi -p "1+2=...[ONLY NUMBER IN WORDS]" --no-tools
-# Expected: three ✓
+# Version
+ct-cognize --version
+
+# Stdin mode
+cat scheduled.json | ct-cognize --input - --taste taste/profile.yaml
+
+# Explicit chain
+ct-cognize --input scheduled.json --taste taste/profile.yaml --agents pi,qwen,gemini
 ```
 
----
+## Diagnostics Controls
 
-## Related Files
-- `tools/ct-analyze/adapter_agents.py` — active multi-agent adapter
-- `taste/profile.yaml` — taste data passed to agent
+- `--trace-id <id>`: tag all stderr diagnostics
+- `--timings`: print stage timings to stderr
+- `--quiet`: suppress non-error diagnostics
+- `--verbose`: richer diagnostics
+
+Diagnostics never contaminate JSON payload on stdout.
+

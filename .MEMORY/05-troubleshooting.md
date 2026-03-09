@@ -1,106 +1,77 @@
-# 🔧 Troubleshooting — CineTaste v5
+# Troubleshooting — CineTaste v5
 
-## Common Issues
+## 1. Input Contract Failures
 
-### 1. Contract Validation Fails
+Symptom:
+- `Contract violation (movie-schedule@1.0.0 input)` from `ct-cognize`.
 
-**Symptom:** "Contract violation: movie-batch.schema.json field X"
-
-**Causes:**
-- Missing required field
-- Wrong type
-- Extra field (additionalProperties: false)
-
-**Fix:**
+Checks:
 ```bash
-# Check input against schema
-python3 -c "
-import json, jsonschema
-data = json.load(open('movies.json'))
-schema = json.load(open('contracts/movie-batch.schema.json'))
-jsonschema.validate(data, schema)
-"
+python3 tools/_shared/validate.py movie-schedule <your_file.json>
 ```
 
-### 2. AI Agent Not Working
+Fix:
+- Ensure payload has both `movies` and `meta`.
+- Remove undeclared fields (contracts enforce `additionalProperties: false`).
 
-**Symptom:** ct-analyze fails or returns empty
+## 2. Agent Availability Failures
 
-**Check:**
+Symptom:
+- `Agent error: No AI agent available...`
+- `preflight ... fail` diagnostics.
+
+Checks:
 ```bash
-# Test pi agent
-pi -p "1+1"  # Should return "2"
-
-# Check taste profile
-cat taste/profile.yaml
+ct-cognize --list-agents
+kimi -p "ok" --print --final-message-only
+pi -p "ok" --no-tools
 ```
 
-### 3. Telegram Send Fails
-
-**Symptom:** t2me returns error
-
-**Check:**
+Fix:
+- Install/configure at least one supported agent CLI.
+- Use explicit ordered chain when needed:
 ```bash
-# Verify authorization
-t2me status
-
-# Re-authorize if needed
-t2me auth
+ct-cognize --input scheduled.json --taste taste/profile.yaml --agents pi,qwen,gemini
 ```
 
-### 4. No Movies Matched
+## 3. Path / Output Errors
 
-**Symptom:** "0 movies matched taste profile"
+Symptom:
+- exit code `3` and `Path error: ...`.
 
-**Causes:**
-- Taste profile too restrictive
-- No good movies today
-- AI analysis failed
+Checks:
+- Confirm `--input` file exists (or use `--input -` for stdin).
+- Confirm `--taste` file exists.
+- Confirm output directory exists for `--output`.
 
-**Fix:**
-```bash
-# Check what was analyzed
-cat /tmp/ct-analyze/analyzed.json | jq '.analyzed[].recommendation'
+## 4. Stderr/Stdout Discipline in Automation
 
-# Lower threshold
-./run --dry-run  # Review scores
-# Edit taste/profile.yaml thresholds
-```
-
-## Debug Mode
+If parsers fail on output, verify diagnostics did not leak into stdout:
 
 ```bash
-# Verbose output
-./run --verbose --dry-run
-
-# Check intermediate files
-ls -la /tmp/ct-*/
+cat scheduled.json | ct-cognize --input - --taste taste/profile.yaml --quiet > analyzed.json
 ```
 
-## Log Files
+- JSON payload should be in `analyzed.json`.
+- Diagnostics stay on stderr.
 
-| Log | Location | Contents |
-|-----|----------|----------|
-| Sends | `logs/sends.log` | Successful deliveries |
-| Errors | `logs/errors.log` | Failures with timestamps |
-| Failed messages | `logs/failed_*.txt` | Preserved for resend |
-
-## Recovery
+## 5. Pipeline Recovery
 
 ```bash
-# Resend failed message
-./run --resend logs/failed_20260302_103000.txt
+# Re-run from cached analysis payload
+./run --input contracts/examples/analysis-result.sample.json
 
-# Re-run from cached analysis
-./run --input /tmp/ct-analyze/analyzed.json
+# Resend existing rendered text
+./run --resend message.txt
 ```
 
-## Getting Help
+## 6. Useful Logs
 
-1. Check this file
-2. Read PROTOCOL.json for system topology
-3. Check tool MANIFEST.json for CLI options
-4. Run with --dry-run to isolate issue
+| File | Purpose |
+|------|---------|
+| `logs/errors.log` | pipeline/runtime failures |
+| `logs/failed_*` | preserved failure artifacts |
+| `.aura/kanban/latest` | active task state |
 
 ---
-*Last updated: 2026-03-02*
+*Last updated: 2026-03-05*

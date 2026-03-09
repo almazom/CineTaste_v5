@@ -1,73 +1,56 @@
-# 📋 Contracts — CineTaste v5
+# Contracts — CineTaste v5
 
-## What Are Contracts?
+## Purpose
 
-Contracts are **JSON Schema** files that define the shape of data at every boundary.
+Contracts are JSON Schemas defining every tool boundary.
+Each stage must emit payloads that validate against its declared output contract.
 
-**Rule:** Every tool input/output MUST have a contract.
-
-## Contract Chain
+## Active Contract Chain
 
 ```
-ct-fetch ──→ movie-batch.schema.json ──→ ct-analyze
-ct-analyze ──→ analysis-result.schema.json ──→ ct-filter
-ct-filter ──→ filter-result.schema.json ──→ ct-format
-ct-format ──→ message-text.schema.json ──→ t2me
-t2me ──→ send-confirmation.schema.json ──→ done
+ct-fetch     -> movie-batch
+ct-schedule  -> movie-schedule
+ct-cognize   -> analysis-result
+ct-filter    -> filter-result
+ct-format    -> message-text
+t2me         -> send-confirmation
 ```
 
 ## Contract Summary
 
-| Contract | Producer | Consumer | Key Fields |
-|----------|----------|----------|------------|
-| `movie-batch` | ct-fetch | ct-analyze | movies[], meta |
-| `analysis-result` | ct-analyze | ct-filter | analyzed[], relevance_score, recommendation |
-| `filter-result` | ct-filter | ct-format | filtered[], matched count |
-| `message-text` | ct-format | t2me | text (markdown) |
-| `send-confirmation` | t2me | — | success, message_id |
+| Contract | Producer | Consumer | Required Top-Level Fields |
+|----------|----------|----------|---------------------------|
+| `movie-batch` | ct-fetch | ct-schedule | `movies`, `meta` |
+| `movie-schedule` | ct-schedule | ct-cognize | `movies`, `meta` |
+| `analysis-result` | ct-cognize | ct-filter | `analyzed`, `meta` |
+| `filter-result` | ct-filter | ct-format | `filtered`, `meta` |
+| `message-text` | ct-format | t2me | `text`, `meta` |
+| `send-confirmation` | t2me | — | `success`, `meta` |
 
-## Contract Structure
-
-Every contract follows this template:
-
-```json
-{
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "contract-name.schema.json",
-  "title": "Human Readable Title",
-  "version": "1.0.0",
-  "description": "What this contract represents",
-  "type": "object",
-  "required": ["field1", "field2"],
-  "properties": {
-    "field1": { "type": "string", "description": "Purpose" }
-  },
-  "additionalProperties": false
-}
-```
+Legacy compatibility note:
+- `ct-analyze` still appears in `PROTOCOL.json` as a legacy consumer/producer for migration boundaries around `movie-schedule` and `analysis-result`.
 
 ## Validation Rules
 
-1. **additionalProperties: false** — No extra fields allowed
-2. **required fields** — Must be present
-3. **type checking** — Enforced at runtime
-4. **enum values** — Limited to declared options
+1. `additionalProperties: false` is enforced in contracts.
+2. Runtime validation is mandatory at tool boundaries (`port.py`).
+3. Format checks (`uri`, `date-time`) are active in shared validator.
 
-## Adding a New Contract
+## Versioning
 
-1. Create `contracts/new-contract.schema.json`
-2. Add to PROTOCOL.json under `contracts`
-3. Update producer/consumer tools' MANIFEST.json
-4. Add validation to port.py
+| Change Type | Rule |
+|-------------|------|
+| Breaking shape change | Create new contract version and update all producers/consumers |
+| Optional additive field | Backward-compatible update permitted |
+| Producer/consumer swap | Update `PROTOCOL.json` + manifests + flow |
 
-## Contract Versioning
+## Practical Checks
 
-| Change Type | Action |
-|-------------|--------|
-| Add required field | New version (breaking) |
-| Remove field | New version (breaking) |
-| Change type | New version (breaking) |
-| Add optional field | In-place (non-breaking) |
+```bash
+# Validate contract examples quickly
+python3 tools/_shared/validate.py movie-schedule contracts/examples/movie-schedule.sample.json
+python3 tools/_shared/validate.py analysis-result contracts/examples/analysis-result.sample.json
+```
 
 ---
-*Last updated: 2026-03-02*
+*Last updated: 2026-03-05*

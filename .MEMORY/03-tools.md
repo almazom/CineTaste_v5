@@ -1,82 +1,68 @@
-# 🔧 Tools — CineTaste v5
+# Tools — CineTaste v5
 
 ## Tool Philosophy
 
 | Principle | Rule |
 |-----------|------|
-| **One verb per tool** | ct-fetch, ct-analyze, ct-filter, ct-format |
-| **Self-contained** | Each tool owns its domain logic; only infra utilities may be shared |
-| **Contract-bound** | Input/output validated against schemas |
-| **Stateless** | Data in → data out, no side effects (except t2me) |
+| One verb per tool | Each tool owns one pipeline responsibility |
+| Contract-bound | Every input/output validated against schema |
+| Stateless by default | No hidden shared mutable state |
+| Observable CLI | Stable flags, stable exit taxonomy, stderr diagnostics |
 
-## Tool Inventory
+## Active Tool Inventory
 
-| Tool | Verb | Position | Input | Output | Adapter |
-|------|------|----------|-------|--------|---------|
-| ct-fetch | fetch | 1 | — | movie-batch | kinoteatr |
-| ct-analyze | analyze | 2 | movie-batch | analysis-result | auto (kimi→pi→dry_run) |
-| ct-filter | filter | 3 | analysis-result | filter-result | — (pure) |
-| ct-format | format | 4 | filter-result | message-text | telegram |
-| t2me | send | 5 | message-text | send-confirmation | — (external) |
+| Tool | Verb | Position | Input | Output | Status |
+|------|------|----------|-------|--------|--------|
+| ct-fetch | fetch | 1 | — | movie-batch | active |
+| ct-schedule | schedule | 2 | movie-batch | movie-schedule | active |
+| ct-cognize | cognize | 3 | movie-schedule | analysis-result | active |
+| ct-filter | filter | 4 | analysis-result | filter-result | active |
+| ct-format | format | 5 | filter-result | message-text | active |
+| t2me | send | 6 | message-text | send-confirmation | external |
+| ct-analyze | analyze | 3 | movie-schedule | analysis-result | legacy |
+
+## `ct-cognize` CLI Surface
+
+Key flags:
+
+- `--input|-i <FILE|->`
+- `--taste|-t <FILE>`
+- `--output|-o <FILE|->`
+- `--agent|-a <auto|kimi|gemini|qwen|pi>`
+- `--agents <LIST>`
+- `--list-agents`
+- `--version`
+- `--trace-id <ID>`
+- `--timings`
+- `--quiet|-q` / `--verbose|-v`
+
+Exit taxonomy:
+
+- `0` success
+- `1` internal unexpected error
+- `2` invalid args
+- `3` path/stdin/output filesystem error
+- `4` agent availability/runtime failure
+- `5` contract or JSON parse error
 
 ## Tool Structure
 
 ```
 tools/ct-<verb>/
-├── MANIFEST.json      # Specification (CLI, contracts, adapters)
-├── main.py            # CLI entry point
-├── port.py            # Input/output validation
-└── adapter_*.py       # External integrations (optional)
+├── MANIFEST.json
+├── main.py
+├── port.py
+└── adapter_*.py (if needed)
 ```
 
-## MANIFEST.json Schema
+## Tool Update Workflow
 
-Every tool MUST have a MANIFEST.json with:
-
-```json
-{
-  "identity": { "name", "verb", "position", "description" },
-  "contracts": { "input", "output" },
-  "cli": { "usage", "flags[]", "exit_codes" },
-  "adapters": { ... },
-  "files": { "required[]", "optional[]" }
-}
-```
-
-## CLI Interface Rules
-
-1. **--input, -i** — Input file (or stdin)
-2. **--output, -o** — Output file (or stdout)
-3. **--dry-run, -n** — Preview without side effects
-4. **--help, -h** — Show usage
-5. **Exit codes** — 0=success, 1=error, 2=bad args, 3=network, 4=parse
-
-## Adding a New Tool
-
-1. Define contracts (input/output)
-2. Create `tools/ct-<verb>/MANIFEST.json`
-3. Add to PROTOCOL.json under `tools`
-4. Implement: main.py, port.py, adapter_*.py
-5. Update flow in `flows/latest/FLOW.md`
-
-## Adapter Pattern
-
-Adapters handle external integrations:
-
-```python
-# adapter_kinoteatr.py
-def fetch_movies(city: str, when: str) -> list[dict]:
-    """Fetch movies from kinoteatr.ru"""
-    # Implementation
-    return movies
-```
-
-The main.py wires adapter → port → output.
-
-## Shared Module Rule
-
-`tools/_shared` is allowed only for infrastructure utilities (for example JSON Schema validation).
-Business/domain logic must remain tool-local to avoid hidden coupling.
+1. Update contract schema(s)
+2. Update tool `MANIFEST.json`
+3. Update `PROTOCOL.json` references
+4. Update `flows/latest/FLOW.md` execution path
+5. Add/adjust tests
+6. Verify runtime and contracts
 
 ---
-*Last updated: 2026-03-02*
+*Last updated: 2026-03-05*
