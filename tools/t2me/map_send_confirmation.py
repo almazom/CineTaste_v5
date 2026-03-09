@@ -50,6 +50,7 @@ def map_confirmation(raw: dict[str, Any]) -> dict[str, Any]:
 
     message = result.get("message")
     char_count = len(message) if isinstance(message, str) else 0
+    dry_run = bool(result.get("dry_run") or raw.get("dry_run"))
     target = (
         result.get("target")
         or route.get("target_locked")
@@ -63,6 +64,7 @@ def map_confirmation(raw: dict[str, Any]) -> dict[str, Any]:
             "sent_at": datetime.now(timezone.utc).isoformat(),
             "target": str(target),
             "char_count": char_count,
+            "dry_run": dry_run,
         },
     }
 
