@@ -9,7 +9,6 @@ All tools should use this for I/O validation.
 import json
 import re
 from pathlib import Path
-from typing import Optional
 from urllib.parse import urlparse
 
 try:
