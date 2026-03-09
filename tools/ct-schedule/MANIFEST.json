@@ -3,7 +3,6 @@
   "$id": "ct-schedule/MANIFEST.json",
   "title": "ct-schedule Tool Manifest",
   "version": "1.0.0",
-
   "identity": {
     "name": "ct-schedule",
     "verb": "schedule",
@@ -11,21 +10,19 @@
     "description": "Enrich movie list with showtime schedule",
     "stateless": true
   },
-
   "contracts": {
     "input": "movie-batch@1.0.0",
     "output": "movie-schedule@1.0.0"
   },
-
   "cli": {
-    "usage": "ct-schedule --input <FILE> [--date <YYYY-MM-DD>] [--source kinoteatr] [--output <FILE>]",
+    "usage": "ct-schedule --input <FILE|-> [--date <YYYY-MM-DD>] [--source kinoteatr] [--output <FILE>] [--dry-run] [--best-effort]",
     "flags": [
       {
         "name": "--input",
         "short": "-i",
         "type": "string",
         "required": true,
-        "description": "Input movie-batch JSON file"
+        "description": "Input movie-batch JSON file path (use - for stdin)"
       },
       {
         "name": "--date",
@@ -45,7 +42,7 @@
         "short": "-o",
         "type": "string",
         "default": "stdout",
-        "description": "Output file path"
+        "description": "Output file path ('-' or 'stdout' writes to stdout)"
       },
       {
         "name": "--dry-run",
@@ -66,17 +63,30 @@
         "short": "-h",
         "type": "boolean",
         "description": "Show help"
+      },
+      {
+        "name": "--best-effort",
+        "type": "boolean",
+        "default": false,
+        "description": "Continue when some showtime fetches fail; default is fail-fast"
+      },
+      {
+        "name": "--version",
+        "type": "boolean",
+        "description": "Show version"
       }
     ],
     "exit_codes": {
       "0": "Success",
-      "1": "General error",
+      "1": "Internal error",
       "2": "Invalid arguments",
-      "3": "Network error",
-      "4": "Parse/contract error"
+      "65": "Invalid JSON or contract violation",
+      "66": "Input file not found",
+      "69": "Schedule source unavailable",
+      "73": "Output/path write failure",
+      "77": "Permission denied"
     }
   },
-
   "adapters": {
     "kinoteatr": {
       "file": "adapter_showtimes.py",
@@ -84,7 +94,6 @@
       "status": "active"
     }
   },
-
   "files": {
     "required": [
       "main.py",
@@ -93,7 +102,6 @@
     ],
     "optional": []
   },
-
   "examples": {
     "schedule": "ct-schedule --input movies.json",
     "schedule_date": "ct-schedule --input movies.json --date 2026-03-03 --output scheduled.json",

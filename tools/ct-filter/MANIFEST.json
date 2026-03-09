@@ -3,7 +3,6 @@
   "$id": "ct-filter/MANIFEST.json",
   "title": "ct-filter Tool Manifest",
   "version": "1.0.0",
-
   "identity": {
     "name": "ct-filter",
     "verb": "filter",
@@ -12,42 +11,40 @@
     "stateless": true,
     "pure_function": true
   },
-
   "contracts": {
     "input": "analysis-result@1.0.0",
     "output": "filter-result@1.0.0"
   },
-
   "cli": {
-    "usage": "ct-filter --input <FILE> [--recommendation <TYPES>] [--output <FILE>]",
+    "usage": "ct-filter --input <FILE|-> [--recommendation <TYPES>] [--output <FILE>]",
     "flags": [
       {
         "name": "--input",
         "short": "-i",
         "type": "string",
         "required": true,
-        "description": "Input analysis-result JSON file"
+        "description": "Input analysis-result JSON file path (use - for stdin)"
       },
       {
         "name": "--recommendation",
         "short": "-r",
         "type": "string",
         "default": "must_see,recommended",
-        "description": "Comma-separated recommendation types to keep"
+        "description": "Comma-separated recommendation types to keep (allowed: must_see,recommended)"
       },
       {
         "name": "--min-score",
         "short": "-m",
         "type": "number",
         "default": 0,
-        "description": "Minimum relevance score (0-100)"
+        "description": "Minimum relevance score (0-100, invalid values fail with exit code 2)"
       },
       {
         "name": "--output",
         "short": "-o",
         "type": "string",
         "default": "stdout",
-        "description": "Output file path"
+        "description": "Output file path ('-' or 'stdout' writes to stdout)"
       },
       {
         "name": "--verbose",
@@ -61,18 +58,24 @@
         "short": "-h",
         "type": "boolean",
         "description": "Show help"
+      },
+      {
+        "name": "--version",
+        "type": "boolean",
+        "description": "Show version"
       }
     ],
     "exit_codes": {
       "0": "Success",
-      "1": "General error",
+      "1": "Internal error",
       "2": "Invalid arguments",
-      "4": "Parse error"
+      "65": "Invalid JSON or contract violation",
+      "66": "Input file not found",
+      "73": "Output/path write failure",
+      "77": "Permission denied"
     }
   },
-
   "adapters": {},
-
   "files": {
     "required": [
       "main.py",
@@ -80,7 +83,6 @@
     ],
     "optional": []
   },
-
   "examples": {
     "filter": "ct-filter --input analyzed.json",
     "must_see_only": "ct-filter --input analyzed.json --recommendation must_see",

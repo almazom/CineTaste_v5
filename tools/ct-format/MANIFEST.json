@@ -3,7 +3,6 @@
   "$id": "ct-format/MANIFEST.json",
   "title": "ct-format Tool Manifest",
   "version": "1.0.0",
-
   "identity": {
     "name": "ct-format",
     "verb": "format",
@@ -11,21 +10,19 @@
     "description": "Render filtered movies to message-text JSON for Telegram delivery",
     "stateless": true
   },
-
   "contracts": {
     "input": "filter-result@1.0.0",
     "output": "message-text@1.0.0"
   },
-
   "cli": {
-    "usage": "ct-format --input <FILE> --template <NAME> [--city <NAME>] [--output <FILE>]",
+    "usage": "ct-format --input <FILE|-> --template <NAME> [--city <NAME>] [--output <FILE>]",
     "flags": [
       {
         "name": "--input",
         "short": "-i",
         "type": "string",
         "required": true,
-        "description": "Input filter-result JSON file"
+        "description": "Input filter-result JSON file path (use - for stdin)"
       },
       {
         "name": "--template",
@@ -46,7 +43,7 @@
         "short": "-o",
         "type": "string",
         "default": "stdout",
-        "description": "Output file path for message-text JSON contract"
+        "description": "Output file path for message-text JSON contract ('-' or 'stdout' writes to stdout)"
       },
       {
         "name": "--verbose",
@@ -60,16 +57,23 @@
         "short": "-h",
         "type": "boolean",
         "description": "Show help"
+      },
+      {
+        "name": "--version",
+        "type": "boolean",
+        "description": "Show version"
       }
     ],
     "exit_codes": {
       "0": "Success",
-      "1": "General error",
+      "1": "Internal error",
       "2": "Invalid arguments",
-      "4": "Parse error"
+      "65": "Invalid JSON or contract violation",
+      "66": "Input file not found",
+      "73": "Output/path write failure",
+      "77": "Permission denied"
     }
   },
-
   "adapters": {
     "telegram": {
       "file": "adapter_telegram.py",
@@ -77,7 +81,6 @@
       "status": "active"
     }
   },
-
   "files": {
     "required": [
       "main.py",
@@ -86,7 +89,6 @@
     ],
     "optional": []
   },
-
   "examples": {
     "format": "ct-format --input filtered.json --template telegram --city 'Набережные Челны'",
     "to_file": "ct-format --input filtered.json --template telegram --output message.json",

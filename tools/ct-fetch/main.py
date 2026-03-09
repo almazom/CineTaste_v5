@@ -27,10 +27,29 @@ SUPPORTED_SOURCES = {
     "kinoteatr": fetch_movies,
 }
 
+EXIT_OK = 0
+EXIT_INTERNAL = 1
+EXIT_INVALID_ARGS = 2
+EXIT_UNAVAILABLE = 69
+EXIT_DATAERR = 65
 
-def parse_args():
+
+def _load_tool_version() -> str:
+    manifest_path = Path(__file__).with_name("MANIFEST.json")
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        return str(manifest.get("version", "unknown"))
+    except Exception:
+        return "unknown"
+
+
+TOOL_VERSION = _load_tool_version()
+
+
+def parse_args() -> argparse.Namespace:
     """Parse CLI arguments."""
     parser = argparse.ArgumentParser(
+        prog=Path(sys.argv[0]).name,
         description="Fetch movies from cinema sources",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
@@ -76,6 +95,8 @@ Examples:
         action="store_true",
         help="Verbose output"
     )
+
+    parser.add_argument("--version", action="version", version=f"ct-fetch {TOOL_VERSION}")
 
     return parser.parse_args()
 
@@ -168,10 +189,10 @@ def enforce_output_or_exit(output: dict) -> None:
         enforce_output(output)
     except ValueError as e:
         print(f"Contract violation: {e}", file=sys.stderr)
-        sys.exit(4)
+        sys.exit(EXIT_DATAERR)
 
 
-def main():
+def main() -> int:
     """Main entry point."""
     args = parse_args()
 
@@ -202,7 +223,7 @@ def main():
         # Output
         json_output = json.dumps(output, ensure_ascii=False, indent=2)
 
-        if args.output == "-":
+        if args.output in {"-", "stdout"}:
             print(json_output)
         else:
             Path(args.output).write_text(json_output, encoding="utf-8")
@@ -212,19 +233,19 @@ def main():
         if args.verbose:
             print(f"Fetched {len(movies)} movies", file=sys.stderr)
 
-        sys.exit(0)
+        sys.exit(EXIT_OK)
 
     except ValueError as e:
         print(f"Error: {e}", file=sys.stderr)
-        sys.exit(2)
+        sys.exit(EXIT_INVALID_ARGS)
 
     except ConnectionError as e:
         print(f"Network error: {e}", file=sys.stderr)
-        sys.exit(3)
+        sys.exit(EXIT_UNAVAILABLE)
 
     except Exception as e:
         print(f"Unexpected error: {e}", file=sys.stderr)
-        sys.exit(1)
+        sys.exit(EXIT_INTERNAL)
 
 
 if __name__ == "__main__":

@@ -10,6 +10,8 @@ No data is inlined into the prompt. The agent uses its own tools
 to read, understand, and judge each movie against the taste profile.
 """
 
+from __future__ import annotations
+
 import argparse
 import json
 import os
@@ -22,11 +24,98 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).parent))
 sys.path.insert(0, str(ROOT / "tools" / "_shared"))
-from port import enforce_output  # noqa: E402
+from port import enforce_input, enforce_output  # noqa: E402
+
+
+# ── Exit Taxonomy ───────────────────────────────────────────────────────
+
+EXIT_OK = 0
+EXIT_INTERNAL = 1
+EXIT_INVALID_ARGS = 2
+EXIT_PATH = 3
+EXIT_AGENT = 4
+EXIT_CONTRACT = 5
+
+
+class CliUsageError(RuntimeError):
+    """Invalid CLI usage (for example unknown values in --agents)."""
+
+
+class PathError(RuntimeError):
+    """Filesystem/stdin path and access problems."""
+
+
+class AgentExecutionError(RuntimeError):
+    """Agent preflight/runtime failures."""
+
+
+class ContractError(ValueError):
+    """Contract validation or JSON payload parsing failures."""
+
+
+# ── Runtime Diagnostics ─────────────────────────────────────────────────
+
+RUNTIME_DIAGNOSTICS = {
+    "trace_id": "",
+    "quiet": False,
+    "verbose": False,
+    "timings": False,
+}
+
+
+def _load_tool_version() -> str:
+    manifest_path = ROOT / "tools" / "ct-cognize" / "MANIFEST.json"
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        return str(manifest.get("version", "unknown"))
+    except (FileNotFoundError, json.JSONDecodeError, KeyError):
+        return "unknown"
+
+
+TOOL_VERSION = _load_tool_version()
+
+
+def _configure_diagnostics(trace_id: str | None, quiet: bool, verbose: bool, timings: bool) -> None:
+    RUNTIME_DIAGNOSTICS["trace_id"] = (trace_id or "").strip()
+    RUNTIME_DIAGNOSTICS["quiet"] = bool(quiet)
+    RUNTIME_DIAGNOSTICS["verbose"] = bool(verbose)
+    RUNTIME_DIAGNOSTICS["timings"] = bool(timings)
+
+
+def _log(message: str, level: str = "info", channel: str = "cognize") -> None:
+    if level != "error" and RUNTIME_DIAGNOSTICS["quiet"]:
+        return
+    if level == "debug" and not RUNTIME_DIAGNOSTICS["verbose"]:
+        return
+
+    trace_id = RUNTIME_DIAGNOSTICS["trace_id"]
+    if trace_id:
+        prefix = f"[{channel}][{trace_id}]"
+    else:
+        prefix = f"[{channel}]"
+    print(f"{prefix} {message}", file=sys.stderr)
+
+
+def _log_timing(name: str, started_at: float) -> None:
+    if not RUNTIME_DIAGNOSTICS["timings"]:
+        return
+    elapsed = time.perf_counter() - started_at
+    _log(f"{name} took {elapsed:.3f}s", channel="timing")
+
+
+def _subprocess_env() -> dict[str, str]:
+    """Force non-interactive, CI-safe defaults for agent subprocesses."""
+    env = os.environ.copy()
+    env.setdefault("CI", "1")
+    env.setdefault("NO_COLOR", "1")
+    env.setdefault("TERM", "dumb")
+    return env
+
 
 # ── Agent Registry ─────────────────────────────────────────────────────
 
@@ -97,7 +186,7 @@ def _extract_alpha_tokens(text: str) -> list[str]:
     return re.findall(r"[a-zа-яё]+", text.lower())
 
 
-def _compact_output(stdout: str, stderr: str, limit: int = 60) -> str:
+def _compact_output(stdout: str, stderr: str, limit: int = 120) -> str:
     """Create short preview from command output."""
     raw = "\n".join(x for x in [stdout.strip(), stderr.strip()] if x).strip()
     if not raw:
@@ -127,32 +216,8 @@ def _run_preflight(agent: dict) -> dict:
             text=True,
             timeout=agent.get("preflight_timeout", 20),
             cwd="/tmp",
+            env=_subprocess_env(),
         )
-
-        preflight_tokens = _extract_alpha_tokens(
-            "\n".join(x for x in [result.stdout, result.stderr] if x)
-        )
-        token = next((t for t in preflight_tokens if t in PREFLIGHT_OK_TOKENS), "")
-        if not token and preflight_tokens:
-            token = preflight_tokens[-1]
-
-        ok = result.returncode == 0 and any(
-            t in PREFLIGHT_OK_TOKENS for t in preflight_tokens
-        )
-
-        if ok:
-            error = ""
-        else:
-            error = f"got: {_compact_output(result.stdout, result.stderr)}"
-
-        return {
-            "agent": agent,
-            "ok": ok,
-            "reply": token,
-            "elapsed": time.perf_counter() - started,
-            "error": error,
-        }
-
     except subprocess.TimeoutExpired:
         return {
             "agent": agent,
@@ -161,23 +226,43 @@ def _run_preflight(agent: dict) -> dict:
             "elapsed": time.perf_counter() - started,
             "error": f"preflight timeout after {agent.get('preflight_timeout', 20)}s",
         }
-    except Exception as e:
+    except Exception as exc:
         return {
             "agent": agent,
             "ok": False,
             "reply": "",
             "elapsed": time.perf_counter() - started,
-            "error": str(e),
+            "error": str(exc),
         }
+
+    preflight_tokens = _extract_alpha_tokens(
+        "\n".join(x for x in [result.stdout, result.stderr] if x)
+    )
+    token = next((t for t in preflight_tokens if t in PREFLIGHT_OK_TOKENS), "")
+    if not token and preflight_tokens:
+        token = preflight_tokens[-1]
+
+    ok = result.returncode == 0 and any(
+        t in PREFLIGHT_OK_TOKENS for t in preflight_tokens
+    )
+    error = "" if ok else f"got: {_compact_output(result.stdout, result.stderr)}"
+
+    return {
+        "agent": agent,
+        "ok": ok,
+        "reply": token,
+        "elapsed": time.perf_counter() - started,
+        "error": error,
+    }
 
 
 def _log_preflight(result: dict) -> None:
     """Emit standardized preflight log line."""
     name = result["agent"]["name"]
     if result["ok"]:
-        print(f"[preflight] {name} ✓ ({result['reply']} in {result['elapsed']:.2f}s)", file=sys.stderr)
+        _log(f"{name} ok ({result['reply']} in {result['elapsed']:.2f}s)", channel="preflight")
     else:
-        print(f"[preflight] {name} ✗ ({result['error']})", file=sys.stderr)
+        _log(f"{name} fail ({result['error']})", channel="preflight")
 
 
 def preflight_check(agent: dict) -> bool:
@@ -208,11 +293,11 @@ def parse_agent_list(spec: str) -> list[str]:
     raw_items = [item.strip().lower() for item in spec.split(",")]
     names = [item for item in raw_items if item]
     if not names:
-        raise RuntimeError("Empty --agents list. Example: --agents pi,qwen,gemini")
+        raise CliUsageError("Empty --agents list. Example: --agents pi,qwen,gemini")
 
     unknown = [name for name in names if name not in AGENT_BY_NAME]
     if unknown:
-        raise RuntimeError(
+        raise CliUsageError(
             f"Unknown agent(s): {', '.join(unknown)}. Known: {', '.join(AGENT_NAMES)}"
         )
 
@@ -241,13 +326,10 @@ def select_named_agent_chain(names: list[str]) -> list[dict]:
             unavailable.append(name)
 
     if unavailable:
-        print(
-            f"[cognize] requested agents unavailable: {', '.join(unavailable)}",
-            file=sys.stderr,
-        )
+        _log(f"requested agents unavailable: {', '.join(unavailable)}")
 
     if not available:
-        raise RuntimeError(
+        raise AgentExecutionError(
             f"No requested AI agent available from --agents: {', '.join(names)}"
         )
 
@@ -269,15 +351,15 @@ def select_agent_chain(name: str = "auto", custom_names: list[str] | None = None
         for agent in AGENTS:
             if agent["name"] == name:
                 if not preflight_check(agent):
-                    raise RuntimeError(f"Requested agent unavailable: {name}")
+                    raise AgentExecutionError(f"Requested agent unavailable: {name}")
                 return [agent]
-        raise RuntimeError(f"Unknown agent: {name}")
+        raise CliUsageError(f"Unknown agent: {name}")
 
     results = parallel_preflight(AGENTS)
-    available = [r["agent"] for r in results if r["ok"]]
+    available = [result["agent"] for result in results if result["ok"]]
 
     if not available:
-        raise RuntimeError("No AI agent available. Cognitive layer cannot proceed.")
+        raise AgentExecutionError("No AI agent available. Cognitive layer cannot proceed.")
 
     return available
 
@@ -333,8 +415,9 @@ def call_agent(agent: dict, workdir: str) -> str:
     mode = agent["file_mode"]
     movies_path = os.path.join(workdir, "movies.json")
     taste_path = os.path.join(workdir, "taste.yaml")
+    started = time.perf_counter()
 
-    print(f"[cognize] Using {agent['name']} ({mode} mode)...", file=sys.stderr)
+    _log(f"using {agent['name']} ({mode} mode)")
 
     try:
         if mode == "cwd":
@@ -344,6 +427,7 @@ def call_agent(agent: dict, workdir: str) -> str:
                 text=True,
                 timeout=timeout,
                 cwd=workdir,
+                env=_subprocess_env(),
             )
 
         elif mode == "at_file":
@@ -353,13 +437,14 @@ def call_agent(agent: dict, workdir: str) -> str:
                 capture_output=True,
                 text=True,
                 timeout=timeout,
+                env=_subprocess_env(),
             )
 
         elif mode == "stdin":
-            with open(movies_path, encoding="utf-8") as f:
-                movies_text = f.read()
-            with open(taste_path, encoding="utf-8") as f:
-                taste_text = f.read()
+            with open(movies_path, encoding="utf-8") as handle:
+                movies_text = handle.read()
+            with open(taste_path, encoding="utf-8") as handle:
+                taste_text = handle.read()
             full_prompt = (
                 f"{INSTRUCTION}\n\n--- taste.yaml ---\n{taste_text}"
                 f"\n\n--- movies.json ---\n{movies_text}"
@@ -370,17 +455,20 @@ def call_agent(agent: dict, workdir: str) -> str:
                 capture_output=True,
                 text=True,
                 timeout=timeout,
+                env=_subprocess_env(),
             )
         else:
-            raise RuntimeError(f"Unknown file_mode: {mode}")
-
-    except subprocess.TimeoutExpired:
-        raise RuntimeError(f"{agent['name']} timeout after {timeout}s")
-    except FileNotFoundError:
-        raise RuntimeError(f"{agent['name']} not found: {agent['cmd']}")
+            raise AgentExecutionError(f"Unknown file_mode: {mode}")
+    except subprocess.TimeoutExpired as exc:
+        raise AgentExecutionError(f"{agent['name']} timeout after {timeout}s") from exc
+    except FileNotFoundError as exc:
+        raise AgentExecutionError(f"{agent['name']} not found: {agent['cmd']}") from exc
+    finally:
+        _log_timing(f"agent.{agent['name']}", started)
 
     if result.returncode != 0:
-        raise RuntimeError(f"{agent['name']} failed: {result.stderr[:300]}")
+        preview = _compact_output(result.stdout, result.stderr)
+        raise AgentExecutionError(f"{agent['name']} failed (exit {result.returncode}): {preview}")
 
     return result.stdout.strip()
 
@@ -397,19 +485,16 @@ def _try_json_load(payload: str) -> tuple[bool, object]:
 
 def parse_response(response: str) -> list:
     """Extract JSON array from AI response."""
-    # Direct parse
     ok, data = _try_json_load(response)
     if ok:
         return data if isinstance(data, list) else [data]
 
-    # Extract JSON array
     match = re.search(r'\[\s*\{.*\}\s*\]', response, re.DOTALL)
     if match:
         ok, data = _try_json_load(match.group())
         if ok:
             return data
 
-    # Markdown code block
     code = re.search(r'```(?:json)?\s*([\s\S]*?)\s*```', response)
     if code:
         ok, data = _try_json_load(code.group(1))
@@ -427,43 +512,45 @@ def _find_movie(movie_id: str, movie_map: dict) -> dict:
     if movie:
         return movie
 
-    for mid, m in movie_map.items():
+    for mid, item in movie_map.items():
         if mid in str(movie_id) or str(movie_id) in mid:
-            print(f"[warn] fuzzy ID match: '{movie_id}' → '{mid}'", file=sys.stderr)
-            return m
+            _log(f"fuzzy ID match: '{movie_id}' -> '{mid}'", channel="warn")
+            return item
 
-    print(f"[warn] no movie found for ID: '{movie_id}'", file=sys.stderr)
+    _log(f"no movie found for ID: '{movie_id}'", channel="warn")
     return {}
 
 
 def merge(movies: list, analyses: list, agent: dict) -> dict:
     """Merge AI analyses with original movie data into analysis-result contract."""
-    movie_map = {m["id"]: m for m in movies}
+    movie_map = {movie["id"]: movie for movie in movies}
     analyzed = []
 
     for analysis in analyses:
         movie_id = analysis.get("movie_id")
         movie = _find_movie(movie_id, movie_map)
 
-        analyzed.append({
-            "movie": {
-                "id": movie.get("id", movie_id),
-                "title": movie.get("title", "Unknown"),
-                "original_title": movie.get("original_title", ""),
-                "director": movie.get("director", ""),
-                "actors": movie.get("actors", []),
-                "genres": movie.get("genres", []),
-                "year": movie.get("year"),
-                "source": movie.get("source", ""),
-                "url": movie.get("url", "")
-            },
-            "relevance_score": analysis.get("relevance_score", 50),
-            "confidence": 0.8,
-            "recommendation": analysis.get("recommendation", "maybe"),
-            "reasoning": analysis.get("reasoning", ""),
-            "key_matches": analysis.get("key_matches", []),
-            "red_flags": analysis.get("red_flags", [])
-        })
+        analyzed.append(
+            {
+                "movie": {
+                    "id": movie.get("id", movie_id),
+                    "title": movie.get("title", "Unknown"),
+                    "original_title": movie.get("original_title", ""),
+                    "director": movie.get("director", ""),
+                    "actors": movie.get("actors", []),
+                    "genres": movie.get("genres", []),
+                    "year": movie.get("year"),
+                    "source": movie.get("source", ""),
+                    "url": movie.get("url", ""),
+                },
+                "relevance_score": analysis.get("relevance_score", 50),
+                "confidence": 0.8,
+                "recommendation": analysis.get("recommendation", "maybe"),
+                "reasoning": analysis.get("reasoning", ""),
+                "key_matches": analysis.get("key_matches", []),
+                "red_flags": analysis.get("red_flags", []),
+            }
+        )
 
     return {
         "analyzed": analyzed,
@@ -477,81 +564,160 @@ def merge(movies: list, analyses: list, agent: dict) -> dict:
     }
 
 
+def _log_fallback_attempt(agent_name: str, error: Exception, remaining: int) -> None:
+    """Log fallback transition after runtime failure or parse error."""
+    if remaining <= 0:
+        return
+
+    status = "parse failed" if isinstance(error, ValueError) else "failed"
+    _log(f"{agent_name} {status} ({error}); trying fallback ({remaining} left)...")
+
+
+# ── Input/Output helpers ───────────────────────────────────────────────
+
+def normalize_cli_path(value: str | None) -> str | None:
+    """Allow optional @path syntax for convenience."""
+    if value is None:
+        return None
+    if value == "-":
+        return value
+    return value[1:] if value.startswith("@") else value
+
+
+def _read_json_payload(input_path: str) -> Any:
+    if input_path == "-":
+        raw = sys.stdin.read()
+        if not raw.strip():
+            raise PathError("stdin is empty; expected movie-schedule JSON payload")
+        source = "stdin"
+    else:
+        try:
+            raw = Path(input_path).read_text(encoding="utf-8")
+        except OSError as exc:
+            raise PathError(f"Cannot read input file '{input_path}': {exc}") from exc
+        source = input_path
+
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ContractError(
+            f"Invalid JSON in {source}: line {exc.lineno}, column {exc.colno} ({exc.msg})"
+        ) from exc
+
+
+def _load_schedule_payload(input_path: str) -> dict:
+    payload = _read_json_payload(input_path)
+    if not isinstance(payload, dict):
+        raise ContractError("Input payload must be a movie-schedule object with movies/meta")
+
+    try:
+        enforce_input(payload)
+    except ValueError as exc:
+        raise ContractError(str(exc)) from exc
+
+    return payload
+
+
+def _validate_fs_paths(input_path: str, taste_path: str, output_path: str) -> None:
+    if input_path != "-" and not Path(input_path).is_file():
+        raise PathError(f"input file not found: {input_path}")
+
+    if not Path(taste_path).is_file():
+        raise PathError(f"taste profile not found: {taste_path}")
+
+    if output_path == "-":
+        return
+
+    target = Path(output_path)
+    if target.exists() and target.is_dir():
+        raise PathError(f"output path is a directory: {output_path}")
+
+    parent = target.parent if str(target.parent) else Path(".")
+    if not parent.exists():
+        raise PathError(f"output directory not found: {parent}")
+    if not parent.is_dir():
+        raise PathError(f"output parent is not a directory: {parent}")
+
+
+def _write_output(output_path: str, payload: str) -> None:
+    if output_path == "-":
+        print(payload)
+        return
+
+    try:
+        Path(output_path).write_text(payload, encoding="utf-8")
+    except OSError as exc:
+        raise PathError(f"Cannot write output file '{output_path}': {exc}") from exc
+
+
 # ── Main ───────────────────────────────────────────────────────────────
 
 def cognize(
-    movies_path: str,
+    schedule_input: dict | str,
     taste_path: str,
     agent_name: str = "auto",
     custom_agents: list[str] | None = None,
 ) -> dict:
     """
-    Write movies + taste to temp workdir, launch AI agent, parse and merge response.
+    Validate movie-schedule input, launch AI agent(s), parse and merge response.
     """
-    with open(movies_path, encoding="utf-8") as f:
-        input_data = json.load(f)
-    if isinstance(input_data, list):
-        movies = input_data
-    elif isinstance(input_data, dict):
-        movies = input_data.get("movies", input_data.get("scheduled", []))
+    if isinstance(schedule_input, dict):
+        payload = schedule_input
+        try:
+            enforce_input(payload)
+        except ValueError as exc:
+            raise ContractError(str(exc)) from exc
     else:
-        raise ValueError(
-            "Invalid input JSON format: expected array of movies or object with movies/scheduled key"
-        )
+        payload = _load_schedule_payload(str(schedule_input))
+
+    movies = payload.get("movies", [])
 
     agents = select_agent_chain(agent_name, custom_agents)
     strict_single = custom_agents is None and agent_name != "auto"
 
     workdir = tempfile.mkdtemp(prefix="ct-cognize-")
     try:
-        with open(os.path.join(workdir, "movies.json"), "w", encoding="utf-8") as f:
-            json.dump({"movies": movies}, f, ensure_ascii=False, indent=2)
-        shutil.copy2(taste_path, os.path.join(workdir, "taste.yaml"))
+        with open(os.path.join(workdir, "movies.json"), "w", encoding="utf-8") as handle:
+            json.dump({"movies": movies}, handle, ensure_ascii=False, indent=2)
+        try:
+            shutil.copy2(taste_path, os.path.join(workdir, "taste.yaml"))
+        except OSError as exc:
+            raise PathError(f"Cannot read taste profile '{taste_path}': {exc}") from exc
 
-        last_error = None
+        last_error: Exception | None = None
         for idx, agent in enumerate(agents):
             try:
                 response = call_agent(agent, workdir)
                 analyses = parse_response(response)
                 return merge(movies, analyses, agent)
-
-            except ValueError as e:
-                last_error = e
+            except (AgentExecutionError, RuntimeError) as error:
+                last_error = AgentExecutionError(str(error))
                 if strict_single:
-                    raise
-                remaining = len(agents) - idx - 1
-                if remaining > 0:
-                    print(
-                        f"[cognize] {agent['name']} parse failed ({e}); trying fallback ({remaining} left)...",
-                        file=sys.stderr,
-                    )
-
-            except RuntimeError as e:
-                last_error = e
+                    raise last_error
+            except ValueError as error:
+                last_error = ContractError(str(error))
                 if strict_single:
-                    raise
-                remaining = len(agents) - idx - 1
-                if remaining > 0:
-                    print(
-                        f"[cognize] {agent['name']} failed ({e}); trying fallback ({remaining} left)...",
-                        file=sys.stderr,
-                    )
+                    raise ContractError(str(error)) from error
 
-        if not strict_single:
-            raise RuntimeError(f"All selected AI agents failed: {last_error}")
+            remaining = len(agents) - idx - 1
+            _log_fallback_attempt(agent["name"], last_error, remaining)
 
-        if isinstance(last_error, ValueError):
+        if isinstance(last_error, ContractError):
             raise last_error
-        raise RuntimeError(str(last_error) if last_error else "Cognitive analysis failed")
-
+        if isinstance(last_error, AgentExecutionError):
+            raise AgentExecutionError(f"All selected AI agents failed: {last_error}")
+        raise AgentExecutionError("Cognitive analysis failed")
     finally:
         shutil.rmtree(workdir, ignore_errors=True)
 
 
-def main():
-    examples = f"""Examples:
+def _build_parser() -> argparse.ArgumentParser:
+    examples = """Examples:
   # Positional mode (shortest form)
   ct-cognize scheduled.json taste/profile.yaml
+
+  # Read input from stdin
+  cat scheduled.json | ct-cognize --input - --taste taste/profile.yaml
 
   # Automatic preflight race + fallback
   ct-cognize --input scheduled.json --taste taste/profile.yaml
@@ -564,9 +730,6 @@ def main():
 
   # Print available agents
   ct-cognize --list-agents
-
-  # Alias command
-  ct-cognetive scheduled.json taste/profile.yaml
 """
     parser = argparse.ArgumentParser(
         prog=os.environ.get("CT_COGNIZE_PROG", "ct-cognize"),
@@ -577,13 +740,21 @@ def main():
     parser.add_argument(
         "input_path",
         nargs="?",
-        help="Movie data JSON file (array or object with movies/scheduled; positional alternative to --input)",
+        help="movie-schedule JSON file path (or '-' for stdin)",
     )
-    parser.add_argument("taste_path", nargs="?", help="Taste profile YAML file (positional alternative to --taste)")
-    parser.add_argument("--input", "-i", help="Movie data JSON file (array or object with movies/scheduled)")
+    parser.add_argument(
+        "taste_path",
+        nargs="?",
+        help="Taste profile YAML file (positional alternative to --taste)",
+    )
+    parser.add_argument("--input", "-i", help="movie-schedule JSON file path (or '-' for stdin)")
     parser.add_argument("--taste", "-t", help="Taste profile YAML file")
     parser.add_argument("--output", "-o", default="-", help="Output file (default: stdout)")
     parser.add_argument("--list-agents", action="store_true", help="Print supported AI agent names and exit")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {TOOL_VERSION}")
+    parser.add_argument("--trace-id", help="Trace ID for stderr diagnostics correlation")
+    parser.add_argument("--timings", action="store_true", help="Emit stage timing diagnostics to stderr")
+
     group = parser.add_mutually_exclusive_group()
     group.add_argument(
         "--agent",
@@ -596,9 +767,25 @@ def main():
         "--agents",
         help="Comma-separated ordered fallback chain (example: pi,qwen,gemini)",
     )
-    parser.add_argument("--verbose", "-v", action="store_true")
 
+    verbosity = parser.add_mutually_exclusive_group()
+    verbosity.add_argument("--quiet", "-q", action="store_true", help="Suppress non-error stderr diagnostics")
+    verbosity.add_argument("--verbose", "-v", action="store_true", help="Verbose stderr diagnostics")
+
+    return parser
+
+
+def main() -> int:
+    parser = _build_parser()
     args = parser.parse_args()
+    started = time.perf_counter()
+
+    _configure_diagnostics(
+        trace_id=args.trace_id,
+        quiet=args.quiet,
+        verbose=args.verbose,
+        timings=args.timings,
+    )
 
     try:
         if args.list_agents:
@@ -612,58 +799,51 @@ def main():
             else:
                 for name in AGENT_NAMES:
                     print(name)
-            return
-
-        def normalize_cli_path(value: str | None) -> str | None:
-            """Allow optional @path syntax for convenience."""
-            if not value:
-                return value
-            return value[1:] if value.startswith("@") else value
+            return EXIT_OK
 
         input_path = normalize_cli_path(args.input or args.input_path)
         taste_path = normalize_cli_path(args.taste or args.taste_path)
 
         if args.input and args.input_path and args.input != args.input_path:
-            parser.error("conflicting input paths: use either --input or positional <input_json>")
+            raise CliUsageError("conflicting input paths: use either --input or positional <input_json>")
         if args.taste and args.taste_path and args.taste != args.taste_path:
-            parser.error("conflicting taste paths: use either --taste or positional <taste_yaml>")
+            raise CliUsageError("conflicting taste paths: use either --taste or positional <taste_yaml>")
         if not input_path or not taste_path:
-            parser.error(
-                "missing required inputs: provide <input_json> <taste_yaml> or use --input/--taste"
-            )
-        if not os.path.isfile(input_path):
-            parser.error(f"input file not found: {input_path}")
-        if not os.path.isfile(taste_path):
-            parser.error(f"taste profile not found: {taste_path}")
+            raise CliUsageError("missing required inputs: provide <input_json> <taste_yaml> or use --input/--taste")
 
+        _validate_fs_paths(input_path, taste_path, args.output)
         custom_agents = parse_agent_list(args.agents) if args.agents else None
 
         result = cognize(input_path, taste_path, args.agent, custom_agents)
-
-        # Validate output contract
-        enforce_output(result)
+        try:
+            enforce_output(result)
+        except ValueError as exc:
+            raise ContractError(str(exc)) from exc
 
         output = json.dumps(result, ensure_ascii=False, indent=2)
-
-        if args.output == "-":
-            print(output)
-        else:
-            with open(args.output, "w", encoding="utf-8") as f:
-                f.write(output)
+        _write_output(args.output, output)
 
         count = len(result["analyzed"])
-        print(f"[cognize] {count} movies analyzed by {result['meta']['agent']}", file=sys.stderr)
+        _log(f"{count} movies analyzed by {result['meta']['agent']}")
+        _log_timing("total", started)
+        return EXIT_OK
 
-    except RuntimeError as e:
-        print(f"Error: {e}", file=sys.stderr)
-        sys.exit(3)
-    except ValueError as e:
-        print(f"Parse error: {e}", file=sys.stderr)
-        sys.exit(4)
-    except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
-        sys.exit(1)
+    except CliUsageError as exc:
+        _log(f"Argument error: {exc}", level="error")
+        return EXIT_INVALID_ARGS
+    except PathError as exc:
+        _log(f"Path error: {exc}", level="error")
+        return EXIT_PATH
+    except AgentExecutionError as exc:
+        _log(f"Agent error: {exc}", level="error")
+        return EXIT_AGENT
+    except ContractError as exc:
+        _log(f"Contract error: {exc}", level="error")
+        return EXIT_CONTRACT
+    except Exception as exc:
+        _log(f"Internal error: {exc}", level="error")
+        return EXIT_INTERNAL
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

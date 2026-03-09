@@ -22,9 +22,31 @@ SUPPORTED_SOURCES: dict[str, Callable[[str, str], list[dict]]] = {
     "kinoteatr": fetch_showtimes,
 }
 
+EXIT_OK = 0
+EXIT_INTERNAL = 1
+EXIT_INVALID_ARGS = 2
+EXIT_DATAERR = 65
+EXIT_NOINPUT = 66
+EXIT_UNAVAILABLE = 69
+EXIT_CANTCREAT = 73
+EXIT_NOPERM = 77
+
+
+def _load_tool_version() -> str:
+    manifest_path = Path(__file__).with_name("MANIFEST.json")
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        return str(manifest.get("version", "unknown"))
+    except Exception:
+        return "unknown"
+
+
+TOOL_VERSION = _load_tool_version()
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
+        prog=Path(sys.argv[0]).name,
         description="Enrich movie list with showtime schedule",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
@@ -50,7 +72,13 @@ Examples:
     )
     parser.add_argument("--output", "-o", default="-", help="Output file path (default: stdout)")
     parser.add_argument("--dry-run", "-n", action="store_true", help="Generate deterministic mock showtimes")
+    parser.add_argument(
+        "--best-effort",
+        action="store_true",
+        help="Continue even if some showtime fetches fail (default: fail on upstream errors)",
+    )
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
+    parser.add_argument("--version", action="version", version=f"ct-schedule {TOOL_VERSION}")
 
     return parser.parse_args()
 
@@ -88,12 +116,7 @@ def resolve_showtimes_for_movie(
     if not url:
         return []
 
-    try:
-        return source_adapter(url, date_value)
-    except ConnectionError as exc:
-        if verbose:
-            print(f"Warning: {exc}", file=sys.stderr)
-        return []
+    return source_adapter(url, date_value)
 
 
 def enrich_movies(
@@ -102,31 +125,66 @@ def enrich_movies(
     source_adapter: Callable[[str, str], list[dict]],
     dry_run: bool,
     verbose: bool,
-) -> tuple[list[dict], int]:
+) -> tuple[list[dict], int, int]:
     """Attach showtimes to each movie."""
     enriched: list[dict] = []
     with_showtimes = 0
+    fetch_failures = 0
 
     for movie in movies:
         movie_data = dict(movie)
         movie_id = str(movie.get("id", ""))
         url = str(movie.get("url", "")).strip()
 
-        showtimes = resolve_showtimes_for_movie(
-            movie_id=movie_id,
-            url=url,
-            date_value=date_value,
-            source_adapter=source_adapter,
-            dry_run=dry_run,
-            verbose=verbose,
-        )
+        try:
+            showtimes = resolve_showtimes_for_movie(
+                movie_id=movie_id,
+                url=url,
+                date_value=date_value,
+                source_adapter=source_adapter,
+                dry_run=dry_run,
+                verbose=verbose,
+            )
+        except ConnectionError as exc:
+            fetch_failures += 1
+            if verbose:
+                print(f"Warning: {exc}", file=sys.stderr)
+            showtimes = []
 
         movie_data["showtimes"] = showtimes
         if showtimes:
             with_showtimes += 1
         enriched.append(movie_data)
 
-    return enriched, with_showtimes
+    return enriched, with_showtimes, fetch_failures
+
+
+def load_input_payload(input_ref: str, verbose: bool) -> dict:
+    """Load movie-batch payload from file or stdin."""
+    if input_ref == "-":
+        if verbose:
+            print("Loading movies from stdin...", file=sys.stderr)
+        raw = sys.stdin.read()
+        if not raw.strip():
+            raise ValueError("stdin is empty; expected movie-batch JSON payload")
+        source = "stdin"
+    else:
+        if verbose:
+            print(f"Loading movies from {input_ref}...", file=sys.stderr)
+        raw = Path(input_ref).read_text(encoding="utf-8")
+        source = input_ref
+
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ValueError(
+            f"invalid JSON input in {source} (line {exc.lineno}, column {exc.colno}: {exc.msg})"
+        ) from exc
+
+    if not isinstance(payload, dict):
+        raise ValueError("input payload must be a JSON object")
+
+    return payload
 
 
 def build_output(
@@ -172,15 +230,10 @@ def main() -> None:
         date_override = validate_date(args.date) if args.date else ""
     except ValueError as exc:
         print(f"Error: {exc}", file=sys.stderr)
-        sys.exit(2)
+        sys.exit(EXIT_INVALID_ARGS)
 
     try:
-        if args.verbose:
-            print(f"Loading movies from {args.input}...", file=sys.stderr)
-
-        with open(args.input, encoding="utf-8") as file_obj:
-            data = json.load(file_obj)
-
+        data = load_input_payload(args.input, args.verbose)
         enforce_input(data)
 
         input_meta = data.get("meta", {})
@@ -192,13 +245,27 @@ def main() -> None:
             if args.dry_run:
                 print("DRY RUN: Generating mock showtimes", file=sys.stderr)
 
-        enriched, with_showtimes = enrich_movies(
+        enriched, with_showtimes, fetch_failures = enrich_movies(
             movies=movies,
             date_value=date_value,
             source_adapter=source_adapter,
             dry_run=args.dry_run,
             verbose=args.verbose,
         )
+
+        if fetch_failures and not args.best_effort:
+            print(
+                "Upstream unavailable: failed to fetch showtimes for "
+                f"{fetch_failures} movie(s); rerun with --best-effort to continue",
+                file=sys.stderr,
+            )
+            sys.exit(EXIT_UNAVAILABLE)
+
+        if fetch_failures and args.verbose:
+            print(
+                f"Best-effort mode: continuing with {fetch_failures} fetch failure(s)",
+                file=sys.stderr,
+            )
 
         output = build_output(
             movies=enriched,
@@ -211,7 +278,7 @@ def main() -> None:
         enforce_output(output)
 
         payload = json.dumps(output, ensure_ascii=False, indent=2)
-        if args.output == "-":
+        if args.output in {"-", "stdout"}:
             print(payload)
         else:
             Path(args.output).write_text(payload, encoding="utf-8")
@@ -224,17 +291,23 @@ def main() -> None:
                 file=sys.stderr,
             )
 
-        sys.exit(0)
+        sys.exit(EXIT_OK)
 
+    except FileNotFoundError as exc:
+        print(f"Input path error: {exc}", file=sys.stderr)
+        sys.exit(EXIT_NOINPUT)
+    except PermissionError as exc:
+        print(f"Permission error: {exc}", file=sys.stderr)
+        sys.exit(EXIT_NOPERM)
     except ValueError as exc:
         print(f"Validation error: {exc}", file=sys.stderr)
-        sys.exit(4)
-    except json.JSONDecodeError as exc:
-        print(f"Error: invalid JSON input ({exc})", file=sys.stderr)
-        sys.exit(2)
+        sys.exit(EXIT_DATAERR)
+    except OSError as exc:
+        print(f"Filesystem error: {exc}", file=sys.stderr)
+        sys.exit(EXIT_CANTCREAT)
     except Exception as exc:
         print(f"Unexpected error: {exc}", file=sys.stderr)
-        sys.exit(1)
+        sys.exit(EXIT_INTERNAL)
 
 
 if __name__ == "__main__":

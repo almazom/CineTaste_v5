@@ -20,10 +20,31 @@ SUPPORTED_TEMPLATES = {
     "telegram": render_message,
 }
 
+EXIT_OK = 0
+EXIT_INTERNAL = 1
+EXIT_INVALID_ARGS = 2
+EXIT_DATAERR = 65
+EXIT_NOINPUT = 66
+EXIT_CANTCREAT = 73
+EXIT_NOPERM = 77
+
+
+def _load_tool_version() -> str:
+    manifest_path = Path(__file__).with_name("MANIFEST.json")
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        return str(manifest.get("version", "unknown"))
+    except Exception:
+        return "unknown"
+
+
+TOOL_VERSION = _load_tool_version()
+
 
 def parse_args():
     """Parse CLI arguments."""
     parser = argparse.ArgumentParser(
+        prog=Path(sys.argv[0]).name,
         description="Format filtered movies to Telegram markdown",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
@@ -63,6 +84,8 @@ Examples:
         help="Verbose output"
     )
 
+    parser.add_argument("--version", action="version", version=f"ct-format {TOOL_VERSION}")
+
     return parser.parse_args()
 
 
@@ -97,18 +120,37 @@ def resolve_template(template_arg: str) -> tuple[str, Callable[[list, str], str]
 
 def load_input(input_path: str, verbose: bool) -> dict:
     """Load input JSON payload from file."""
-    if verbose:
-        print(f"Loading filtered movies from {input_path}...", file=sys.stderr)
+    if input_path == "-":
+        if verbose:
+            print("Loading filtered movies from stdin...", file=sys.stderr)
+        raw = sys.stdin.read()
+        if not raw.strip():
+            raise ValueError("stdin is empty; expected filter-result JSON payload")
+        source = "stdin"
+    else:
+        if verbose:
+            print(f"Loading filtered movies from {input_path}...", file=sys.stderr)
+        raw = Path(input_path).read_text(encoding="utf-8")
+        source = input_path
 
-    with open(input_path) as input_file:
-        return json.load(input_file)
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ValueError(
+            f"invalid JSON input in {source} (line {exc.lineno}, column {exc.colno}: {exc.msg})"
+        ) from exc
+
+    if not isinstance(payload, dict):
+        raise ValueError("input payload must be a JSON object")
+
+    return payload
 
 
 def write_output(output: dict, output_path: str, verbose: bool) -> None:
     """Write output JSON either to stdout or a file."""
     json_output = json.dumps(output, ensure_ascii=False, indent=2)
 
-    if output_path == "-":
+    if output_path in {"-", "stdout"}:
         print(json_output)
         return
 
@@ -123,7 +165,7 @@ def run(args: argparse.Namespace) -> int:
         template, renderer = resolve_template(args.template)
     except ValueError as e:
         print(f"Error: {e}", file=sys.stderr)
-        return 2
+        return EXIT_INVALID_ARGS
 
     try:
         data = load_input(args.input, args.verbose)
@@ -150,15 +192,23 @@ def run(args: argparse.Namespace) -> int:
         if args.verbose:
             print(f"Formatted {len(filtered)} movies", file=sys.stderr)
 
-        return 0
+        return EXIT_OK
 
     except ValueError as e:
         print(f"Validation error: {e}", file=sys.stderr)
-        return 4
-
+        return EXIT_DATAERR
+    except FileNotFoundError as e:
+        print(f"Input path error: {e}", file=sys.stderr)
+        return EXIT_NOINPUT
+    except PermissionError as e:
+        print(f"Permission error: {e}", file=sys.stderr)
+        return EXIT_NOPERM
+    except OSError as e:
+        print(f"Filesystem error: {e}", file=sys.stderr)
+        return EXIT_CANTCREAT
     except Exception as e:
         print(f"Unexpected error: {e}", file=sys.stderr)
-        return 1
+        return EXIT_INTERNAL
 
 
 def main() -> None:

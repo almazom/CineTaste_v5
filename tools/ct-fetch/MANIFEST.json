@@ -3,7 +3,6 @@
   "$id": "ct-fetch/MANIFEST.json",
   "title": "ct-fetch Tool Manifest",
   "version": "1.0.0",
-
   "identity": {
     "name": "ct-fetch",
     "verb": "fetch",
@@ -11,14 +10,12 @@
     "description": "Fetch movies from cinema source",
     "stateless": true
   },
-
   "contracts": {
     "input": null,
     "output": "movie-batch@1.0.0"
   },
-
   "cli": {
-    "usage": "ct-fetch --city <CITY> [--when <DATE>] [--source kinoteatr] [--output <FILE>]",
+    "usage": "ct-fetch --city <CITY> [--when <DATE>] [--source kinoteatr] [--output <FILE>] [--dry-run]",
     "flags": [
       {
         "name": "--city",
@@ -39,7 +36,7 @@
         "short": "-o",
         "type": "string",
         "default": "stdout",
-        "description": "Output file path"
+        "description": "Output file path ('-' or 'stdout' writes to stdout)"
       },
       {
         "name": "--source",
@@ -67,17 +64,21 @@
         "short": "-h",
         "type": "boolean",
         "description": "Show help"
+      },
+      {
+        "name": "--version",
+        "type": "boolean",
+        "description": "Show version"
       }
     ],
     "exit_codes": {
       "0": "Success",
-      "1": "General error",
+      "1": "Internal error",
       "2": "Invalid arguments",
-      "3": "Network error",
-      "4": "Parse error"
+      "65": "Output contract violation",
+      "69": "Source unavailable"
     }
   },
-
   "adapters": {
     "kinoteatr": {
       "file": "adapter_kinoteatr.py",
@@ -85,7 +86,6 @@
       "status": "active"
     }
   },
-
   "files": {
     "required": [
       "main.py",
@@ -96,7 +96,6 @@
       "adapter_*.py"
     ]
   },
-
   "examples": {
     "fetch_today": "ct-fetch --city naberezhnie-chelni --when now",
     "fetch_date": "ct-fetch --city naberezhnie-chelni --when 2026-03-15",
