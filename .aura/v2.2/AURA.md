@@ -76,7 +76,7 @@ GOAL: Orchestrate CLI microservices via contracts, not assumptions.
 ```
 tests/
 ├── test_ct_fetch.py     # ct-fetch contract + adapter tests
-├── test_ct_analyze.py   # ct-analyze contract + agent tests
+├── test_ct_cognize.py   # ct-cognize contract + agent tests
 ├── test_ct_filter.py    # ct-filter contract tests
 └── test_ct_format.py    # ct-format contract + renderer tests
 ```
@@ -107,9 +107,12 @@ pytest tests/test_ct_fetch.py -v
 
 Before production release, run E2E tests:
 ```bash
-# Full E2E test suite
-./run --dry-run    # Preview mode
-./run              # Production run
+# Full E2E production path
+./run
+
+# Replay/recovery flows
+./run --input contracts/examples/analysis-result.sample.json
+./run --resend message.txt
 ```
 
 ---
@@ -118,9 +121,12 @@ Before production release, run E2E tests:
 
 ### 5.1 Agent Priority
 
-```
-kimi (web search) → pi (fast reasoning) → dry_run (mock)
-```
+Configured agent families:
+- `kimi` — web-search capable
+- `gemini` / `qwen` — cwd/file-reading mode
+- `pi` — deterministic `@file` fallback
+
+For runtime `ct-cognize --agent auto`, selection is determined by preflight readiness and the first-ready order captured during preflight, not by a hard-coded static chain.
 
 ### 5.2 Preflight Check
 
@@ -137,23 +143,20 @@ pi -p "1+2=...[ONLY NUMBER IN WORDS]" --no-tools
 
 ### 5.3 Agent Usage in Code
 
-```python
-from adapter_agents import select_agent, analyze_movies
+`ct-cognize` owns agent orchestration. Runtime behavior:
 
-# Auto-select available agent
-agent = select_agent()  # Returns kimi, pi, or None
-
-# Analyze with fallback
-analyzed, meta = analyze_movies(movies, taste_path, dry_run=False)
-```
+1. Enforce input contract (`movie-schedule@1.0.0`) before preflight.
+2. Run parallel preflight for `--agent auto`.
+3. Execute selected chain with runtime fallback.
+4. Keep diagnostics on stderr and JSON payload on stdout.
 
 ### 5.4 When to Use Which Agent
 
 | Scenario | Agent | Reason |
 |----------|-------|--------|
 | Unknown movies | kimi | Can web search |
-| Fast iteration | pi | Faster response |
-| Testing/preview | dry_run | No AI call |
+| Filesystem-driven reasoning | gemini/qwen | Reads `movies.json` + `taste.yaml` in workdir |
+| Deterministic fallback | pi | Stable `@file` path |
 
 ---
 
@@ -203,7 +206,8 @@ KANBAN.json → .aura/kanban/latest
 ```bash
 # Run pipeline
 ./run                    # Full production run
-./run --dry-run          # Preview mode
+./run --input FILE       # Replay from analysis-result payload
+./run --resend FILE      # Resend rendered message text
 
 # Run tests
 pytest tests/ -v         # All tests
