@@ -26,13 +26,38 @@ sys.path.insert(0, str(TOOLS_DIR / "_shared"))
 from validate import validate_against_contract  # noqa: E402
 
 
-CT_TOOLS = ("ct-fetch", "ct-schedule", "ct-analyze", "ct-filter", "ct-format")
+PROTOCOL = json.loads((ROOT / "PROTOCOL.json").read_text(encoding="utf-8"))
+
+
+def active_cli_tools() -> tuple[str, ...]:
+    tools = []
+    for name, spec in PROTOCOL["tools"].items():
+        if spec.get("external"):
+            continue
+        if spec.get("status") == "legacy":
+            continue
+        tools.append((spec.get("position", 999), name))
+    return tuple(name for _, name in sorted(tools))
+
+
+CT_TOOLS = active_cli_tools()
 
 
 def run_tool(tool: str, args: list[str]) -> subprocess.CompletedProcess[str]:
     script = ROOT / tool
     return subprocess.run(
         [str(script), *args],
+        capture_output=True,
+        text=True,
+        cwd=str(ROOT),
+    )
+
+
+def run_tool_stdin(tool: str, args: list[str], payload: str) -> subprocess.CompletedProcess[str]:
+    script = ROOT / tool
+    return subprocess.run(
+        [str(script), *args],
+        input=payload,
         capture_output=True,
         text=True,
         cwd=str(ROOT),
@@ -74,11 +99,11 @@ class TestCliRequiredArgs:
         assert result.returncode == 2
         assert "--city" in result.stderr
 
-    def test_ct_analyze_requires_taste(self, tmp_path: Path):
+    def test_ct_cognize_requires_taste(self, tmp_path: Path):
         sample = ROOT / "contracts" / "examples" / "movie-schedule.sample.json"
-        result = run_tool("ct-analyze", ["--input", str(sample)])
+        result = run_tool("ct-cognize", ["--input", str(sample)])
         assert result.returncode == 2
-        assert "--taste" in result.stderr
+        assert "missing required inputs" in result.stderr
 
     def test_ct_schedule_requires_input(self):
         result = run_tool("ct-schedule", [])
@@ -94,6 +119,14 @@ class TestCliRequiredArgs:
         result = run_tool("ct-format", [])
         assert result.returncode == 2
         assert "--input" in result.stderr
+
+
+class TestCliVersion:
+    @pytest.mark.parametrize("tool", CT_TOOLS)
+    def test_version_flag_succeeds(self, tool: str):
+        result = run_tool(tool, ["--version"])
+        assert result.returncode == 0, result.stderr
+        assert tool in result.stdout
 
 
 class TestCliSuccessPaths:
@@ -114,26 +147,11 @@ class TestCliSuccessPaths:
         is_valid, errors = validate_against_contract(payload, "movie-batch")
         assert is_valid, errors
 
-    def test_ct_analyze_dry_run_emits_analysis_result_contract(self, tmp_path: Path):
-        sample = ROOT / "contracts" / "examples" / "movie-schedule.sample.json"
-        taste = ROOT / "taste" / "profile.yaml"
-        output_path = tmp_path / "analyzed.json"
-        result = run_tool(
-            "ct-analyze",
-            [
-                "--input",
-                str(sample),
-                "--taste",
-                str(taste),
-                "--dry-run",
-                "--output",
-                str(output_path),
-            ],
-        )
+    def test_ct_cognize_list_agents_succeeds(self):
+        result = run_tool("ct-cognize", ["--list-agents"])
         assert result.returncode == 0, result.stderr
-        payload = json.loads(output_path.read_text(encoding="utf-8"))
-        is_valid, errors = validate_against_contract(payload, "analysis-result")
-        assert is_valid, errors
+        listed = {line.strip() for line in result.stdout.splitlines() if line.strip()}
+        assert {"kimi", "gemini", "qwen", "pi"}.issubset(listed)
 
     def test_ct_schedule_dry_run_emits_movie_schedule_contract(self, tmp_path: Path):
         sample = ROOT / "contracts" / "examples" / "movie-batch.sample.json"
@@ -193,6 +211,43 @@ class TestCliSuccessPaths:
         is_valid, errors = validate_against_contract(payload, "message-text")
         assert is_valid, errors
 
+    @pytest.mark.parametrize(
+        ("tool", "sample", "args", "contract_name"),
+        [
+            (
+                "ct-schedule",
+                "movie-batch.sample.json",
+                ["--input", "-", "--dry-run"],
+                "movie-schedule",
+            ),
+            (
+                "ct-filter",
+                "analysis-result.sample.json",
+                ["--input", "-"],
+                "filter-result",
+            ),
+            (
+                "ct-format",
+                "filter-result.sample.json",
+                ["--input", "-", "--template", "telegram"],
+                "message-text",
+            ),
+        ],
+    )
+    def test_tools_accept_stdin_input(
+        self,
+        tool: str,
+        sample: str,
+        args: list[str],
+        contract_name: str,
+    ):
+        sample_payload = (ROOT / "contracts" / "examples" / sample).read_text(encoding="utf-8")
+        result = run_tool_stdin(tool, args, sample_payload)
+        assert result.returncode == 0, result.stderr
+        output = json.loads(result.stdout)
+        is_valid, errors = validate_against_contract(output, contract_name)
+        assert is_valid, errors
+
 
 class TestCliErrorPaths:
     def test_ct_fetch_unknown_source_returns_invalid_args(self):
@@ -209,37 +264,53 @@ class TestCliErrorPaths:
         assert result.returncode == 2
         assert "Unknown source" in result.stderr
 
-    def test_ct_analyze_missing_taste_file_returns_invalid_args(self, tmp_path: Path):
+    def test_ct_cognize_missing_taste_file_returns_path_error(self, tmp_path: Path):
         sample = ROOT / "contracts" / "examples" / "movie-schedule.sample.json"
         missing_taste = tmp_path / "missing.yaml"
         result = run_tool(
-            "ct-analyze",
+            "ct-cognize",
             [
                 "--input",
                 str(sample),
                 "--taste",
                 str(missing_taste),
-                "--dry-run",
             ],
         )
-        assert result.returncode == 2
-        assert "Taste profile not found" in result.stderr
+        assert result.returncode == 3
+        assert "taste profile not found" in result.stderr
 
-    def test_ct_analyze_invalid_agent_returns_invalid_args(self):
+    def test_ct_cognize_invalid_agents_returns_invalid_args(self):
         sample = ROOT / "contracts" / "examples" / "movie-schedule.sample.json"
         taste = ROOT / "taste" / "profile.yaml"
         result = run_tool(
-            "ct-analyze",
+            "ct-cognize",
             [
                 "--input",
                 str(sample),
                 "--taste",
                 str(taste),
-                "--agent",
-                "invalid-agent",
+                "--agents",
+                "pi,unknown",
             ],
         )
         assert result.returncode == 2
+
+    def test_ct_cognize_invalid_input_contract_returns_contract_error(self, tmp_path: Path):
+        bad_input = tmp_path / "bad.json"
+        bad_input.write_text(json.dumps({"movies": []}), encoding="utf-8")
+        taste = ROOT / "taste" / "profile.yaml"
+
+        result = run_tool(
+            "ct-cognize",
+            [
+                "--input",
+                str(bad_input),
+                "--taste",
+                str(taste),
+            ],
+        )
+        assert result.returncode == 5
+        assert "Contract violation" in result.stderr
 
     def test_ct_schedule_invalid_date_returns_invalid_args(self):
         sample = ROOT / "contracts" / "examples" / "movie-batch.sample.json"
@@ -256,6 +327,34 @@ class TestCliErrorPaths:
         assert result.returncode == 2
         assert "--date must be YYYY-MM-DD" in result.stderr
 
+    def test_ct_filter_invalid_recommendation_returns_invalid_args(self):
+        sample = ROOT / "contracts" / "examples" / "analysis-result.sample.json"
+        result = run_tool(
+            "ct-filter",
+            [
+                "--input",
+                str(sample),
+                "--recommendation",
+                "nope",
+            ],
+        )
+        assert result.returncode == 2
+        assert "Unknown recommendation value" in result.stderr
+
+    def test_ct_filter_invalid_min_score_returns_invalid_args(self):
+        sample = ROOT / "contracts" / "examples" / "analysis-result.sample.json"
+        result = run_tool(
+            "ct-filter",
+            [
+                "--input",
+                str(sample),
+                "--min-score",
+                "-5",
+            ],
+        )
+        assert result.returncode == 2
+        assert "--min-score must be between 0 and 100" in result.stderr
+
     def test_ct_format_unknown_template_returns_invalid_args(self):
         sample = ROOT / "contracts" / "examples" / "filter-result.sample.json"
         result = run_tool(
@@ -269,3 +368,16 @@ class TestCliErrorPaths:
         )
         assert result.returncode == 2
         assert "Unknown template" in result.stderr
+
+    @pytest.mark.parametrize(
+        ("tool", "args"),
+        [
+            ("ct-schedule", ["--input", "/no/such/file.json", "--dry-run"]),
+            ("ct-filter", ["--input", "/no/such/file.json"]),
+            ("ct-format", ["--input", "/no/such/file.json", "--template", "telegram"]),
+        ],
+    )
+    def test_missing_input_returns_noinput_exit(self, tool: str, args: list[str]):
+        result = run_tool(tool, args)
+        assert result.returncode == 66
+        assert "Input path error" in result.stderr

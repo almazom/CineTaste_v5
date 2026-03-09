@@ -3,6 +3,7 @@ Test ct-cognize tool: port validation, response parsing, merge, and CLI.
 """
 
 import json
+import io
 import subprocess
 import time
 import pytest
@@ -375,6 +376,14 @@ class TestCLI:
         listed = {line.strip() for line in result.stdout.splitlines() if line.strip()}
         assert set(AGENT_NAMES).issubset(listed)
 
+    def test_version(self):
+        result = subprocess.run(
+            [str(ROOT / "ct-cognize"), "--version"],
+            capture_output=True, text=True, timeout=10,
+        )
+        assert result.returncode == 0
+        assert "ct-cognize" in result.stdout
+
     def test_alias_help(self):
         result = subprocess.run(
             [str(ROOT / "ct-cognetive"), "--help"],
@@ -413,7 +422,7 @@ class TestCognizeIntegration:
 
         # Write input files
         movies_file = tmp_path / "movies.json"
-        movies_file.write_text(json.dumps({"movies": sample_movies()}), encoding="utf-8")
+        movies_file.write_text(json.dumps(sample_schedule_input()), encoding="utf-8")
 
         taste_file = tmp_path / "taste.yaml"
         taste_file.write_text("likes:\n  genres: [drama]\ndislikes:\n  genres: [horror]\n", encoding="utf-8")
@@ -453,7 +462,7 @@ class TestCognizeIntegration:
         from main import cognize
 
         movies_file = tmp_path / "movies.json"
-        movies_file.write_text(json.dumps({"movies": sample_movies()}), encoding="utf-8")
+        movies_file.write_text(json.dumps(sample_schedule_input()), encoding="utf-8")
 
         taste_file = tmp_path / "taste.yaml"
         taste_file.write_text("likes: {}\ndislikes: {}\n", encoding="utf-8")
@@ -497,7 +506,7 @@ class TestCognizeIntegration:
         assert result["meta"]["agent"] == "fallback"
         assert len(result["analyzed"]) == 1
 
-    def test_cognize_accepts_raw_movie_array(self, monkeypatch, tmp_path):
+    def test_cognize_rejects_raw_movie_array(self, monkeypatch, tmp_path):
         from main import cognize
 
         movies_file = tmp_path / "movies.json"
@@ -531,15 +540,14 @@ class TestCognizeIntegration:
             ),
         )
 
-        result = cognize(str(movies_file), str(taste_file), agent_name="auto")
-        assert len(result["analyzed"]) == 1
-        assert result["analyzed"][0]["movie"]["id"] == "kt-test-movie"
+        with pytest.raises(ValueError, match="movie-schedule"):
+            cognize(str(movies_file), str(taste_file), agent_name="auto")
 
     def test_cognize_agent_failure_raises(self, monkeypatch, tmp_path):
         from main import cognize
 
         movies_file = tmp_path / "movies.json"
-        movies_file.write_text(json.dumps({"movies": sample_movies()}), encoding="utf-8")
+        movies_file.write_text(json.dumps(sample_schedule_input()), encoding="utf-8")
 
         taste_file = tmp_path / "taste.yaml"
         taste_file.write_text("likes: {}\ndislikes: {}\n", encoding="utf-8")
@@ -577,7 +585,7 @@ class TestCognizeIntegration:
             ],
         )
 
-        cli_main()
+        assert cli_main() == 0
 
         payload = json.loads(output_file.read_text(encoding="utf-8"))
         assert payload["meta"]["agent"] == "mock"
@@ -607,7 +615,156 @@ class TestCognizeIntegration:
             ],
         )
 
-        cli_main()
+        assert cli_main() == 0
 
         payload = json.loads(output_file.read_text(encoding="utf-8"))
         assert payload["meta"]["agent"] == "mock"
+
+    def test_cognize_rejects_invalid_contract_before_preflight(self, monkeypatch, tmp_path):
+        from main import cognize
+
+        movies_file = tmp_path / "invalid.json"
+        movies_file.write_text(json.dumps({"movies": sample_movies()}), encoding="utf-8")
+
+        taste_file = tmp_path / "taste.yaml"
+        taste_file.write_text("likes: {}\ndislikes: {}\n", encoding="utf-8")
+
+        called = {"preflight": False}
+
+        def fail_if_called(*args, **kwargs):
+            called["preflight"] = True
+            raise AssertionError("select_agent_chain must not run before input contract validation")
+
+        monkeypatch.setattr("main.select_agent_chain", fail_if_called)
+
+        with pytest.raises(ValueError, match="Contract violation"):
+            cognize(str(movies_file), str(taste_file), agent_name="auto")
+
+        assert called["preflight"] is False
+
+    def test_cli_stdin_mode_keeps_stdout_json_only(self, monkeypatch, tmp_path, capsys):
+        taste_file = tmp_path / "taste.yaml"
+        taste_file.write_text("likes: {}\ndislikes: {}\n", encoding="utf-8")
+
+        mock_agent = {
+            "name": "mock",
+            "cmd": "mock",
+            "run_args": [],
+            "timeout": 10,
+            "file_mode": "cwd",
+            "supports_web_search": False,
+        }
+
+        monkeypatch.setattr("main.select_agent_chain", lambda *args, **kwargs: [mock_agent])
+        monkeypatch.setattr(
+            "main.call_agent",
+            lambda *args, **kwargs: json.dumps(
+                [
+                    {
+                        "movie_id": "kt-test-movie",
+                        "relevance_score": 82,
+                        "recommendation": "recommended",
+                        "reasoning": "stdin mode",
+                        "key_matches": ["drama"],
+                        "red_flags": [],
+                    }
+                ]
+            ),
+        )
+        monkeypatch.setattr("main.sys.stdin", io.StringIO(json.dumps(sample_schedule_input())))
+        monkeypatch.setattr(
+            "main.sys.argv",
+            [
+                "ct-cognize",
+                "--input",
+                "-",
+                "--taste",
+                str(taste_file),
+                "--quiet",
+            ],
+        )
+
+        code = cli_main()
+        captured = capsys.readouterr()
+
+        assert code == 0
+        payload = json.loads(captured.out)
+        assert payload["meta"]["agent"] == "mock"
+        assert captured.err == ""
+
+    def test_cli_invalid_agents_exit_code(self, monkeypatch, tmp_path):
+        movies_file = tmp_path / "movies.json"
+        movies_file.write_text(json.dumps(sample_schedule_input()), encoding="utf-8")
+
+        taste_file = tmp_path / "taste.yaml"
+        taste_file.write_text("likes: {}\ndislikes: {}\n", encoding="utf-8")
+
+        monkeypatch.setattr(
+            "main.sys.argv",
+            [
+                "ct-cognize",
+                "--input",
+                str(movies_file),
+                "--taste",
+                str(taste_file),
+                "--agents",
+                "pi,unknown",
+            ],
+        )
+
+        assert cli_main() == 2
+
+    def test_cli_unreadable_taste_file_exit_code(self, monkeypatch, tmp_path, capsys):
+        movies_file = tmp_path / "movies.json"
+        movies_file.write_text(json.dumps(sample_schedule_input()), encoding="utf-8")
+
+        taste_file = tmp_path / "taste.yaml"
+        taste_file.write_text("likes: {}\ndislikes: {}\n", encoding="utf-8")
+        taste_file.chmod(0)
+
+        monkeypatch.setattr("main.select_agent_chain", lambda *args, **kwargs: [{"name": "mock"}])
+        monkeypatch.setattr(
+            "main.sys.argv",
+            [
+                "ct-cognize",
+                "--input",
+                str(movies_file),
+                "--taste",
+                str(taste_file),
+                "--agent",
+                "pi",
+            ],
+        )
+
+        try:
+            code = cli_main()
+        finally:
+            taste_file.chmod(0o600)
+
+        captured = capsys.readouterr()
+        assert code == 3
+        assert "Cannot read taste profile" in captured.err
+
+    def test_cli_output_path_error_exit_code(self, monkeypatch, tmp_path):
+        movies_file = tmp_path / "movies.json"
+        movies_file.write_text(json.dumps(sample_schedule_input()), encoding="utf-8")
+
+        taste_file = tmp_path / "taste.yaml"
+        taste_file.write_text("likes: {}\ndislikes: {}\n", encoding="utf-8")
+
+        bad_output = tmp_path / "missing" / "out.json"
+
+        monkeypatch.setattr(
+            "main.sys.argv",
+            [
+                "ct-cognize",
+                "--input",
+                str(movies_file),
+                "--taste",
+                str(taste_file),
+                "--output",
+                str(bad_output),
+            ],
+        )
+
+        assert cli_main() == 3
