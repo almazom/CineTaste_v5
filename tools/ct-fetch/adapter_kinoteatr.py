@@ -190,5 +190,5 @@ def _enrich_from_detail_pages(movies: List[Dict[str, Any]]) -> None:
                 movie["actors"] = re.findall(
                     r'itemprop="name">([^<]+)', actors_block.group(1)
                 )
-        except Exception:
+        except (requests.RequestException, AttributeError, TypeError):
             pass  # best-effort enrichment
