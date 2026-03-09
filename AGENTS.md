@@ -36,7 +36,7 @@ Treat `@aura.md` as the runtime protocol (`AURA.md` symlink in repo root).
 | `03-tools.md` | Building/using tools |
 | `04-taste.md` | Modifying preferences |
 | `05-troubleshooting.md` | Something broke |
-| `06-ai-agents.md` | Working with `ct-analyze --agent` |
+| `06-ai-agents.md` | Working with `ct-cognize --agent auto` |
 
 ---
 
@@ -92,14 +92,20 @@ ls contracts/
 cat contracts/movie-batch.schema.json
 ```
 
-### Step 3: Check Tool Manifests
+### Step 3: Check Active Tool Manifests
 ```bash
 cat tools/ct-fetch/MANIFEST.json
+cat tools/ct-cognize/MANIFEST.json
 ```
 
-### Step 4: Run Pipeline
+### Step 4: Read Active Flow
 ```bash
-./run --dry-run    # Preview
+cat flows/latest/FLOW.md   # Current flow file (Version: 1.3.1)
+```
+
+### Step 5: Run Pipeline
+```bash
+./run --dry-run    # Preview / validates send via t2me --dry-run
 ./run              # Production (sends to Telegram)
 ```
 
@@ -123,10 +129,12 @@ CineTaste_v5/
 │   ├── 02-contracts.md
 │   ├── 03-tools.md
 │   ├── 04-taste.md
-│   └── 05-troubleshooting.md
+│   ├── 05-troubleshooting.md
+│   └── 06-ai-agents.md
 │
 ├── contracts/                 # JSON Schema boundaries
 │   ├── movie-batch.schema.json
+│   ├── movie-schedule.schema.json
 │   ├── analysis-result.schema.json
 │   ├── filter-result.schema.json
 │   ├── message-text.schema.json
@@ -134,15 +142,18 @@ CineTaste_v5/
 │
 ├── tools/                     # CLI microservices
 │   ├── ct-fetch/MANIFEST.json
-│   ├── ct-analyze/MANIFEST.json
+│   ├── ct-schedule/MANIFEST.json
+│   ├── ct-cognize/MANIFEST.json
+│   ├── ct-analyze/MANIFEST.json   # legacy
 │   ├── ct-filter/MANIFEST.json
 │   ├── ct-format/MANIFEST.json
 │   └── t2me/MANIFEST.json
 │
 ├── flows/                     # Pipeline versions
-│   ├── v1.2/FLOW.md
-│   └── latest → v1.2/
+│   ├── v1.3/FLOW.md           # Current file, header version 1.3.1
+│   └── latest → v1.3/
 │
+├── run                        # Pipeline entrypoint
 ├── taste/profile.yaml         # User preferences
 ├── .aura/templates/           # Output templates
 └── logs/                      # Execution logs
@@ -219,5 +230,5 @@ ls -1 logs/failed_* | tail -n 1
 
 ---
 
-*Last updated: 2026-03-02*
-*Version: 5.2.0*
+*Last updated: 2026-03-08*
+*Version: 5.4.0*

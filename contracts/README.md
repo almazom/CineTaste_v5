@@ -2,10 +2,12 @@
 
 Every data boundary in CineTaste is defined by a JSON Schema contract.
 
+Active runtime: `./run` reads `flows/latest/FLOW.md` (current flow version `1.3.1`).
+
 ## Contract Chain
 
 ```
-ct-fetch ──→ movie-batch ──→ ct-schedule ──→ movie-schedule ──→ ct-analyze
+ct-fetch ──→ movie-batch ──→ ct-schedule ──→ movie-schedule ──→ ct-cognize
     ──→ analysis-result ──→ ct-filter ──→ filter-result ──→ ct-format
     ──→ message-text ──→ t2me
 ```
@@ -15,11 +17,13 @@ ct-fetch ──→ movie-batch ──→ ct-schedule ──→ movie-schedule �
 | Contract | Producer | Consumer | Description |
 |----------|----------|----------|-------------|
 | `movie-batch` | ct-fetch | ct-schedule | Raw movies from cinema |
-| `movie-schedule` | ct-schedule | ct-analyze | Movies enriched with showtimes |
-| `analysis-result` | ct-analyze | ct-filter | AI-scored movies |
+| `movie-schedule` | ct-schedule | ct-cognize | Movies enriched with showtimes |
+| `analysis-result` | ct-cognize | ct-filter | AI-scored movies |
 | `filter-result` | ct-filter | ct-format | Filtered recommendations |
 | `message-text` | ct-format | t2me | Telegram markdown |
 | `send-confirmation` | t2me | — | Delivery status |
+
+Legacy note: `ct-analyze` remains in `PROTOCOL.json` only as a legacy mapping for the same `movie-schedule` → `analysis-result` boundary.
 
 ## Validation
 

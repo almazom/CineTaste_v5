@@ -1,31 +1,36 @@
-# CineTaste v5.3.0
+# CineTaste v5.4.0
 
 > AI-powered cinema recommendations delivered to Telegram
 
-## What's New in v5.3.0
+## What's New in v5.4.0
 
 | Feature | Description |
 |---------|-------------|
-| **New Stage** | Added `ct-schedule` with `movie-schedule` contract between fetch and analyze |
-| **SSOT Runtime** | `./run` parses `PROTOCOL.json` + `flows/latest/FLOW.md` at execution |
-| **Self-Healing** | Any failure halts, logs, and preserves artifacts with recovery hints |
-| **Strict CLI Flags** | `ct-analyze --agent`, `ct-fetch --source`, `ct-format --template` now enforced |
-| **Contract Enforcement** | JSON Schema `format` (`uri`, `date-time`) checks are active |
-| **Deterministic Tests** | Network tests are marked and excluded by default (`-m "not network"`) |
+| **Cognitive Stage** | `ct-cognize` is active at position 3 (`ct-analyze` is legacy) |
+| **Flow v1.3** | Runtime chain is `ct-fetch → ct-schedule → ct-cognize → ct-filter → ct-format → t2me` |
+| **Strict SSOT Runtime** | `./run` parses `PROTOCOL.json` + `flows/latest/FLOW.md` on every execution |
+| **Safe Pipeline Dry-Run** | `./run --dry-run` executes all stages and validates send with `t2me --dry-run` (no live delivery) |
+| **Contract Enforcement** | Input/output contracts validated with JSON Schema format checks |
 
 ## Quick Start
 
 ```bash
-# Preview recommendations (dry-run path from FLOW, no Telegram send)
+# Full production pipeline (sends to Telegram)
+./run
+
+# Re-run format/send from cached analysis-result payload
+./run --input contracts/examples/analysis-result.sample.json
+
+# Full pipeline without live Telegram send
 ./run --dry-run
 
-# Full production run
-./run
+# Resend an existing rendered message text file
+./run --resend message.txt
 
 # Run tests
 make test
 
-# Run with coverage
+# Coverage
 make test-cov
 ```
 
@@ -38,11 +43,11 @@ PROTOCOL.json (SSOT)
        │
        ├── tools/ ─────── CLI microservices
        │     ├── ct-fetch/      # Kinoteatr.ru scraper
-       │     ├── ct-schedule/   # Showtime enrichment stage
-       │     ├── ct-analyze/    # AI analysis (auto|kimi|pi|dry_run)
-       │     ├── ct-filter/     # Taste threshold filter
-       │     ├── ct-format/     # Telegram markdown
-       │     └── _shared/       # Shared infra utilities (validation only)
+       │     ├── ct-schedule/   # Showtime enrichment
+       │     ├── ct-cognize/    # Cognitive AI analysis
+       │     ├── ct-filter/     # Recommendation filter
+       │     ├── ct-format/     # Telegram markdown renderer
+       │     └── _shared/       # Shared validation utilities
        │
        └── flows/ ─────── Pipeline steps
              └── latest/FLOW.md
@@ -51,51 +56,32 @@ PROTOCOL.json (SSOT)
 ## Pipeline
 
 ```
-ct-fetch → ct-schedule → ct-analyze → ct-filter → ct-format → t2me
-    │            │             │           │           │        │
-    ▼            ▼             ▼           ▼           ▼        ▼
-movies      scheduled      analyzed    filtered    message   Telegram
-(47)        (47)           (46)        (6)         (text)    (sent)
+ct-fetch → ct-schedule → ct-cognize → ct-filter → ct-format → t2me
 ```
 
-## AI Agents
+## AI Agents for `ct-cognize`
 
-| Agent | Status | Best For |
-|-------|--------|----------|
-| **kimi** | ✅ Primary | Web search, unknown movies |
-| **pi** | ✅ Fallback | Fast reasoning |
-| **dry_run** | ✅ Testing | Mock analysis |
+| Agent | Status | Mode |
+|-------|--------|------|
+| **kimi** | ✅ Active | `stdin` |
+| **gemini** | ✅ Active | `cwd` |
+| **qwen** | ✅ Active | `cwd` |
+| **pi** | ✅ Active | `@file` |
 
-### Preflight Check
-
-```bash
-kimi -p "1+2=...[ONLY NUMBER IN WORDS]" --print --final-message-only
-# Expected: three
-
-pi -p "1+2=...[ONLY NUMBER IN WORDS]" --no-tools
-# Expected: three
-```
+Default selection mode:
+`auto` = parallel preflight race, then ordered runtime fallback.
 
 ## Testing
 
 ```bash
-# Unit tests
-make test           # pytest tests/ -v
-
-# Coverage report
-make test-cov       # pytest --cov
-
-# Deterministic suite (default)
+# Unit and contract tests
 make test
 
-# Optional network integration tests
+# Coverage report
+make test-cov
+
+# Network integration subset
 python3 -m pytest tests/ -m network -v
-
-# E2E dry-run
-make dry-run        # ./run --dry-run
-
-# Production run
-make run            # ./run
 ```
 
 ## Key Files
@@ -103,27 +89,17 @@ make run            # ./run
 | File | Purpose |
 |------|---------|
 | `PROTOCOL.json` | System manifest (SSOT) |
-| `AURA.md` | Agent directives (v2.2) |
-| `.aura/kanban/` | Planning history |
+| `AURA.md` | Agent directives (execution discipline) |
+| `.aura/kanban/latest` | Active task board |
 | `.MEMORY/` | Context cards |
-| `contracts/` | JSON Schema boundaries |
-| `tests/` | pytest test suite |
-
-## Philosophy
-
-Based on Rich Hickey's "Simple Made Easy":
-
-- **Simple > Easy**: Artifact simplicity over authoring convenience
-- **Uncomplect**: One responsibility per tool
-- **Data > Logic**: Declarative over imperative
-- **MVS**: Minimum Viable Solution
+| `flows/latest/FLOW.md` | Executable runtime pipeline |
 
 ## Documentation
 
-- [AURA.md](AURA.md) — System protocol (v2.2)
-- [AGENTS.md](AGENTS.md) — AI agent instructions
-- [.MEMORY/00-index.md](.MEMORY/00-index.md) — Context cards
-- [.MEMORY/06-ai-agents.md](.MEMORY/06-ai-agents.md) — AI agent guide
+- [AURA.md](AURA.md) — System protocol
+- [AGENTS.md](AGENTS.md) — Agent operating rules
+- [.MEMORY/00-index.md](.MEMORY/00-index.md) — Memory bank index
+- [.MEMORY/06-ai-agents.md](.MEMORY/06-ai-agents.md) — `ct-cognize` agent execution notes
 
 ---
-*Version: 5.3.0*
+*Version: 5.4.0*
