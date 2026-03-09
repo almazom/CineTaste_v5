@@ -3,7 +3,7 @@
 **Файл:** `contracts/movie-schedule.schema.json`
 **Версия:** 1.0.0
 **Производитель:** ct-schedule
-**Потребитель:** ct-analyze
+**Потребитель:** ct-cognize
 
 ---
 

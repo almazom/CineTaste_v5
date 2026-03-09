@@ -25,10 +25,34 @@
       "properties": {
         "sent_at": { "type": "string", "format": "date-time" },
         "target": { "type": "string", "description": "Telegram target" },
-        "char_count": { "type": "integer", "description": "Message length" }
+        "char_count": { "type": "integer", "description": "Message length" },
+        "dry_run": { "type": "boolean", "description": "Whether send was validated in dry-run mode" }
       },
       "additionalProperties": false
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "success": { "const": true },
+          "meta": {
+            "type": "object",
+            "properties": { "dry_run": { "const": false } },
+            "required": ["dry_run"]
+          }
+        },
+        "required": ["success", "meta"]
+      },
+      "then": { "required": ["message_id"] }
+    },
+    {
+      "if": {
+        "properties": { "success": { "const": false } },
+        "required": ["success"]
+      },
+      "then": { "required": ["error"] }
+    }
+  ]
 }

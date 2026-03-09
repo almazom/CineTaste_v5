@@ -2,7 +2,7 @@
 
 **Файл:** `contracts/analysis-result.schema.json`
 **Версия:** 1.0.0
-**Производитель:** ct-analyze
+**Производитель:** ct-cognize
 **Потребитель:** ct-filter
 
 ---

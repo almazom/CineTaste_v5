@@ -2,6 +2,8 @@
 
 ASCII-диаграммы для всех контрактов проекта CineTaste.
 
+Актуальный runtime: `./run` читает `flows/latest/FLOW.md` (версия `1.3.1`) и использует `ct-cognize` на cognitive-этапе.
+
 ## Файлы
 
 | Файл | Контракт | Описание |
@@ -16,7 +18,7 @@ ASCII-диаграммы для всех контрактов проекта Cin
 ## Поток данных
 
 ```
-ct-fetch --> ct-schedule --> ct-analyze --> ct-filter --> ct-format --> t2me
+ct-fetch --> ct-schedule --> ct-cognize --> ct-filter --> ct-format --> t2me
     |             |             |             |             |          |
     v             v             v             v             v          v
 movie-batch  movie-schedule  analysis    filter-result  message-text  send-confirm
