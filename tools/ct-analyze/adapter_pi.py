@@ -11,8 +11,6 @@ import re
 import subprocess
 import sys
 import yaml
-from pathlib import Path
-from typing import Optional
 
 
 PI_CLI = "pi"
@@ -153,7 +151,7 @@ def parse_ai_response(response: str) -> list:
         except json.JSONDecodeError:
             pass
 
-    raise ValueError(f"Could not parse JSON from AI response")
+    raise ValueError("Could not parse JSON from AI response")
 
 
 def analyze_movies(movies: list, taste_path: str, dry_run: bool = False) -> list:
