@@ -51,5 +51,5 @@ if __name__ == "__main__":
                 print(f"  - {e}")
         sys.exit(0 if is_valid else 1)
     else:
-        print(f"Usage: python port.py <file.json>")
+        print("Usage: python port.py <file.json>")
         print(f"Validates against {CONTRACT}.schema.json")
