@@ -1,7 +1,7 @@
 #!/bin/bash
 # CineTaste v5 — SSOT-driven pipeline orchestrator
 
-set -euo pipefail
+set -Eeuo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
@@ -11,8 +11,10 @@ FLOW_FILE="$ROOT/flows/latest/FLOW.md"
 
 CITY="naberezhnie-chelni"
 CITY_DISPLAY="Набережные Челны"
+APP_VERSION="unknown"
 WHEN="now"
 VERBOSE=false
+DRY_RUN=false
 RESEND_FILE=""
 INPUT_FILE=""
 
@@ -35,15 +37,15 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 step() {
-    echo -e "${BLUE}▶ $1${NC}"
+    echo -e "${BLUE}▶ $1${NC}" >&2
 }
 
 ok() {
-    echo -e "${GREEN}✓ $1${NC}"
+    echo -e "${GREEN}✓ $1${NC}" >&2
 }
 
 warn() {
-    echo -e "${YELLOW}⚠ $1${NC}"
+    echo -e "${YELLOW}⚠ $1${NC}" >&2
 }
 
 fail() {
@@ -51,13 +53,15 @@ fail() {
 }
 
 die() {
-    fail "$1"
-    exit 1
+    local message="$1"
+    local code="${2:-1}"
+    fail "$message"
+    exit "$code"
 }
 
 log() {
     if [[ "$VERBOSE" == "true" ]]; then
-        echo "  $1"
+        echo "  $1" >&2
     fi
 }
 
@@ -67,14 +71,42 @@ cleanup() {
     fi
 }
 
-on_error() {
-    local exit_code=$?
+delivery_state() {
+    local confirmation_file="$1"
+
+    [[ -f "$confirmation_file" ]] || {
+        echo "missing missing"
+        return 0
+    }
+
+    python3 - "$confirmation_file" <<'PY'
+import json
+import sys
+
+payload = json.load(open(sys.argv[1], encoding="utf-8"))
+if "success" in payload:
+    meta = payload.get("meta") or {}
+    success = payload.get("success") is True
+    dry_run = bool(meta.get("dry_run"))
+else:
+    result = payload.get("result") or {}
+    success = str(payload.get("status", "")).lower() == "ok"
+    dry_run = bool(result.get("dry_run") or payload.get("dry_run"))
+print(
+    "true" if success else "false",
+    "true" if dry_run else "false",
+)
+PY
+}
+
+preserve_failure_artifacts() {
+    local exit_code="${1:-1}"
     set +e
     trap - ERR
 
     mkdir -p "$ROOT/logs"
     local ts
-    ts="$(date +%Y%m%d_%H%M%S)"
+    ts="$(date +%Y%m%d_%H%M%S_%N)"
     local failed_dir="$ROOT/logs/failed_${ts}"
     mkdir -p "$failed_dir"
 
@@ -91,21 +123,52 @@ on_error() {
         printf '%s\n' "${CURRENT_CMD:-N/A}"
     } > "$failed_dir/failure.txt"
 
-    cat > "$failed_dir/RECOVER.md" << EOF
-# CineTaste Recovery
+    local send_success="missing"
+    local send_dry_run="missing"
+    if [[ -f "$failed_dir/send-confirmation.json" ]]; then
+        read -r send_success send_dry_run < <(delivery_state "$failed_dir/send-confirmation.json")
+    elif [[ -f "$failed_dir/t2me-raw.json" ]]; then
+        read -r send_success send_dry_run < <(delivery_state "$failed_dir/t2me-raw.json")
+    fi
 
-Failed step: \`${CURRENT_STEP:-unknown}\`
-Exit code: \`${exit_code}\`
+    {
+        echo "# CineTaste Recovery"
+        echo
+        echo "Failed step: \`${CURRENT_STEP:-unknown}\`"
+        echo "Exit code: \`${exit_code}\`"
+        echo
+        echo "Artifacts preserved in:"
+        echo "\`${failed_dir}\`"
+        echo
+        echo "Recovery paths:"
 
-Artifacts preserved in:
-\`${failed_dir}\`
+        local recovery_index=1
+        if [[ -f "$failed_dir/analyzed.json" ]]; then
+            echo "${recovery_index}. Retry from analyzed artifact:"
+            echo "   \`./run --input ${failed_dir}/analyzed.json\`"
+            recovery_index=$((recovery_index + 1))
+        fi
 
-Recovery paths:
-1. Retry from analyzed artifact:
-   \`./run --input ${failed_dir}/analyzed.json\`
-2. Resend prepared message:
-   \`./run --resend ${failed_dir}/message.txt\`
-EOF
+        if [[ -f "$failed_dir/message.txt" ]]; then
+            if [[ "$send_success" == "true" && "$send_dry_run" != "true" ]]; then
+                echo "${recovery_index}. Do not auto-resend the preserved message:"
+                echo "   Live delivery may already have succeeded; inspect \`${failed_dir}/send-confirmation.json\` and \`logs/sends.log\` first."
+                recovery_index=$((recovery_index + 1))
+            else
+                local resend_flags=""
+                if [[ "$DRY_RUN" == "true" || "$send_dry_run" == "true" ]]; then
+                    resend_flags="--dry-run "
+                fi
+                echo "${recovery_index}. Reuse the preserved message file:"
+                echo "   \`./run ${resend_flags}--resend ${failed_dir}/message.txt\`"
+                recovery_index=$((recovery_index + 1))
+            fi
+        fi
+
+        if [[ "$recovery_index" -eq 1 ]]; then
+            echo "1. Inspect \`${failed_dir}/failure.txt\` and rerun manually from the last good artifact."
+        fi
+    } > "$failed_dir/RECOVER.md"
 
     echo "$(date -Iseconds) | step=${CURRENT_STEP:-unknown} | exit=${exit_code} | artifacts=${failed_dir}" >> "$ROOT/logs/errors.log"
     fail "Pipeline failed at ${CURRENT_STEP:-unknown}"
@@ -113,12 +176,17 @@ EOF
     exit "$exit_code"
 }
 
+on_error() {
+    local exit_code=$?
+    preserve_failure_artifacts "$exit_code"
+}
+
 trap cleanup EXIT
 trap on_error ERR
 
 usage() {
     cat << EOF
-Usage: ./pipeline [OPTIONS]
+Usage: ./run [OPTIONS]
 
 CineTaste v5 — Cinema recommendations to Telegram
 
@@ -126,9 +194,16 @@ Options:
   --when DATE       Date filter: 'now' or YYYY-MM-DD (default: now)
   --input FILE      Skip fetch/analyze, use cached analysis-result JSON
   --resend FILE     Resend existing message file
+  --dry-run, -n     Execute full pipeline but skip live send (uses t2me --dry-run)
   --verbose, -v     Show details
+  --version         Show version
   --help, -h        Show help
 EOF
+    exit 0
+}
+
+print_version() {
+    echo "CineTaste pipeline ${APP_VERSION}"
     exit 0
 }
 
@@ -143,11 +218,13 @@ with open(sys.argv[1], encoding="utf-8") as f:
 project = protocol.get("project", {})
 print(project.get("city", "naberezhnie-chelni"))
 print(project.get("city_display", "Набережные Челны"))
+print(project.get("version", "unknown"))
 PY
 )
 
     CITY="${defaults[0]}"
     CITY_DISPLAY="${defaults[1]}"
+    APP_VERSION="${defaults[2]}"
 }
 
 build_ssot_index() {
@@ -358,6 +435,11 @@ run_stage() {
 
     label="$(stage_label "$stage")"
     cmd="$(resolve_step_command "$stage")"
+    if [[ "$stage" == "t2me" && "$DRY_RUN" == "true" ]]; then
+        export T2ME_SEND_FLAGS="--dry-run"
+    else
+        export T2ME_SEND_FLAGS=""
+    fi
 
     CURRENT_STEP="Step ${current}/${total}: ${stage}"
     CURRENT_CMD="$cmd"
@@ -369,9 +451,35 @@ run_stage() {
     fi
 
     eval "$cmd"
+}
 
-    CURRENT_STEP=""
-    CURRENT_CMD=""
+validate_send_confirmation_file() {
+    local confirmation_file="$1"
+    local send_error
+
+    send_error="$(python3 - "$confirmation_file" "$DRY_RUN" <<'PY2'
+import json
+import sys
+
+confirmation_path = sys.argv[1]
+dry_run = sys.argv[2] == "true"
+payload = json.load(open(confirmation_path, encoding="utf-8"))
+
+if payload.get("success") is not True:
+    print(payload.get("error") or "t2me send-confirmation indicates failure")
+    raise SystemExit(1)
+
+meta = payload.get("meta") or {}
+if not dry_run and not meta.get("dry_run") and not payload.get("message_id"):
+    print("t2me success payload missing message_id")
+    raise SystemExit(1)
+PY2
+)" || true
+
+    if [[ -n "$send_error" ]]; then
+        fail "t2me send-confirmation indicates failure: $send_error"
+        preserve_failure_artifacts 69
+    fi
 }
 
 while [[ $# -gt 0 ]]; do
@@ -391,35 +499,66 @@ while [[ $# -gt 0 ]]; do
             RESEND_FILE="$2"
             shift 2
             ;;
+        --dry-run|-n)
+            DRY_RUN=true
+            shift
+            ;;
         --verbose|-v)
             VERBOSE=true
             shift
+            ;;
+        --version)
+            load_protocol_defaults
+            print_version
+            ;;
+        --)
+            shift
+            break
             ;;
         --help|-h)
             usage
             ;;
         *)
-            die "Unknown option: $1"
+            die "Unknown option: $1" 64
             ;;
     esac
 done
+
+if [[ $# -gt 0 ]]; then
+    die "Unexpected positional arguments: $*" 64
+fi
 
 load_protocol_defaults
 export ROOT TMPDIR CITY CITY_DISPLAY WHEN
 
 if [[ -n "$RESEND_FILE" ]]; then
-    [[ -f "$RESEND_FILE" ]] || die "File not found: $RESEND_FILE"
+    resend_t2me_flags=""
+    [[ -f "$RESEND_FILE" ]] || die "File not found: $RESEND_FILE" 66
     step "Resending message from $RESEND_FILE"
+    cp "$RESEND_FILE" "$TMPDIR/message.txt"
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        resend_t2me_flags="--dry-run"
+    fi
 
     CURRENT_STEP="resend"
-    CURRENT_CMD="cat \"$RESEND_FILE\" | t2me send --markdown"
+    CURRENT_CMD="cat \"$RESEND_FILE\" | t2me send --markdown ${resend_t2me_flags} > \"$TMPDIR/t2me-raw.json\""
     eval "$CURRENT_CMD"
+    python3 "$ROOT/tools/t2me/map_send_confirmation.py" \
+        --input "$TMPDIR/t2me-raw.json" \
+        --output "$TMPDIR/send-confirmation.json"
+    validate_send_confirmation_file "$TMPDIR/send-confirmation.json"
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        ok "Dry-run confirmation validated (no live send)"
+    else
+        mkdir -p "$ROOT/logs"
+        echo "$(date -Iseconds) - Resent: $RESEND_FILE" >> "$ROOT/logs/sends.log"
+        ok "Message sent to Telegram"
+    fi
+    cat "$TMPDIR/send-confirmation.json"
     CURRENT_STEP=""
     CURRENT_CMD=""
-
-    mkdir -p "$ROOT/logs"
-    echo "$(date -Iseconds) - Resent: $RESEND_FILE" >> "$ROOT/logs/sends.log"
-    ok "Message sent to Telegram"
     exit 0
 fi
 
@@ -428,11 +567,11 @@ mapfile -t STAGES < <(get_stages)
 TOTAL_STAGES="${#STAGES[@]}"
 
 if [[ "$TOTAL_STAGES" -eq 0 ]]; then
-    die "No stages found in SSOT index"
+    die "No stages found in SSOT index" 69
 fi
 
 if [[ -n "$INPUT_FILE" ]]; then
-    [[ -f "$INPUT_FILE" ]] || die "Input file not found: $INPUT_FILE"
+    [[ -f "$INPUT_FILE" ]] || die "Input file not found: $INPUT_FILE" 66
     cp "$INPUT_FILE" "$TMPDIR/analyzed.json"
     ANALYZED_COUNT="$(python3 -c "import json; print(len(json.load(open('$TMPDIR/analyzed.json'))['analyzed']))")"
     step "Using cached analysis from $INPUT_FILE"
@@ -476,32 +615,39 @@ for idx in "${!STAGES[@]}"; do
             ok "Formatted message: $MSG_LINES lines"
             ;;
         t2me)
-            SEND_SUCCESS="$(python3 -c "import json; print(str(json.load(open('$TMPDIR/send-confirmation.json')).get('success', False)).lower())")"
-            if [[ "$SEND_SUCCESS" != "true" ]]; then
-                SEND_ERROR="$(python3 -c "import json; print(json.load(open('$TMPDIR/send-confirmation.json')).get('error', 'unknown error'))")"
-                die "t2me send-confirmation indicates failure: ${SEND_ERROR}"
+            validate_send_confirmation_file "$TMPDIR/send-confirmation.json"
+            if [[ "$DRY_RUN" == "true" ]]; then
+                ok "Dry-run confirmation validated (no live send)"
+            else
+                mkdir -p "$ROOT/logs"
+                echo "$(date -Iseconds) - Sent: $FILTERED_COUNT movies" >> "$ROOT/logs/sends.log"
+                ok "Message sent to Telegram"
             fi
-            mkdir -p "$ROOT/logs"
-            echo "$(date -Iseconds) - Sent: $FILTERED_COUNT movies" >> "$ROOT/logs/sends.log"
-            ok "Message sent to Telegram"
-            echo ""
-            echo -e "${BLUE}── Message Sent ─────────────────────────────────────────────${NC}"
-            cat "$TMPDIR/message.txt"
-            echo -e "${BLUE}─────────────────────────────────────────────────────────────${NC}"
+            echo "" >&2
+            echo -e "${BLUE}── Message Preview ──────────────────────────────────────────${NC}" >&2
+            cat "$TMPDIR/message.txt" >&2
+            echo -e "${BLUE}─────────────────────────────────────────────────────────────${NC}" >&2
             ;;
     esac
+
+    CURRENT_STEP=""
+    CURRENT_CMD=""
 done
 
-echo ""
-echo -e "${BLUE}════════════════════════════════════════════════════════════════${NC}"
-echo -e "${BLUE}  ✅ CineTaste v5 — Complete${NC}"
-echo -e "${BLUE}════════════════════════════════════════════════════════════════${NC}"
-echo ""
-echo "  📊 Summary:"
-echo "     • Movies fetched:    ${MOVIE_COUNT}"
-echo "     • With schedule:     ${SCHEDULED_WITH}/${SCHEDULED_COUNT}"
-echo "     • Movies analyzed:   ${ANALYZED_COUNT}"
-echo "     • Movies matched:    ${FILTERED_COUNT}"
-echo "     • Destination:       Telegram"
-echo ""
-echo ""
+echo "" >&2
+echo -e "${BLUE}════════════════════════════════════════════════════════════════${NC}" >&2
+echo -e "${BLUE}  ✅ CineTaste v5 — Complete${NC}" >&2
+echo -e "${BLUE}════════════════════════════════════════════════════════════════${NC}" >&2
+echo "" >&2
+echo "  📊 Summary:" >&2
+echo "     • Movies fetched:    ${MOVIE_COUNT}" >&2
+echo "     • With schedule:     ${SCHEDULED_WITH}/${SCHEDULED_COUNT}" >&2
+echo "     • Movies analyzed:   ${ANALYZED_COUNT}" >&2
+echo "     • Movies matched:    ${FILTERED_COUNT}" >&2
+if [[ "$DRY_RUN" == "true" ]]; then
+    echo "     • Destination:       Telegram (dry-run)" >&2
+else
+    echo "     • Destination:       Telegram" >&2
+fi
+echo "" >&2
+echo "" >&2

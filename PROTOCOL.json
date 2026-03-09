@@ -152,13 +152,17 @@
   },
 
   "flow": {
-    "current_version": "1.3.0",
+    "current_version": "1.3.1",
     "file": "flows/latest/FLOW.md",
     "stages": ["ct-fetch", "ct-schedule", "ct-cognize", "ct-filter", "ct-format", "t2me"],
     "modes": {
       "production": {
-        "description": "Full pipeline with cognitive layer, always sends to Telegram",
+        "description": "Full pipeline with cognitive layer, sends to Telegram",
         "flags": []
+      },
+      "dry_run": {
+        "description": "Full pipeline with cognitive layer, validates send via t2me --dry-run",
+        "flags": ["--dry-run"]
       },
       "resend": {
         "description": "Resend existing message",

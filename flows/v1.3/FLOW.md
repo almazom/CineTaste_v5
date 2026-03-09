@@ -1,5 +1,5 @@
 # FLOW.md — Executable Pipeline Specification
-# Version: 1.3.0
+# Version: 1.3.1
 # Project: CineTaste v5
 # Paradigm: Contract-First, Protocol-Driven
 
@@ -46,7 +46,7 @@ taste_profile: taste/profile.yaml
 movie-batch    movie-schedule   analysis-result  filter-result   message-text    Telegram ✓
 ```
 
-**ALWAYS SEND:** Step 6 is mandatory. Pipeline always runs live with cognitive layer.
+**STEP 6 ALWAYS RUNS:** send-confirmation is always produced. With `--dry-run`, Step 6 validates via `t2me --dry-run` without live delivery.
 
 ---
 
@@ -140,13 +140,15 @@ python3 -c "import json; print(json.load(open('$TMPDIR/message.json'))['text'])"
 ## Step 6 — t2me (MANDATORY)
 
 > **Verb:** send | **Input:** `message-text` | **Output:** `send-confirmation@1.0.0`
+>
+> Runtime note: pipeline exports `T2ME_SEND_FLAGS=--dry-run` for Step 6 when launched with `./run --dry-run`.
 
 ```bash
 # @step: 6
 # @contract: send-confirmation
 # @output: $TMPDIR/send-confirmation.json
 
-cat "$TMPDIR/message.txt" | t2me send --markdown > "$TMPDIR/t2me-raw.json"
+cat "$TMPDIR/message.txt" | t2me send --markdown ${T2ME_SEND_FLAGS:-} > "$TMPDIR/t2me-raw.json"
 python3 "$ROOT/tools/t2me/map_send_confirmation.py" \
     --input "$TMPDIR/t2me-raw.json" \
     --output "$TMPDIR/send-confirmation.json"
@@ -166,7 +168,9 @@ Options:
   --when DATE       Date filter (default: now)
   --input FILE      Skip fetch/analyze, use cached
   --resend FILE     Resend existing message
+  --dry-run, -n     Execute full flow without live Telegram delivery
   --verbose, -v     Show details
+  --version         Show version
   --help, -h        Show help
 ```
 
@@ -200,6 +204,11 @@ CineTaste_v5/
 ---
 
 ## Changelog
+### [1.3.1] — 2026-03-05
+
+- Restored pipeline `--dry-run` mode by routing send step to `t2me --dry-run`
+- Clarified Step 6 behavior: send-confirmation is always generated
+- Added `--version` and updated CLI options documentation
 
 ### [1.3.0] — 2026-03-03
 
