@@ -106,11 +106,14 @@ def validate_movie_schedule(data: dict) -> tuple[bool, list[str]]:
 def validate_analysis_result(data: dict) -> tuple[bool, list[str]]:
     return validate_against_contract(data, "analysis-result")
 
+
 def validate_filter_result(data: dict) -> tuple[bool, list[str]]:
     return validate_against_contract(data, "filter-result")
 
+
 def validate_message_text(data: dict) -> tuple[bool, list[str]]:
     return validate_against_contract(data, "message-text")
+
 
 def validate_send_confirmation(data: dict) -> tuple[bool, list[str]]:
     return validate_against_contract(data, "send-confirmation")
