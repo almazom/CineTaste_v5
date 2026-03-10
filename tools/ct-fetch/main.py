@@ -20,8 +20,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DOTENV_PATH = PROJECT_ROOT / ".env"
 load_dotenv(DOTENV_PATH)
 
-from adapter_kinoteatr import fetch_movies, CITY_URLS
-from port import enforce_output
+from adapter_kinoteatr import fetch_movies, CITY_URLS  # noqa: E402
+from port import enforce_output  # noqa: E402
 
 SUPPORTED_SOURCES = {
     "kinoteatr": fetch_movies,
