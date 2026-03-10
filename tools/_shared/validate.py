@@ -103,6 +103,9 @@ def validate_movie_batch(data: dict) -> tuple[bool, list[str]]:
 def validate_movie_schedule(data: dict) -> tuple[bool, list[str]]:
     return validate_against_contract(data, "movie-schedule")
 
+def validate_movie_showtimes(data: dict) -> tuple[bool, list[str]]:
+    return validate_against_contract(data, "movie-showtimes")
+
 def validate_analysis_result(data: dict) -> tuple[bool, list[str]]:
     return validate_against_contract(data, "analysis-result")
 
@@ -125,7 +128,7 @@ if __name__ == "__main__":
     if len(sys.argv) < 3:
         print("Usage: python validate.py <contract_name> <file.json>")
         print(
-            "Contracts: movie-batch, movie-schedule, analysis-result, "
+            "Contracts: movie-batch, movie-schedule, movie-showtimes, analysis-result, "
             "filter-result, message-text, send-confirmation"
         )
         sys.exit(1)
