@@ -42,6 +42,10 @@
                   "format": "date-time",
                   "description": "Session date-time in ISO 8601"
                 },
+                "price": {
+                  "type": "string",
+                  "description": "Optional ticket price label as shown on source page"
+                },
                 "hall": { "type": "string", "description": "Optional hall/screen label" },
                 "booking_url": { "type": "string", "format": "uri", "description": "Optional booking URL" }
               },

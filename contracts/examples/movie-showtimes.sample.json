@@ -5,11 +5,13 @@
     {
       "time": "10:10",
       "datetime_iso": "2026-03-10T10:10:00+03:00",
+      "price": "от 250 ₽",
       "booking_url": "https://kinoteatr.ru/film/postoronniy-2/naberezhnie-chelni/"
     },
     {
       "time": "15:20",
       "datetime_iso": "2026-03-10T15:20:00+03:00",
+      "price": "от 350 ₽",
       "booking_url": "https://kinoteatr.ru/film/postoronniy-2/naberezhnie-chelni/"
     }
   ],
