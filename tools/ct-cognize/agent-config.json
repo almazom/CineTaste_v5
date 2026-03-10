@@ -1,0 +1,91 @@
+{
+  "preflight": {
+    "prompt": "Ответь одним словом: ok",
+    "timeout_default": 45,
+    "timeout_env_var": "CT_COGNIZE_PREFLIGHT_TIMEOUT",
+    "ok_tokens": ["ok", "ок"]
+  },
+  "runtime": {
+    "timeout_default": 600,
+    "timeout_env_var": "CT_COGNIZE_RUNTIME_TIMEOUT",
+    "env": {
+      "CI": "1",
+      "NO_COLOR": "1",
+      "TERM": "dumb"
+    }
+  },
+  "agents": [
+    {
+      "name": "kimi",
+      "cmd": "kimi",
+      "preflight_args": ["--print", "--final-message-only", "-p"],
+      "run_args": ["--print", "--final-message-only", "--thinking"],
+      "timeout": 600,
+      "preflight_timeout": 45,
+      "supports_web_search": true,
+      "file_mode": "stdin",
+      "enabled": false,
+      "disabled_reason": "Consistently fails with 402 membership error"
+    },
+    {
+      "name": "gemini",
+      "cmd": "gemini",
+      "preflight_args": ["-p"],
+      "run_args": ["--approval-mode", "yolo"],
+      "timeout": 600,
+      "preflight_timeout": 45,
+      "supports_web_search": false,
+      "file_mode": "cwd",
+      "enabled": false,
+      "disabled_reason": "Consistently fails with EACCES permission error"
+    },
+    {
+      "name": "qwen",
+      "cmd": "qwen",
+      "preflight_args": ["-p"],
+      "run_args": ["--approval-mode", "yolo"],
+      "timeout": 600,
+      "preflight_timeout": 45,
+      "supports_web_search": false,
+      "file_mode": "cwd",
+      "enabled": true
+    },
+    {
+      "name": "pi",
+      "cmd": "pi",
+      "preflight_args": [
+        "--no-session",
+        "--provider",
+        "zai",
+        "--model",
+        "glm-5",
+        "--thinking",
+        "off",
+        "--no-tools",
+        "-p"
+      ],
+      "run_args": ["--print", "--no-tools", "--thinking", "high"],
+      "timeout": 600,
+      "preflight_timeout": 45,
+      "supports_web_search": false,
+      "file_mode": "at_file",
+      "enabled": true
+    },
+    {
+      "name": "claude",
+      "cmd": "claude",
+      "preflight_args": [
+        "-p",
+        "--model",
+        "MiniMax-M2.5",
+        "--no-session-persistence"
+      ],
+      "run_args": ["--approval-mode", "yolo"],
+      "timeout": 600,
+      "preflight_timeout": 45,
+      "supports_web_search": false,
+      "file_mode": "cwd",
+      "enabled": true
+    }
+  ]
+}

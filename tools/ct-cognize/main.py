@@ -111,72 +111,42 @@ def _log_timing(name: str, started_at: float) -> None:
 def _subprocess_env() -> dict[str, str]:
     """Force non-interactive, CI-safe defaults for agent subprocesses."""
     env = os.environ.copy()
-    env.setdefault("CI", "1")
-    env.setdefault("NO_COLOR", "1")
-    env.setdefault("TERM", "dumb")
+    env.update(CONFIG["runtime"]["env"])
     return env
 
 
-# ── Agent Registry ─────────────────────────────────────────────────────
+# ── Configuration Loader ────────────────────────────────────────────────
 
-AGENTS = [
-    {
-        "name": "kimi",
-        "cmd": "kimi",
-        "preflight_args": ["--print", "--final-message-only", "-p"],
-        "run_args": ["--print", "--final-message-only", "--thinking"],
-        "timeout": 300,
-        "preflight_timeout": 20,
-        "supports_web_search": True,
-        "file_mode": "stdin",
-    },
-    {
-        "name": "gemini",
-        "cmd": "gemini",
-        "preflight_args": ["-p"],
-        "run_args": ["--approval-mode", "yolo"],
-        "timeout": 300,
-        "preflight_timeout": 20,
-        "supports_web_search": False,
-        "file_mode": "cwd",
-    },
-    {
-        "name": "qwen",
-        "cmd": "qwen",
-        "preflight_args": ["-p"],
-        "run_args": ["--approval-mode", "yolo"],
-        "timeout": 300,
-        "preflight_timeout": 20,
-        "supports_web_search": False,
-        "file_mode": "cwd",
-    },
-    {
-        "name": "pi",
-        "cmd": "pi",
-        "preflight_args": [
-            "--no-session",
-            "--provider",
-            "zai",
-            "--model",
-            "glm-5",
-            "--thinking",
-            "off",
-            "--no-tools",
-            "-p",
-        ],
-        "run_args": ["--print", "--no-tools", "--thinking", "high"],
-        "timeout": 240,
-        "preflight_timeout": 20,
-        "supports_web_search": False,
-        "file_mode": "at_file",
-    },
-]
+def _load_agent_config() -> dict:
+    """Load agent configuration from external JSON file."""
+    config_path = Path(__file__).parent / "agent-config.json"
+    try:
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError) as exc:
+        raise RuntimeError(f"Failed to load agent-config.json: {exc}") from exc
 
+    # Apply environment variable overrides for timeouts
+    preflight_env = config["preflight"].get("timeout_env_var")
+    if preflight_env:
+        config["preflight"]["timeout_default"] = int(
+            os.environ.get(preflight_env, config["preflight"]["timeout_default"])
+        )
+
+    runtime_env = config["runtime"].get("timeout_env_var")
+    if runtime_env:
+        config["runtime"]["timeout_default"] = int(
+            os.environ.get(runtime_env, config["runtime"]["timeout_default"])
+        )
+
+    return config
+
+
+CONFIG = _load_agent_config()
+AGENTS = [a for a in CONFIG["agents"] if a.get("enabled", True)]
 AGENT_NAMES = [agent["name"] for agent in AGENTS]
 AGENT_BY_NAME = {agent["name"]: agent for agent in AGENTS}
-
-PREFLIGHT_PROMPT = "Ответь одним словом: ok. Не используй инструменты."
-PREFLIGHT_OK_TOKENS = {"ok", "ок"}
+PREFLIGHT_PROMPT = CONFIG["preflight"]["prompt"]
+PREFLIGHT_OK_TOKENS = set(CONFIG["preflight"]["ok_tokens"])
 
 
 # ── Preflight ──────────────────────────────────────────────────────────
@@ -198,6 +168,9 @@ def _compact_output(stdout: str, stderr: str, limit: int = 120) -> str:
 def _run_preflight(agent: dict) -> dict:
     """Run one agent preflight probe and return structured result."""
     cmd = agent["cmd"]
+    preflight_timeout = agent.get(
+        "preflight_timeout", CONFIG["preflight"]["timeout_default"]
+    )
     started = time.perf_counter()
 
     if not shutil.which(cmd):
@@ -214,7 +187,7 @@ def _run_preflight(agent: dict) -> dict:
             [cmd] + agent["preflight_args"] + [PREFLIGHT_PROMPT],
             capture_output=True,
             text=True,
-            timeout=agent.get("preflight_timeout", 20),
+            timeout=preflight_timeout,
             cwd="/tmp",
             env=_subprocess_env(),
         )
@@ -224,7 +197,7 @@ def _run_preflight(agent: dict) -> dict:
             "ok": False,
             "reply": "",
             "elapsed": time.perf_counter() - started,
-            "error": f"preflight timeout after {agent.get('preflight_timeout', 20)}s",
+            "error": f"preflight timeout after {preflight_timeout}s",
         }
     except Exception as exc:
         return {
@@ -257,12 +230,19 @@ def _run_preflight(agent: dict) -> dict:
 
 
 def _log_preflight(result: dict) -> None:
-    """Emit standardized preflight log line."""
+    """Emit standardized preflight log line with transparency."""
     name = result["agent"]["name"]
+    cmd = result["agent"]["cmd"]
+    model = result["agent"].get("preflight_args", [])
+    model_str = ""
+    for i, arg in enumerate(model):
+        if arg == "--model" and i + 1 < len(model):
+            model_str = f" model={model[i+1]}"
+            break
     if result["ok"]:
-        _log(f"{name} ok ({result['reply']} in {result['elapsed']:.2f}s)", channel="preflight")
+        _log(f"{name}{model_str} → ok ({result['reply']} in {result['elapsed']:.2f}s)", channel="preflight")
     else:
-        _log(f"{name} fail ({result['error']})", channel="preflight")
+        _log(f"{name}{model_str} → fail ({result['error']})", channel="preflight")
 
 
 def preflight_check(agent: dict) -> bool:
@@ -411,13 +391,21 @@ def call_agent(agent: dict, workdir: str) -> str:
       - stdin:   prompt + inline data sent via stdin
     """
     cmd_base = [agent["cmd"]] + agent["run_args"]
-    timeout = agent["timeout"]
+    timeout = agent.get("timeout", CONFIG["runtime"]["timeout_default"])
     mode = agent["file_mode"]
     movies_path = os.path.join(workdir, "movies.json")
     taste_path = os.path.join(workdir, "taste.yaml")
     started = time.perf_counter()
 
-    _log(f"using {agent['name']} ({mode} mode)")
+    # Extract model info for transparency
+    model_info = ""
+    run_args = agent.get("run_args", [])
+    for i, arg in enumerate(run_args):
+        if arg == "--model" and i + 1 < len(run_args):
+            model_info = f" model={run_args[i+1]}"
+            break
+
+    _log(f"using {agent['name']}{model_info} ({mode} mode, timeout={timeout}s)")
 
     try:
         if mode == "cwd":
