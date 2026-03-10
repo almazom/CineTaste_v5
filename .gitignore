@@ -65,3 +65,6 @@ Thumbs.db
 temp/
 sdd_package_*/
 
+# Archive
+archive/
+
