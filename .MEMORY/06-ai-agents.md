@@ -1,27 +1,35 @@
 # AI Agents — `ct-cognize`
 
 > Purpose: runtime behavior of cognitive analysis stage (`ct-cognize`)
-> Updated: 2026-03-05
+> Updated: 2026-03-10
 
 ## Active Agents
 
-| Agent | CLI | Mode | Notes |
-|------|-----|------|-------|
-| kimi | `kimi` | stdin | strongest for unknown movies / web search |
-| gemini | `gemini` | cwd | file-reading in workdir |
-| qwen | `qwen` | cwd | file-reading in workdir |
-| pi | `pi` | @file | deterministic fallback path |
+| Agent | CLI | Mode | Timeout | Preflight | Notes |
+|------|-----|------|---------|-----------|-------|
+| kimi | `kimi` | stdin | 600s | `--print --final-message-only -p` | strongest for unknown movies / web search |
+| gemini | `gemini` | cwd | 600s | `-p` | file-reading in workdir |
+| qwen | `qwen` | cwd | 600s | `-p` | file-reading in workdir |
+| pi | `pi` | @file | 600s | `--no-session --provider zai --model glm-5 --thinking off --no-tools -p` | deterministic fallback path |
+| claude | `claude` | cwd | 600s | `-p --model MiniMax-M2.5 --no-session-persistence` | alternative general-purpose agent |
 
 ## Selection Policy
 
 - `--agent auto` (default):
-  - parallel preflight checks the configured agents for readiness;
+  - parallel preflight checks ALL configured agents simultaneously;
+  - agents race to respond first with "ok";
   - runtime fallback order follows the first-ready agents discovered at preflight;
   - if all agents fail, the command exits with agent failure (no silent dry-run fallback).
 - `--agent <name>`:
-  - strict single-agent mode.
+  - strict single-agent mode (no fallback).
 - `--agents a,b,c`:
   - user-defined ordered fallback chain.
+
+## Preflight Behavior
+
+All agents run preflight in parallel with prompt: `"Ответь одним словом: ok"`
+
+Preflight timeout: 45s per agent. First responders become primary candidates.
 
 ## Contract Gate
 
