@@ -232,7 +232,6 @@ def _run_preflight(agent: dict) -> dict:
 def _log_preflight(result: dict) -> None:
     """Emit standardized preflight log line with transparency."""
     name = result["agent"]["name"]
-    cmd = result["agent"]["cmd"]
     model = result["agent"].get("preflight_args", [])
     model_str = ""
     for i, arg in enumerate(model):

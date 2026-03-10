@@ -26,7 +26,6 @@ def build_prompt(movies: list, taste: dict) -> str:
     """Build analysis prompt for AI agent."""
     likes = taste.get("likes", {})
     dislikes = taste.get("dislikes", {})
-    thresholds = taste.get("thresholds", {})
 
     prompt = """Ты — кинокритик с утонченным вкусом. Проанализируй фильмы и оцени их соответствие вкусу пользователя.
 
