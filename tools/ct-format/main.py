@@ -169,7 +169,6 @@ def run(args: argparse.Namespace) -> int:
 
     try:
         data = load_input(args.input, args.verbose)
-
         enforce_input(data)
 
         filtered = data.get("filtered", [])
@@ -177,16 +176,13 @@ def run(args: argparse.Namespace) -> int:
             print(f"Loaded {len(filtered)} filtered movies", file=sys.stderr)
 
         text = renderer(filtered, args.city)
-
         output = build_output(
             text=text,
             template=template,
             city_display=args.city,
             movie_count=len(filtered)
         )
-
         enforce_output(output)
-
         write_output(output, args.output, args.verbose)
 
         if args.verbose:

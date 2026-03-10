@@ -15,56 +15,36 @@ def render_message(
     city_display: str,
     date: Optional[str] = None
 ) -> str:
-    """
-    Render filtered movies as Telegram markdown.
-
-    Args:
-        filtered: List of filtered movie dicts
-        city_display: City name for header
-        date: Date string (default: today)
-
-    Returns:
-        Telegram markdown formatted message
-    """
+    """Render filtered movies as Telegram markdown."""
     if not date:
         date = datetime.now().strftime("%d.%m.%Y")
 
-    lines = []
+    lines = [
+        f"📅 {date}",
+        "",
+        "┏━━ СЕГОДНЯ ━━┓",
+        ""
+    ]
 
-    # Header
-    lines.append(f"📅 {date}")
-    lines.append("")
-    lines.append("┏━━ СЕГОДНЯ ━━┓")
-    lines.append("")
-
-    # Group by recommendation
     must_see = [m for m in filtered if m.get("recommendation") == "must_see"]
     recommended = [m for m in filtered if m.get("recommendation") == "recommended"]
 
-    # Must see section
     if must_see:
-        lines.append("🌟 ОБЯЗАТЕЛЬНО")
-        lines.append("")
-        for i, item in enumerate(must_see, 1):
-            line = render_movie_line(item, i)
-            lines.append(line)
+        lines.extend(["🌟 ОБЯЗАТЕЛЬНО", ""])
+        lines.extend(render_movie_line(item, i) for i, item in enumerate(must_see, 1))
         lines.append("")
 
-    # Recommended section
     if recommended:
-        lines.append("👍 РЕКОМЕНДУЮ")
-        lines.append("")
-        for i, item in enumerate(recommended, len(must_see) + 1):
-            line = render_movie_line(item, i)
-            lines.append(line)
+        lines.extend(["👍 РЕКОМЕНДУЮ", ""])
+        lines.extend(render_movie_line(item, i) for i, item in enumerate(recommended, len(must_see) + 1))
         lines.append("")
 
-    # Stats footer
-    total = len(filtered)
-    lines.append("┏━━ 📊 ━━┓")
-    lines.append(f"{total} фильмов подходит")
-    lines.append("")
-    lines.append(f"📍 {city_display}")
+    lines.extend([
+        "┏━━ 📊 ━━┓",
+        f"{len(filtered)} фильмов подходит",
+        "",
+        f"📍 {city_display}"
+    ])
 
     return "\n".join(lines)
 

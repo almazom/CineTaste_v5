@@ -76,8 +76,8 @@ def build_output(analyzed: list, analyzer: str) -> dict:
         "meta": {
             "analyzer": analyzer,
             "analyzed_at": datetime.now(timezone.utc).isoformat(),
-            "taste_profile": "1.0"
-        }
+            "taste_profile": "1.0",
+        },
     }
 
 
@@ -86,51 +86,33 @@ def main():
     args = parse_args()
 
     try:
-        # Load input
         if args.verbose:
             print(f"Loading movies from {args.input}...", file=sys.stderr)
 
         with open(args.input) as f:
             data = json.load(f)
 
-        # Validate input
         enforce_input(data)
-
         movies = data.get("movies", [])
+
         if args.verbose:
             print(f"Loaded {len(movies)} movies", file=sys.stderr)
 
-        # Check taste profile exists
         if not Path(args.taste).exists():
             print(f"Error: Taste profile not found: {args.taste}", file=sys.stderr)
             sys.exit(2)
 
-        # Analyze
         if args.verbose:
             if args.dry_run:
                 print("DRY RUN: Using mock analysis", file=sys.stderr)
             else:
                 print(f"Analyzing with {args.agent}...", file=sys.stderr)
 
-        analyzed, agent_meta = analyze_movies(
-            movies,
-            args.taste,
-            dry_run=args.dry_run,
-            agent_name=args.agent,
-        )
-
-        # Build output (merge meta from agent)
-        output = {
-            "analyzed": analyzed,
-            "meta": agent_meta
-        }
-
-        # Validate output
+        analyzed, agent_meta = analyze_movies(movies, args.taste, dry_run=args.dry_run, agent_name=args.agent)
+        output = {"analyzed": analyzed, "meta": agent_meta}
         enforce_output(output)
 
-        # Output
         json_output = json.dumps(output, ensure_ascii=False, indent=2)
-
         if args.output == "-":
             print(json_output)
         else:
@@ -139,7 +121,6 @@ def main():
                 print(f"Wrote analysis to {args.output}", file=sys.stderr)
 
         if args.verbose:
-            # Summary stats
             recs = {}
             for a in analyzed:
                 r = a.get("recommendation", "unknown")
@@ -151,15 +132,12 @@ def main():
     except ValueError as e:
         print(f"Validation error: {e}", file=sys.stderr)
         sys.exit(4)
-
     except TimeoutError as e:
         print(f"Timeout: {e}", file=sys.stderr)
         sys.exit(3)
-
     except RuntimeError as e:
         print(f"AI agent error: {e}", file=sys.stderr)
         sys.exit(3)
-
     except Exception as e:
         print(f"Unexpected error: {e}", file=sys.stderr)
         sys.exit(1)
