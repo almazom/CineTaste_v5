@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ct-schedule/port.py — Validation port.
+ct-schedule/port.py — Validation Port
 
 Validates input (movie-batch@1.0.0) and output (movie-schedule@1.0.0).
 """
@@ -20,18 +20,22 @@ OUTPUT_CONTRACT = "movie-schedule"
 
 
 def enforce_input(data: dict) -> dict:
+    """Validate input data against movie-batch contract."""
     return enforce_contract(data, INPUT_CONTRACT, "input")
 
 
 def enforce_output(data: dict) -> dict:
+    """Validate output data against movie-schedule contract."""
     return enforce_contract(data, OUTPUT_CONTRACT, "output")
 
 
 def validate_input(data: dict) -> tuple[bool, list[str]]:
+    """Validate input against movie-batch contract."""
     return validate_against_contract(data, INPUT_CONTRACT)
 
 
 def validate_output(data: dict) -> tuple[bool, list[str]]:
+    """Validate output against movie-schedule contract."""
     return validate_against_contract(data, OUTPUT_CONTRACT)
 
 

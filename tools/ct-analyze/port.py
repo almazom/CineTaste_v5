@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
 """
-ct-analyze/port.py — Validation Port (розетка)
+ct-analyze/port.py — Validation Port
 
 Validates input (movie-schedule@1.0.0) and output (analysis-result@1.0.0).
-Uses shared jsonschema validation.
 """
 
 import json
 import sys
 from pathlib import Path
 
-# Add _shared to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "_shared"))
 
 from validate import enforce_contract, validate_against_contract
@@ -20,22 +18,12 @@ OUTPUT_CONTRACT = "analysis-result"
 
 
 def enforce_input(data: dict) -> dict:
-    """
-    Validate input data against movie-schedule contract.
-
-    Raises:
-        ValueError: If validation fails
-    """
+    """Validate input data against movie-schedule contract."""
     return enforce_contract(data, INPUT_CONTRACT, "input")
 
 
 def enforce_output(data: dict) -> dict:
-    """
-    Validate output data against analysis-result contract.
-
-    Raises:
-        ValueError: If validation fails
-    """
+    """Validate output data against analysis-result contract."""
     return enforce_contract(data, OUTPUT_CONTRACT, "output")
 
 
