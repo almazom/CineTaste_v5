@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
 """
-ct-fetch/port.py — Validation Port (розетка)
+ct-fetch/port.py — Validation Port
 
 Validates output against movie-batch@1.0.0 contract.
-Uses shared jsonschema validation.
 """
 
 import json
 import sys
 from pathlib import Path
 
-# Add _shared to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "_shared"))
 
 from validate import enforce_contract, validate_against_contract
@@ -19,22 +17,12 @@ CONTRACT = "movie-batch"
 
 
 def enforce_output(data: dict) -> dict:
-    """
-    Validate output data against movie-batch contract.
-
-    Raises:
-        ValueError: If validation fails
-    """
+    """Validate output data against movie-batch contract."""
     return enforce_contract(data, CONTRACT, "output")
 
 
 def validate(data: dict) -> tuple[bool, list[str]]:
-    """
-    Validate data against movie-batch contract.
-
-    Returns:
-        (is_valid, errors) tuple
-    """
+    """Validate data against movie-batch contract."""
     return validate_against_contract(data, CONTRACT)
 
 

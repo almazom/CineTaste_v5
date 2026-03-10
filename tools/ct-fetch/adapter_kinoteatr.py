@@ -63,73 +63,36 @@ def fetch_movies(city: str, when: str = "now") -> List[Dict[str, Any]]:
 
 
 def parse_html(html: str) -> List[Dict[str, Any]]:
-    """
-    Regex-based extraction of movie info from kinoteatr.ru HTML.
-
-    The HTML structure has:
-        <a href="https://kinoteatr.ru/film/film-slug/city/"
-           data-gtm-ec-name="Movie Title">
-        ...
-        data-gtm-list-item-filmName="Movie Title"
-        data-gtm-list-item-genre="genre1, genre2"
-    """
+    """Regex-based extraction of movie info from kinoteatr.ru HTML."""
     movies: List[Dict[str, Any]] = []
     seen_titles: set[str] = set()
 
-    # Pattern 1: Extract from anchor tags with data-gtm-ec-name
+    # Extract anchor URLs
     anchor_pattern = re.compile(
         r'<a[^>]*href="(https://kinoteatr\.ru/film/[^"]+)"[^>]*'
         r'data-gtm-ec-name="([^"]+)"[^>]*>',
         re.DOTALL | re.IGNORECASE
     )
+    anchors = {m.group(2).strip(): m.group(1) for m in anchor_pattern.finditer(html)
+               if "podarok" not in m.group(1).lower() and "подарочн" not in m.group(2).lower()}
 
-    # Extract all anchor info
-    anchors = {}
-    for match in anchor_pattern.finditer(html):
-        url = match.group(1)
-        title = match.group(2).strip()
-        # Skip non-movie links
-        if "podarok" in url.lower() or "подарочн" in title.lower():
-            continue
-        anchors[title] = url
-
-    # Pattern 2: Extract movie cards with data attributes
+    # Extract movie cards
     card_pattern = re.compile(
         r'data-gtm-list-item-filmName="([^"]+)"[^>]*'
         r'data-gtm-list-item-genre="([^"]*)"',
         re.DOTALL | re.IGNORECASE
     )
-
-    # Pattern 3: Extract age ratings
-    rating_pattern = re.compile(
-        r'contentRating">(\d+)\+',
-        re.IGNORECASE
-    )
-
-    # Get all ratings
+    rating_pattern = re.compile(r'contentRating">(\d+)\+', re.IGNORECASE)
     ratings = rating_pattern.findall(html)
 
-    # Process movie cards
     for i, match in enumerate(card_pattern.finditer(html)):
         title = match.group(1).strip()
-        genres_raw = match.group(2).strip()
-
-        # Skip non-movies
         if "подарочн" in title.lower():
             continue
 
-        # Get URL from anchors
-        url = anchors.get(title)
-
-        # Parse genres
-        genres = []
-        if genres_raw:
-            genres = [g.strip() for g in genres_raw.split(',') if g.strip() and len(g.strip()) < 20]
-
-        # Get age rating
+        genres_raw = match.group(2).strip()
+        genres = [g.strip() for g in genres_raw.split(',') if g.strip() and len(g.strip()) < 20]
         age = ratings[i] if i < len(ratings) else "0"
-
-        # Create movie ID from title
         movie_id = re.sub(r"[^\w]", "-", title.lower())[:50]
 
         movie: Dict[str, Any] = {
@@ -144,19 +107,16 @@ def parse_html(html: str) -> List[Dict[str, Any]]:
             "source": "kinoteatr.ru",
             "raw_description": f"{age}+, {', '.join(genres)}" if genres else f"{age}+"
         }
-        if url:
+        if url := anchors.get(title):
             movie["url"] = url
 
-        # Avoid duplicates
         if title in seen_titles:
             continue
 
         movies.append(movie)
         seen_titles.add(title)
 
-    # Enrich with director/actors from detail pages
     _enrich_from_detail_pages(movies)
-
     return movies
 
 

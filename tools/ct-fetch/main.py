@@ -165,7 +165,7 @@ def dry_run_data(city: str) -> list:
             "duration_min": 120,
             "source": "kinoteatr.ru",
             "url": "https://kinoteatr.ru/film/test-1/",
-            "raw_description": "Тестовое описание фильма"
+            "raw_description": "Тестовое описание фильма",
         },
         {
             "id": "kt-test-2",
@@ -178,8 +178,8 @@ def dry_run_data(city: str) -> list:
             "duration_min": 95,
             "source": "kinoteatr.ru",
             "url": "https://kinoteatr.ru/film/test-2/",
-            "raw_description": ""
-        }
+            "raw_description": "",
+        },
     ]
 
 
@@ -207,45 +207,41 @@ def main() -> int:
             movies = dry_run_data(args.city)
         else:
             if args.verbose:
-                print(
-                    f"Fetching movies for {args.city} from {args.source} (when={when})...",
-                    file=sys.stderr,
-                )
+                print(f"Fetching movies for {args.city} from {args.source} (when={when})...", file=sys.stderr)
             movies = source_adapter(args.city, when)
 
-        # Build output
+        # Build and validate output
         city_display = get_city_display(args.city)
         output = build_output(movies, args.city, city_display, when)
-
-        # Validate output against contract
         enforce_output_or_exit(output)
 
-        # Output
+        # Output result
         json_output = json.dumps(output, ensure_ascii=False, indent=2)
+        output_path = args.output
 
-        if args.output in {"-", "stdout"}:
+        if output_path in {"-", "stdout"}:
             print(json_output)
         else:
-            Path(args.output).write_text(json_output, encoding="utf-8")
+            Path(output_path).write_text(json_output, encoding="utf-8")
             if args.verbose:
-                print(f"Wrote {len(movies)} movies to {args.output}", file=sys.stderr)
+                print(f"Wrote {len(movies)} movies to {output_path}", file=sys.stderr)
 
         if args.verbose:
             print(f"Fetched {len(movies)} movies", file=sys.stderr)
 
-        sys.exit(EXIT_OK)
+        return EXIT_OK
 
     except ValueError as e:
         print(f"Error: {e}", file=sys.stderr)
-        sys.exit(EXIT_INVALID_ARGS)
+        return EXIT_INVALID_ARGS
 
     except ConnectionError as e:
         print(f"Network error: {e}", file=sys.stderr)
-        sys.exit(EXIT_UNAVAILABLE)
+        return EXIT_UNAVAILABLE
 
     except Exception as e:
         print(f"Unexpected error: {e}", file=sys.stderr)
-        sys.exit(EXIT_INTERNAL)
+        return EXIT_INTERNAL
 
 
 if __name__ == "__main__":

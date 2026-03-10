@@ -159,11 +159,10 @@ def _extract_alpha_tokens(text: str) -> list[str]:
 
 def _compact_output(stdout: str, stderr: str, limit: int = 120) -> str:
     """Create short preview from command output."""
-    raw = "\n".join(x for x in [stdout.strip(), stderr.strip()] if x).strip()
+    raw = "\n".join(filter(None, (stdout.strip(), stderr.strip()))).strip()
     if not raw:
         return "<empty>"
-    raw = raw.replace("\n", " ")
-    return raw[:limit]
+    return raw.replace("\n", " ")[:limit]
 
 
 def _run_preflight(agent: dict) -> dict:
@@ -208,7 +207,7 @@ def _run_preflight(agent: dict) -> dict:
         }
 
     preflight_tokens = _extract_alpha_tokens(
-        "\n".join(x for x in [result.stdout, result.stderr] if x)
+        "\n".join(filter(None, (result.stdout, result.stderr)))
     )
     token = next((t for t in preflight_tokens if t in PREFLIGHT_OK_TOKENS), "")
     if not token and preflight_tokens:
@@ -269,8 +268,7 @@ def parallel_preflight(candidates: list[dict]) -> list[dict]:
 
 def parse_agent_list(spec: str) -> list[str]:
     """Parse comma-separated agent list preserving order and removing duplicates."""
-    raw_items = [item.strip().lower() for item in spec.split(",")]
-    names = [item for item in raw_items if item]
+    names = [item.strip().lower() for item in spec.split(",") if item.strip()]
     if not names:
         raise CliUsageError("Empty --agents list. Example: --agents pi,qwen,gemini")
 
@@ -280,14 +278,7 @@ def parse_agent_list(spec: str) -> list[str]:
             f"Unknown agent(s): {', '.join(unknown)}. Known: {', '.join(AGENT_NAMES)}"
         )
 
-    unique_names = []
-    seen = set()
-    for name in names:
-        if name not in seen:
-            seen.add(name)
-            unique_names.append(name)
-
-    return unique_names
+    return list(dict.fromkeys(names))
 
 
 def select_named_agent_chain(names: list[str]) -> list[dict]:
@@ -398,8 +389,8 @@ def call_agent(agent: dict, workdir: str) -> str:
     started = time.perf_counter()
 
     # Extract model info for transparency
-    model_info = ""
     run_args = agent.get("run_args", [])
+    model_info = ""
     for i, arg in enumerate(run_args):
         if arg == "--model" and i + 1 < len(run_args):
             model_info = f" model={run_args[i+1]}"
@@ -520,27 +511,25 @@ def merge(movies: list, analyses: list, agent: dict) -> dict:
         movie_id = analysis.get("movie_id")
         movie = _find_movie(movie_id, movie_map)
 
-        analyzed.append(
-            {
-                "movie": {
-                    "id": movie.get("id", movie_id),
-                    "title": movie.get("title", "Unknown"),
-                    "original_title": movie.get("original_title", ""),
-                    "director": movie.get("director", ""),
-                    "actors": movie.get("actors", []),
-                    "genres": movie.get("genres", []),
-                    "year": movie.get("year"),
-                    "source": movie.get("source", ""),
-                    "url": movie.get("url", ""),
-                },
-                "relevance_score": analysis.get("relevance_score", 50),
-                "confidence": 0.8,
-                "recommendation": analysis.get("recommendation", "maybe"),
-                "reasoning": analysis.get("reasoning", ""),
-                "key_matches": analysis.get("key_matches", []),
-                "red_flags": analysis.get("red_flags", []),
-            }
-        )
+        analyzed.append({
+            "movie": {
+                "id": movie.get("id", movie_id),
+                "title": movie.get("title", "Unknown"),
+                "original_title": movie.get("original_title", ""),
+                "director": movie.get("director", ""),
+                "actors": movie.get("actors", []),
+                "genres": movie.get("genres", []),
+                "year": movie.get("year"),
+                "source": movie.get("source", ""),
+                "url": movie.get("url", ""),
+            },
+            "relevance_score": analysis.get("relevance_score", 50),
+            "confidence": 0.8,
+            "recommendation": analysis.get("recommendation", "maybe"),
+            "reasoning": analysis.get("reasoning", ""),
+            "key_matches": analysis.get("key_matches", []),
+            "red_flags": analysis.get("red_flags", []),
+        })
 
     return {
         "analyzed": analyzed,
@@ -696,9 +685,7 @@ def cognize(
 
         if isinstance(last_error, ContractError):
             raise last_error
-        if isinstance(last_error, AgentExecutionError):
-            raise AgentExecutionError(f"All selected AI agents failed: {last_error}")
-        raise AgentExecutionError("Cognitive analysis failed")
+        raise AgentExecutionError(f"All selected AI agents failed: {last_error}")
     finally:
         shutil.rmtree(workdir, ignore_errors=True)
 

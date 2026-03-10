@@ -194,21 +194,12 @@ def filter_movies(
     Returns:
         Filtered list of movies
     """
-    filtered = []
-
-    for item in analyzed:
-        rec = item.get("recommendation", "")
-        score = item.get("relevance_score", 0)
-
-        # Check recommendation type
-        if rec not in allowed_recommendations:
-            continue
-
-        # Check minimum score
-        if score < min_score:
-            continue
-
-        filtered.append(build_filtered_item(item, rec, score))
+    filtered = [
+        build_filtered_item(item, item.get("recommendation", ""), item.get("relevance_score", 0))
+        for item in analyzed
+        if item.get("recommendation", "") in allowed_recommendations
+        and item.get("relevance_score", 0) >= min_score
+    ]
 
     # Sort by score descending
     filtered.sort(key=lambda x: x["relevance_score"], reverse=True)
@@ -243,8 +234,6 @@ def main():
 
     try:
         data = load_input(args.input, args.verbose)
-
-        # Validate input
         enforce_input(data)
 
         analyzed = data.get("analyzed", [])
@@ -252,54 +241,44 @@ def main():
             print(f"Loaded {len(analyzed)} analyzed movies", file=sys.stderr)
 
         validate_args(args)
-
-        # Parse allowed recommendations
         allowed_recs = parse_recommendations(args.recommendation)
-
-        # Filter
         filtered = filter_movies(analyzed, allowed_recs, args.min_score)
 
-        # Build output
         output = build_output(
             filtered,
             total_input=len(analyzed),
             allowed_recommendations=allowed_recs,
             min_score=args.min_score
         )
-
-        # Validate output
         enforce_output(output)
-
-        # Output
         write_output(output, args.output, args.verbose)
 
         if args.verbose:
             print(f"Filtered: {len(analyzed)} → {len(filtered)} movies", file=sys.stderr)
 
-        # Warning if nothing matched
         if len(filtered) == 0:
             print("Warning: No movies matched filter criteria", file=sys.stderr)
 
-        sys.exit(EXIT_OK)
+        return EXIT_OK
 
     except InvalidArgumentsError as e:
         print(f"Validation error: {e}", file=sys.stderr)
-        sys.exit(EXIT_INVALID_ARGS)
+        return EXIT_INVALID_ARGS
     except ValueError as e:
         print(f"Validation error: {e}", file=sys.stderr)
-        sys.exit(EXIT_DATAERR)
+        return EXIT_DATAERR
     except FileNotFoundError as e:
         print(f"Input path error: {e}", file=sys.stderr)
-        sys.exit(EXIT_NOINPUT)
+        return EXIT_NOINPUT
     except PermissionError as e:
         print(f"Permission error: {e}", file=sys.stderr)
-        sys.exit(EXIT_NOPERM)
+        return EXIT_NOPERM
     except OSError as e:
         print(f"Filesystem error: {e}", file=sys.stderr)
-        sys.exit(EXIT_CANTCREAT)
+        return EXIT_CANTCREAT
     except Exception as e:
         print(f"Unexpected error: {e}", file=sys.stderr)
-        sys.exit(EXIT_INTERNAL)
+        return EXIT_INTERNAL
 
 
 if __name__ == "__main__":
