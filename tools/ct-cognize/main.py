@@ -31,7 +31,6 @@ sys.path.insert(0, str(Path(__file__).parent))
 sys.path.insert(0, str(ROOT / "tools" / "_shared"))
 from port import enforce_input, enforce_output  # noqa: E402
 
-
 # ── Exit Taxonomy ───────────────────────────────────────────────────────
 
 EXIT_OK = 0
@@ -117,6 +116,7 @@ def _subprocess_env() -> dict[str, str]:
 
 # ── Configuration Loader ────────────────────────────────────────────────
 
+
 def _load_agent_config() -> dict:
     """Load agent configuration from external JSON file."""
     config_path = Path(__file__).parent / "agent-config.json"
@@ -151,6 +151,7 @@ PREFLIGHT_OK_TOKENS = set(CONFIG["preflight"]["ok_tokens"])
 
 # ── Preflight ──────────────────────────────────────────────────────────
 
+
 def _extract_alpha_tokens(text: str) -> list[str]:
     """Extract lowercase alpha tokens from output text."""
     return re.findall(r"[a-zа-яё]+", text.lower())
@@ -168,9 +169,7 @@ def _compact_output(stdout: str, stderr: str, limit: int = 120) -> str:
 def _run_preflight(agent: dict) -> dict:
     """Run one agent preflight probe and return structured result."""
     cmd = agent["cmd"]
-    preflight_timeout = agent.get(
-        "preflight_timeout", CONFIG["preflight"]["timeout_default"]
-    )
+    preflight_timeout = agent.get("preflight_timeout", CONFIG["preflight"]["timeout_default"])
     started = time.perf_counter()
 
     if not shutil.which(cmd):
@@ -215,9 +214,7 @@ def _run_preflight(agent: dict) -> dict:
     if not token and preflight_tokens:
         token = preflight_tokens[-1]
 
-    ok = result.returncode == 0 and any(
-        t in PREFLIGHT_OK_TOKENS for t in preflight_tokens
-    )
+    ok = result.returncode == 0 and any(t in PREFLIGHT_OK_TOKENS for t in preflight_tokens)
     error = "" if ok else f"got: {_compact_output(result.stdout, result.stderr)}"
 
     return {
@@ -239,7 +236,10 @@ def _log_preflight(result: dict) -> None:
             model_str = f" model={model[i+1]}"
             break
     if result["ok"]:
-        _log(f"{name}{model_str} → ok ({result['reply']} in {result['elapsed']:.2f}s)", channel="preflight")
+        _log(
+            f"{name}{model_str} → ok ({result['reply']} in {result['elapsed']:.2f}s)",
+            channel="preflight",
+        )
     else:
         _log(f"{name}{model_str} → fail ({result['error']})", channel="preflight")
 
@@ -380,6 +380,7 @@ INSTRUCTION = """Ты — кинокритик с утонченным вкус�
 
 # ── Agent Invocation ───────────────────────────────────────────────────
 
+
 def call_agent(agent: dict, workdir: str) -> str:
     """
     Call AI agent with movies.json and taste.yaml in workdir.
@@ -462,6 +463,7 @@ def call_agent(agent: dict, workdir: str) -> str:
 
 # ── Response Parsing ───────────────────────────────────────────────────
 
+
 def _try_json_load(payload: str) -> tuple[bool, object]:
     """Try to decode JSON payload."""
     try:
@@ -476,13 +478,13 @@ def parse_response(response: str) -> list:
     if ok:
         return data if isinstance(data, list) else [data]
 
-    match = re.search(r'\[\s*\{.*\}\s*\]', response, re.DOTALL)
+    match = re.search(r"\[\s*\{.*\}\s*\]", response, re.DOTALL)
     if match:
         ok, data = _try_json_load(match.group())
         if ok:
             return data
 
-    code = re.search(r'```(?:json)?\s*([\s\S]*?)\s*```', response)
+    code = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", response)
     if code:
         ok, data = _try_json_load(code.group(1))
         if ok:
@@ -492,6 +494,7 @@ def parse_response(response: str) -> list:
 
 
 # ── Merge ──────────────────────────────────────────────────────────────
+
 
 def _find_movie(movie_id: str, movie_map: dict) -> dict:
     """Exact lookup with fuzzy substring fallback."""
@@ -561,6 +564,7 @@ def _log_fallback_attempt(agent_name: str, error: Exception, remaining: int) -> 
 
 
 # ── Input/Output helpers ───────────────────────────────────────────────
+
 
 def normalize_cli_path(value: str | None) -> str | None:
     """Allow optional @path syntax for convenience."""
@@ -638,6 +642,7 @@ def _write_output(output_path: str, payload: str) -> None:
 
 
 # ── Main ───────────────────────────────────────────────────────────────
+
 
 def cognize(
     schedule_input: dict | str,
@@ -737,10 +742,14 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--input", "-i", help="movie-schedule JSON file path (or '-' for stdin)")
     parser.add_argument("--taste", "-t", help="Taste profile YAML file")
     parser.add_argument("--output", "-o", default="-", help="Output file (default: stdout)")
-    parser.add_argument("--list-agents", action="store_true", help="Print supported AI agent names and exit")
+    parser.add_argument(
+        "--list-agents", action="store_true", help="Print supported AI agent names and exit"
+    )
     parser.add_argument("--version", action="version", version=f"%(prog)s {TOOL_VERSION}")
     parser.add_argument("--trace-id", help="Trace ID for stderr diagnostics correlation")
-    parser.add_argument("--timings", action="store_true", help="Emit stage timing diagnostics to stderr")
+    parser.add_argument(
+        "--timings", action="store_true", help="Emit stage timing diagnostics to stderr"
+    )
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument(
@@ -756,8 +765,12 @@ def _build_parser() -> argparse.ArgumentParser:
     )
 
     verbosity = parser.add_mutually_exclusive_group()
-    verbosity.add_argument("--quiet", "-q", action="store_true", help="Suppress non-error stderr diagnostics")
-    verbosity.add_argument("--verbose", "-v", action="store_true", help="Verbose stderr diagnostics")
+    verbosity.add_argument(
+        "--quiet", "-q", action="store_true", help="Suppress non-error stderr diagnostics"
+    )
+    verbosity.add_argument(
+        "--verbose", "-v", action="store_true", help="Verbose stderr diagnostics"
+    )
 
     return parser
 
@@ -779,9 +792,10 @@ def main() -> int:
             if args.verbose:
                 print("name\tcmd\tmode\ttimeout\tweb_search")
                 for agent in AGENTS:
+                    supports_web = str(agent.get("supports_web_search", False)).lower()
                     print(
                         f"{agent['name']}\t{agent['cmd']}\t{agent['file_mode']}\t"
-                        f"{agent['timeout']}\t{str(agent.get('supports_web_search', False)).lower()}"
+                        f"{agent['timeout']}\t{supports_web}"
                     )
             else:
                 for name in AGENT_NAMES:
@@ -792,11 +806,17 @@ def main() -> int:
         taste_path = normalize_cli_path(args.taste or args.taste_path)
 
         if args.input and args.input_path and args.input != args.input_path:
-            raise CliUsageError("conflicting input paths: use either --input or positional <input_json>")
+            raise CliUsageError(
+                "conflicting input paths: use either --input or positional <input_json>"
+            )
         if args.taste and args.taste_path and args.taste != args.taste_path:
-            raise CliUsageError("conflicting taste paths: use either --taste or positional <taste_yaml>")
+            raise CliUsageError(
+                "conflicting taste paths: use either --taste or positional <taste_yaml>"
+            )
         if not input_path or not taste_path:
-            raise CliUsageError("missing required inputs: provide <input_json> <taste_yaml> or use --input/--taste")
+            raise CliUsageError(
+                "missing required inputs: provide <input_json> <taste_yaml> or use --input/--taste"
+            )
 
         _validate_fs_paths(input_path, taste_path, args.output)
         custom_agents = parse_agent_list(args.agents) if args.agents else None

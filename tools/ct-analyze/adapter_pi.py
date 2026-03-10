@@ -12,7 +12,6 @@ import subprocess
 import sys
 import yaml
 
-
 PI_CLI = "pi"
 
 
@@ -27,51 +26,39 @@ def build_prompt(movies: list, taste: dict) -> str:
     likes = taste.get("likes", {})
     dislikes = taste.get("dislikes", {})
 
-    prompt = """Ты — кинокритик с утонченным вкусом. Проанализируй фильмы и оцени их соответствие вкусу пользователя.
-
-ВКУС ПОЛЬЗОВАТЕЛЯ:
-
-Нравится:
-- Режиссеры: {directors}
-- Актеры: {actors}
-- Жанры: {genres}
-- Ключевые слова: {keywords}
-
-НЕ нравится:
-- Жанры: {dislike_genres}
-- Ключевые слова: {dislike_keywords}
-
-ФИЛЬМЫ ДЛЯ АНАЛИЗА:
-{movies_list}
-
-ЗАДАЧА:
-Для каждого фильма верни JSON-объект с анализом:
-- movie_id: ID фильма
-- relevance_score: число от 0 до 100 (насколько соответствует вкусу)
-- recommendation: одно из ["must_see", "recommended", "maybe", "skip"]
-- reasoning: краткое объяснение (1-2 предложения)
-- key_matches: что совпало со вкусом
-- red_flags: что НЕ совпало
-
-ВЕРНИ ТОЛЬКО ВАЛИДНЫЙ JSON-МАССИВ, БЕЗ МАРКДАУН КОДА:
-[
-  {{
-    "movie_id": "...",
-    "relevance_score": 85,
-    "recommendation": "recommended",
-    "reasoning": "...",
-    "key_matches": ["..."],
-    "red_flags": ["..."]
-  }}
-]
-""".format(
-        directors=", ".join(likes.get("directors", [])),
-        actors=", ".join(likes.get("actors", [])),
-        genres=", ".join(likes.get("genres", [])),
-        keywords=", ".join(likes.get("keywords", [])),
-        dislike_genres=", ".join(dislikes.get("genres", [])),
-        dislike_keywords=", ".join(dislikes.get("keywords", [])),
-        movies_list=format_movies_for_prompt(movies)
+    prompt = (
+        "Ты — кинокритик с утонченным вкусом. "
+        "Проанализируй фильмы и оцени их соответствие вкусу пользователя.\n\n"
+        "ВКУС ПОЛЬЗОВАТЕЛЯ:\n\n"
+        "Нравится:\n"
+        f"- Режиссеры: {', '.join(likes.get('directors', []))}\n"
+        f"- Актеры: {', '.join(likes.get('actors', []))}\n"
+        f"- Жанры: {', '.join(likes.get('genres', []))}\n"
+        f"- Ключевые слова: {', '.join(likes.get('keywords', []))}\n\n"
+        "НЕ нравится:\n"
+        f"- Жанры: {', '.join(dislikes.get('genres', []))}\n"
+        f"- Ключевые слова: {', '.join(dislikes.get('keywords', []))}\n\n"
+        "ФИЛЬМЫ ДЛЯ АНАЛИЗА:\n"
+        f"{format_movies_for_prompt(movies)}\n\n"
+        "ЗАДАЧА:\n"
+        "Для каждого фильма верни JSON-объект с анализом:\n"
+        "- movie_id: ID фильма\n"
+        "- relevance_score: число от 0 до 100 (насколько соответствует вкусу)\n"
+        '- recommendation: одно из ["must_see", "recommended", "maybe", "skip"]\n'
+        "- reasoning: краткое объяснение (1-2 предложения)\n"
+        "- key_matches: что совпало со вкусом\n"
+        "- red_flags: что НЕ совпало\n\n"
+        "ВЕРНИ ТОЛЬКО ВАЛИДНЫЙ JSON-МАССИВ, БЕЗ МАРКДАУН КОДА:\n"
+        "[\n"
+        "  {\n"
+        '    "movie_id": "...",\n'
+        '    "relevance_score": 85,\n'
+        '    "recommendation": "recommended",\n'
+        '    "reasoning": "...",\n'
+        '    "key_matches": ["..."],\n'
+        '    "red_flags": ["..."]\n'
+        "  }\n"
+        "]"
     )
 
     return prompt
@@ -105,10 +92,7 @@ def call_pi(prompt: str, timeout: int = 120) -> str:
     """
     try:
         result = subprocess.run(
-            [PI_CLI, "-p", prompt],
-            capture_output=True,
-            text=True,
-            timeout=timeout
+            [PI_CLI, "-p", prompt], capture_output=True, text=True, timeout=timeout
         )
 
         if result.returncode != 0:
@@ -135,7 +119,7 @@ def parse_ai_response(response: str) -> list:
         pass
 
     # Try extracting JSON array
-    json_match = re.search(r'\[\s*\{.*\}\s*\]', response, re.DOTALL)
+    json_match = re.search(r"\[\s*\{.*\}\s*\]", response, re.DOTALL)
     if json_match:
         try:
             return json.loads(json_match.group())
@@ -143,7 +127,7 @@ def parse_ai_response(response: str) -> list:
             pass
 
     # Try markdown code block
-    code_match = re.search(r'```(?:json)?\s*([\s\S]*?)\s*```', response)
+    code_match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", response)
     if code_match:
         try:
             return json.loads(code_match.group(1))
@@ -194,25 +178,27 @@ def analyze_movies(movies: list, taste_path: str, dry_run: bool = False) -> list
             print(f"[warn] no movie found for ID: '{movie_id}'", file=sys.stderr)
             movie = {}
 
-        result.append({
-            "movie": {
-                "id": movie.get("id", movie_id),
-                "title": movie.get("title", "Unknown"),
-                "original_title": movie.get("original_title", ""),
-                "director": movie.get("director", ""),
-                "actors": movie.get("actors", []),
-                "genres": movie.get("genres", []),
-                "year": movie.get("year"),
-                "source": movie.get("source", ""),
-                "url": movie.get("url", "")
-            },
-            "relevance_score": analysis.get("relevance_score", 50),
-            "confidence": 0.8,
-            "recommendation": analysis.get("recommendation", "maybe"),
-            "reasoning": analysis.get("reasoning", ""),
-            "key_matches": analysis.get("key_matches", []),
-            "red_flags": analysis.get("red_flags", [])
-        })
+        result.append(
+            {
+                "movie": {
+                    "id": movie.get("id", movie_id),
+                    "title": movie.get("title", "Unknown"),
+                    "original_title": movie.get("original_title", ""),
+                    "director": movie.get("director", ""),
+                    "actors": movie.get("actors", []),
+                    "genres": movie.get("genres", []),
+                    "year": movie.get("year"),
+                    "source": movie.get("source", ""),
+                    "url": movie.get("url", ""),
+                },
+                "relevance_score": analysis.get("relevance_score", 50),
+                "confidence": 0.8,
+                "recommendation": analysis.get("recommendation", "maybe"),
+                "reasoning": analysis.get("reasoning", ""),
+                "key_matches": analysis.get("key_matches", []),
+                "red_flags": analysis.get("red_flags", []),
+            }
+        )
 
     return result
 
@@ -225,32 +211,32 @@ def mock_analyze(movies: list) -> list:
         score = 70 + (hash(movie.get("id", "")) % 25)
         rec = "recommended" if score >= 60 else "maybe"
 
-        result.append({
-            "movie": {
-                "id": movie.get("id", ""),
-                "title": movie.get("title", "Unknown"),
-                "original_title": movie.get("original_title", ""),
-                "director": movie.get("director", ""),
-                "actors": movie.get("actors", []),
-                "genres": movie.get("genres", []),
-                "year": movie.get("year"),
-                "source": movie.get("source", ""),
-                "url": movie.get("url", "")
-            },
-            "relevance_score": score,
-            "confidence": 0.9,
-            "recommendation": rec,
-            "reasoning": "Dry run — no AI analysis performed",
-            "key_matches": ["dry-run"],
-            "red_flags": []
-        })
+        result.append(
+            {
+                "movie": {
+                    "id": movie.get("id", ""),
+                    "title": movie.get("title", "Unknown"),
+                    "original_title": movie.get("original_title", ""),
+                    "director": movie.get("director", ""),
+                    "actors": movie.get("actors", []),
+                    "genres": movie.get("genres", []),
+                    "year": movie.get("year"),
+                    "source": movie.get("source", ""),
+                    "url": movie.get("url", ""),
+                },
+                "relevance_score": score,
+                "confidence": 0.9,
+                "recommendation": rec,
+                "reasoning": "Dry run — no AI analysis performed",
+                "key_matches": ["dry-run"],
+                "red_flags": [],
+            }
+        )
 
     return result
 
 
 if __name__ == "__main__":
-    import sys
-
     if len(sys.argv) > 1:
         with open(sys.argv[1]) as f:
             data = json.load(f)
