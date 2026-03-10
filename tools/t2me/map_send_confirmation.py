@@ -40,23 +40,13 @@ def map_confirmation(raw: dict[str, Any]) -> dict[str, Any]:
     status = str(raw.get("status", "")).lower()
     success = status == "ok"
 
-    result = raw.get("result")
-    if not isinstance(result, dict):
-        result = {}
-
-    route = raw.get("route")
-    if not isinstance(route, dict):
-        route = {}
+    result = raw.get("result") or {}
+    route = raw.get("route") or {}
 
     message = result.get("message")
     char_count = len(message) if isinstance(message, str) else 0
     dry_run = bool(result.get("dry_run") or raw.get("dry_run"))
-    target = (
-        result.get("target")
-        or route.get("target_locked")
-        or route.get("target")
-        or ""
-    )
+    target = result.get("target") or route.get("target_locked") or route.get("target") or ""
 
     payload: dict[str, Any] = {
         "success": success,
@@ -68,11 +58,7 @@ def map_confirmation(raw: dict[str, Any]) -> dict[str, Any]:
         },
     }
 
-    message_id = _first_int(
-        result.get("message_id"),
-        result.get("id"),
-        raw.get("message_id"),
-    )
+    message_id = _first_int(result.get("message_id"), result.get("id"), raw.get("message_id"))
     if message_id is not None:
         payload["message_id"] = message_id
 
