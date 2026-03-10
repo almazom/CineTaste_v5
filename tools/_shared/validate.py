@@ -52,16 +52,7 @@ def load_contract(contract_name: str) -> dict:
 
 
 def validate_against_contract(data: dict, contract_name: str) -> tuple[bool, list[str]]:
-    """
-    Validate data against a named contract.
-
-    Args:
-        data: Data to validate
-        contract_name: Contract name (e.g., "movie-batch")
-
-    Returns:
-        (is_valid, errors) tuple
-    """
+    """Validate data against a named contract."""
     try:
         schema = load_contract(contract_name)
         validator = Draft7Validator(schema, format_checker=FormatChecker())
@@ -70,10 +61,10 @@ def validate_against_contract(data: dict, contract_name: str) -> tuple[bool, lis
         if not errors:
             return True, []
 
-        formatted = []
-        for e in errors:
-            path = ".".join(str(p) for p in e.absolute_path) if e.absolute_path else "root"
-            formatted.append(f"{path}: {e.message}")
+        formatted = [
+            f"{'.'.join(str(p) for p in e.absolute_path) or 'root'}: {e.message}"
+            for e in errors
+        ]
         return False, formatted
 
     except ValidationError as e:
