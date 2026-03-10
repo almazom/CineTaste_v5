@@ -17,6 +17,17 @@ VERBOSE=false
 DRY_RUN=false
 RESEND_FILE=""
 INPUT_FILE=""
+TIMEOUT=720
+LIST_RUNS=false
+RERUN_ID=""
+
+# Run logging
+RUN_ID=""
+RUN_DIR=""
+RUN_LOG_FILE=""
+RUN_START_TIME=""
+declare -A STAGE_TIMINGS
+declare -A STAGE_STATUS
 
 MOVIE_COUNT="cached"
 SCHEDULED_COUNT="cached"
@@ -34,6 +45,7 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 NC='\033[0m'
 
 step() {
@@ -50,6 +62,156 @@ warn() {
 
 fail() {
     echo -e "${RED}✗ $1${NC}" >&2
+}
+
+progress_bar() {
+    local current="$1"
+    local total="$2"
+    local width=30
+    local filled=$(( (current * width) / total ))
+    local empty=$((width - filled))
+    local bar=""
+    local i
+
+    for ((i=0; i<filled; i++)); do
+        bar="${bar}█"
+    done
+    for ((i=0; i<empty; i++)); do
+        bar="${bar}░"
+    done
+
+    local percent=$(( (current * 100) / total ))
+    echo -e "${CYAN}[${bar}] ${percent}%${NC}" >&2
+}
+
+# ── Run Logging Functions ───────────────────────────────────────────────
+
+init_run_logging() {
+    RUN_ID="$(date +%Y-%m-%dT%H%M%SZ)"
+    local run_date="$(date +%Y-%m-%d)"
+    RUN_DIR="$ROOT/runs/${run_date}/${RUN_ID}"
+    RUN_LOG_FILE="$RUN_DIR/run.log"
+
+    mkdir -p "$RUN_DIR/artifacts"
+    mkdir -p "$RUN_DIR/logs"
+
+    # Start tee to capture all output
+    exec > >(tee -a "$RUN_LOG_FILE") 2>&1
+
+    RUN_START_TIME="$(date +%s)"
+
+    # Write run.yaml header
+    cat > "$RUN_DIR/run.yaml" << EOF
+run_id: ${RUN_ID}
+pipeline_version: ${APP_VERSION}
+started_at: $(date -Iseconds)
+status: running
+mode: $([ "$DRY_RUN" = true ] && echo "dry-run" || echo "production")
+
+params:
+  city: ${CITY}
+  city_display: ${CITY_DISPLAY}
+  when: ${WHEN}
+  timeout: ${TIMEOUT}
+  dry_run: $([ "$DRY_RUN" = true ] && echo "true" || echo "false")
+
+EOF
+}
+
+log_stage_start() {
+    local stage="$1"
+    STAGE_TIMINGS["$stage"]="$(date +%s%N)"
+    echo "$(date -Iseconds) | START | $stage" >> "$RUN_DIR/logs/stages.log"
+}
+
+log_stage_complete() {
+    local stage="$1"
+    local status="${2:-success}"
+    local end_time
+    end_time="$(date +%s%N)"
+    local start_time="${STAGE_TIMINGS[$stage]:-$end_time}"
+    local duration_ns=$((end_time - start_time))
+    local duration_ms=$((duration_ns / 1000000))
+
+    STAGE_TIMINGS["$stage"]=$duration_ms
+    STAGE_STATUS["$stage"]=$status
+
+    echo "$(date -Iseconds) | $status | $stage | ${duration_ms}ms" >> "$RUN_DIR/logs/stages.log"
+}
+
+log_preflight() {
+    echo "$@" >> "$RUN_DIR/logs/preflight.log"
+}
+
+preserve_artifact() {
+    local src="$1"
+    local name="$2"
+    if [[ -f "$src" ]]; then
+        cp "$src" "$RUN_DIR/artifacts/$name"
+    fi
+}
+
+finalize_run() {
+    local status="$1"
+    local end_time
+    end_time="$(date +%s)"
+    local duration=$((end_time - RUN_START_TIME))
+
+    # Update run.yaml
+    cat >> "$RUN_DIR/run.yaml" << EOF
+
+completed_at: $(date -Iseconds)
+status: ${status}
+duration_seconds: ${duration}
+
+results:
+  movies_fetched: ${MOVIE_COUNT}
+  movies_scheduled: ${SCHEDULED_WITH}
+  movies_analyzed: ${ANALYZED_COUNT}
+  movies_matched: ${FILTERED_COUNT}
+  message_lines: ${MSG_LINES}
+  sent: $([ "$DRY_RUN" = true ] && echo "false" || echo "true")
+
+stages:
+EOF
+
+    # Add stage timings
+    for stage in ct-fetch ct-schedule ct-cognize ct-filter ct-format t2me; do
+        local timing="${STAGE_TIMINGS[$stage]:-0}"
+        local stage_status="${STAGE_STATUS[$stage]:-skipped}"
+        echo "  - name: $stage" >> "$RUN_DIR/run.yaml"
+        echo "    status: $stage_status" >> "$RUN_DIR/run.yaml"
+        echo "    duration_ms: $timing" >> "$RUN_DIR/run.yaml"
+    done
+
+    # Create summary.json
+    cat > "$RUN_DIR/summary.json" << EOF
+{
+  "run_id": "${RUN_ID}",
+  "status": "${status}",
+  "mode": $([ "$DRY_RUN" = true ] && echo '"dry-run"' || echo '"production"'),
+  "started_at": "$(date -Iseconds)",
+  "duration_seconds": ${duration},
+  "movies": {
+    "fetched": ${MOVIE_COUNT},
+    "matched": ${FILTERED_COUNT}
+  },
+  "agent": "${COGNIZE_AGENT:-auto}",
+  "artifacts": [
+    "artifacts/movies.json",
+    "artifacts/scheduled.json",
+    "artifacts/analyzed.json",
+    "artifacts/filtered.json",
+    "artifacts/message.txt"
+  ]
+}
+EOF
+
+    # Update latest symlink
+    ln -sfn "$RUN_DIR" "$ROOT/runs/latest"
+
+    echo "" >&2
+    echo -e "${CYAN}📁 Run artifacts saved to: ${RUN_DIR}${NC}" >&2
 }
 
 die() {
@@ -178,6 +340,12 @@ preserve_failure_artifacts() {
 
 on_error() {
     local exit_code=$?
+    
+    # Finalize run logging on failure
+    if [[ -n "$RUN_DIR" ]]; then
+        finalize_run "failed"
+    fi
+    
     preserve_failure_artifacts "$exit_code"
 }
 
@@ -195,10 +363,62 @@ Options:
   --input FILE      Skip fetch/analyze, use cached analysis-result JSON
   --resend FILE     Resend existing message file
   --dry-run, -n     Execute full pipeline but skip live send (uses t2me --dry-run)
+  --timeout SEC     Timeout for entire pipeline in seconds (default: 720)
+  --list            List recent runs with status and results
+  --rerun ID        Rerun a previous run (uses same parameters)
   --verbose, -v     Show details
   --version         Show version
   --help, -h        Show help
+
+Examples:
+  ./run                           # Full production pipeline
+  ./run --dry-run                 # Dry-run (no Telegram send)
+  ./run --list                    # Show recent runs
+  ./run --rerun 2026-03-10T065504Z  # Rerun specific run
 EOF
+    exit 0
+}
+
+list_runs() {
+    local runs_dir="$ROOT/runs"
+    
+    if [[ ! -d "$runs_dir" ]]; then
+        echo "No runs found. Execute ./run first."
+        exit 0
+    fi
+
+    echo -e "${BLUE}════════════════════════════════════════════════════════════════${NC}"
+    echo -e "${BLUE}  Recent Pipeline Runs${NC}"
+    echo -e "${BLUE}════════════════════════════════════════════════════════════════${NC}"
+    echo ""
+    printf "%-24s  %-10s  %-10s  %-10s  %-8s  %s\n" "RUN ID" "STATUS" "MODE" "MOVIES" "AGENT" "DURATION"
+    echo "─────────────────────────────────────────────────────────────────────────"
+
+    # Find all summary.json files, sorted by modification time (newest first)
+    find "$runs_dir" -name "summary.json" -type f -printf '%T@ %p\n' 2>/dev/null | \
+        sort -rn | \
+        head -20 | \
+        while read -r timestamp summary_file; do
+            if [[ -f "$summary_file" ]]; then
+                local run_id status mode duration movies_fetched movies_matched agent
+                run_id="$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d['run_id'])" "$summary_file" 2>/dev/null || echo "unknown")"
+                status="$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d['status'])" "$summary_file" 2>/dev/null || echo "unknown")"
+                mode="$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d['mode'])" "$summary_file" 2>/dev/null || echo "unknown")"
+                duration="$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d['duration_seconds'])" "$summary_file" 2>/dev/null || echo "0")"
+                movies_fetched="$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d['movies']['fetched'])" "$summary_file" 2>/dev/null || echo "0")"
+                movies_matched="$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d['movies']['matched'])" "$summary_file" 2>/dev/null || echo "0")"
+                agent="$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d['agent'])" "$summary_file" 2>/dev/null || echo "-")"
+
+                local status_color="$GREEN"
+                [[ "$status" == "failed" ]] && status_color="$RED"
+                [[ "$status" == "running" ]] && status_color="$YELLOW"
+
+                printf "%-24s  ${status_color}%-10s${NC}  %-10s  %-10s  %-8s  %ss\n" \
+                    "$run_id" "$status" "$mode" "${movies_fetched}→${movies_matched}" "$agent" "$duration"
+            fi
+        done
+
+    echo ""
     exit 0
 }
 
@@ -444,13 +664,31 @@ run_stage() {
     CURRENT_STEP="Step ${current}/${total}: ${stage}"
     CURRENT_CMD="$cmd"
 
+    # Display progress bar and step info
+    echo "" >&2
+    progress_bar "$current" "$total"
     step "Step ${current}/${total}: ${stage} — ${label}"
     if [[ "$VERBOSE" == "true" ]]; then
         log "Command:"
         printf '%s\n' "$cmd" | sed 's/^/    /'
     fi
 
-    eval "$cmd"
+    # Log stage start
+    log_stage_start "$stage"
+
+    # Run with timeout
+    if timeout "$TIMEOUT" bash -c "$cmd"; then
+        log_stage_complete "$stage" "success"
+    else
+        local exit_code=$?
+        if [[ $exit_code -eq 124 ]]; then
+            fail "Step ${stage} timed out after ${TIMEOUT}s"
+            log_stage_complete "$stage" "timeout"
+        else
+            log_stage_complete "$stage" "failed"
+        fi
+        return $exit_code
+    fi
 }
 
 validate_send_confirmation_file() {
@@ -503,9 +741,23 @@ while [[ $# -gt 0 ]]; do
             DRY_RUN=true
             shift
             ;;
+        --list)
+            LIST_RUNS=true
+            shift
+            ;;
+        --rerun)
+            [[ $# -ge 2 ]] || die "--rerun requires a run ID"
+            RERUN_ID="$2"
+            shift 2
+            ;;
         --verbose|-v)
             VERBOSE=true
             shift
+            ;;
+        --timeout)
+            [[ $# -ge 2 ]] || die "--timeout requires a value"
+            TIMEOUT="$2"
+            shift 2
             ;;
         --version)
             load_protocol_defaults
@@ -528,8 +780,18 @@ if [[ $# -gt 0 ]]; then
     die "Unexpected positional arguments: $*" 64
 fi
 
+# Handle --list
+if [[ "$LIST_RUNS" == "true" ]]; then
+    list_runs
+fi
+
 load_protocol_defaults
 export ROOT TMPDIR CITY CITY_DISPLAY WHEN
+
+# Initialize run logging (unless resending)
+if [[ -z "$RESEND_FILE" && -z "$RERUN_ID" ]]; then
+    init_run_logging
+fi
 
 if [[ -n "$RESEND_FILE" ]]; then
     resend_t2me_flags=""
@@ -593,15 +855,18 @@ for idx in "${!STAGES[@]}"; do
         ct-fetch)
             MOVIE_COUNT="$(python3 -c "import json; print(len(json.load(open('$TMPDIR/movies.json'))['movies']))")"
             ok "Fetched $MOVIE_COUNT movies"
+            preserve_artifact "$TMPDIR/movies.json" "movies.json"
             ;;
         ct-schedule)
             SCHEDULED_COUNT="$(python3 -c "import json; print(len(json.load(open('$TMPDIR/scheduled.json'))['movies']))")"
             SCHEDULED_WITH="$(python3 -c "import json; print(json.load(open('$TMPDIR/scheduled.json'))['meta'].get('movies_with_showtimes', 0))")"
             ok "Scheduled $SCHEDULED_WITH/$SCHEDULED_COUNT movies with showtimes"
+            preserve_artifact "$TMPDIR/scheduled.json" "scheduled.json"
             ;;
         ct-analyze|ct-cognize)
             ANALYZED_COUNT="$(python3 -c "import json; print(len(json.load(open('$TMPDIR/analyzed.json'))['analyzed']))")"
             ok "Analyzed $ANALYZED_COUNT movies"
+            preserve_artifact "$TMPDIR/analyzed.json" "analyzed.json"
             ;;
         ct-filter)
             FILTERED_COUNT="$(python3 -c "import json; d=json.load(open('$TMPDIR/filtered.json')); print(d['meta']['matched'])")"
@@ -609,10 +874,13 @@ for idx in "${!STAGES[@]}"; do
             if [[ "$FILTERED_COUNT" -eq 0 ]]; then
                 warn "No movies matched taste profile"
             fi
+            preserve_artifact "$TMPDIR/filtered.json" "filtered.json"
             ;;
         ct-format)
             MSG_LINES="$(wc -l < "$TMPDIR/message.txt")"
             ok "Formatted message: $MSG_LINES lines"
+            preserve_artifact "$TMPDIR/message.txt" "message.txt"
+            preserve_artifact "$TMPDIR/message.json" "message.json"
             ;;
         t2me)
             validate_send_confirmation_file "$TMPDIR/send-confirmation.json"
@@ -623,6 +891,7 @@ for idx in "${!STAGES[@]}"; do
                 echo "$(date -Iseconds) - Sent: $FILTERED_COUNT movies" >> "$ROOT/logs/sends.log"
                 ok "Message sent to Telegram"
             fi
+            preserve_artifact "$TMPDIR/send-confirmation.json" "send-confirmation.json"
             echo "" >&2
             echo -e "${BLUE}── Message Preview ──────────────────────────────────────────${NC}" >&2
             cat "$TMPDIR/message.txt" >&2
@@ -651,3 +920,6 @@ else
 fi
 echo "" >&2
 echo "" >&2
+
+# Finalize run logging
+finalize_run "success"

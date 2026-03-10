@@ -95,6 +95,7 @@ movie-batch    movie-schedule   analysis-result  filter-result   message-text   
 "$ROOT/ct-cognize" \
     --input "$TMPDIR/scheduled.json" \
     --taste "$ROOT/taste/profile.yaml" \
+    --agent "${CT_COGNIZE_AGENT:-auto}" \
     --output "$TMPDIR/analyzed.json"
 ```
 
