@@ -187,15 +187,77 @@
     "framework": "pytest",
     "coverage_target": 80,
     "e2e_dir": ".testrun/",
+    "phase_7_5": {
+      "status": "complete",
+      "date": "2026-03-10",
+      "artifacts": {
+        "golden_paths": "tests/features/golden_paths.feature",
+        "boundary_cases": "tests/features/boundary_cases.feature",
+        "recovery_paths": "tests/features/recovery_paths.feature",
+        "sample_data": "tests/fixtures/sample_data.yaml",
+        "test_plan": "tests/test_plan.md",
+        "coverage_analysis": "reports/testing/coverage_analysis.md"
+      },
+      "receipt": {
+        "phase": "7.5",
+        "project_type": "cli_pipeline",
+        "golden_paths_count": 5,
+        "boundary_cases_count": 8,
+        "recovery_paths_count": 10,
+        "components_covered": [
+          "ct-fetch",
+          "ct-schedule",
+          "ct-cognize",
+          "ct-filter",
+          "ct-format",
+          "t2me"
+        ],
+        "contracts_covered": [
+          "movie-batch",
+          "movie-schedule",
+          "analysis-result",
+          "filter-result",
+          "message-text",
+          "send-confirmation"
+        ],
+        "entry_points_tested": [
+          "./run (CLI main)",
+          "./run --dry-run",
+          "./run --input <file>",
+          "./run --resend <file>"
+        ],
+        "layer_coverage": "4-6 layers per Golden Path",
+        "methodology": "Prometheus-Vassa Plamenny (Fire-Testing Architect)"
+      }
+    },
     "commands": {
       "unit": "pytest tests/ -v",
       "coverage": "pytest tests/ --cov=tools --cov-report=term-missing",
       "e2e": "./run",
+      "e2e_features": "pytest tests/features/ -v",
+      "golden_paths": "pytest tests/features/ -k 'golden' -v",
+      "boundary_cases": "pytest tests/features/ -k 'boundary' -v",
+      "recovery_paths": "pytest tests/features/ -k 'recovery' -v",
       "network_integration": "pytest tests/ -m network -v"
     }
   },
 
   "version_history": [
+    {
+      "version": "5.5.0",
+      "date": "2026-03-10",
+      "changes": [
+        "Phase 7.5: Universal Integration Testing Design complete",
+        "Added tests/features/golden_paths.feature (5 critical end-to-end scenarios)",
+        "Added tests/features/boundary_cases.feature (8 boundary scenarios)",
+        "Added tests/features/recovery_paths.feature (10 recovery scenarios)",
+        "Added tests/fixtures/sample_data.yaml with test data builders",
+        "Added tests/test_plan.md with testing strategy",
+        "Added reports/testing/coverage_analysis.md with component/contract mapping",
+        "Added tests/conftest.py with pytest-bdd fixtures and helpers",
+        "Updated PROTOCOL.json with phase_7_5 receipt and expanded test commands"
+      ]
+    },
     {
       "version": "5.4.0",
       "date": "2026-03-03",
