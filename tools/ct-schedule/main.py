@@ -282,7 +282,8 @@ def main() -> None:
                 print(f"Wrote schedule to {args.output}", file=sys.stderr)
 
         if args.verbose:
-            print(f"Schedule enrichment complete: {with_showtimes}/{len(enriched)} movies with showtimes", file=sys.stderr)
+            print(f"Schedule enrichment complete: {with_showtimes}/"
+                  f"{len(enriched)} movies with showtimes", file=sys.stderr)
 
         sys.exit(EXIT_OK)
 

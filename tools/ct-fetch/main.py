@@ -192,6 +192,16 @@ def enforce_output_or_exit(output: dict) -> None:
         sys.exit(EXIT_DATAERR)
 
 
+def _handle_output(json_output: str, movies: list, output_path: str, verbose: bool) -> None:
+    """Handle output writing."""
+    if output_path in {"-", "stdout"}:
+        print(json_output)
+    else:
+        Path(output_path).write_text(json_output, encoding="utf-8")
+        if verbose:
+            print(f"Wrote {len(movies)} movies to {output_path}", file=sys.stderr)
+
+
 def main() -> int:
     """Main entry point."""
     args = parse_args()
@@ -217,14 +227,7 @@ def main() -> int:
 
         # Output result
         json_output = json.dumps(output, ensure_ascii=False, indent=2)
-        output_path = args.output
-
-        if output_path in {"-", "stdout"}:
-            print(json_output)
-        else:
-            Path(output_path).write_text(json_output, encoding="utf-8")
-            if args.verbose:
-                print(f"Wrote {len(movies)} movies to {output_path}", file=sys.stderr)
+        _handle_output(json_output, movies, args.output, args.verbose)
 
         if args.verbose:
             print(f"Fetched {len(movies)} movies", file=sys.stderr)
