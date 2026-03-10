@@ -33,12 +33,9 @@ def to_datetime_iso(date_value: str, time_value: str) -> str:
 
 def parse_showtimes_html(html: str, date_value: str, booking_url: str = "") -> list[dict[str, Any]]:
     """Extract and normalize unique showtimes from HTML."""
-    found = list(
-        dict.fromkeys(
-            f"{match.group(1)}:{match.group(2)}"
-            for match in TIME_RE.finditer(html)
-        )
-    )
+    found = list(dict.fromkeys(
+        f"{m.group(1)}:{m.group(2)}" for m in TIME_RE.finditer(html)
+    ))
 
     showtimes: list[dict[str, Any]] = []
     for time_value in found:
@@ -74,10 +71,4 @@ def dry_run_showtimes(movie_id: str, date_value: str) -> list[dict[str, Any]]:
     second_idx = (first_idx + 2 + (seed % 3)) % len(slots)
     values = sorted({slots[first_idx], slots[second_idx]})
 
-    return [
-        {
-            "time": value,
-            "datetime_iso": to_datetime_iso(date_value, value),
-        }
-        for value in values
-    ]
+    return [{"time": v, "datetime_iso": to_datetime_iso(date_value, v)} for v in values]

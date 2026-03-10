@@ -262,10 +262,7 @@ def main() -> None:
             sys.exit(EXIT_UNAVAILABLE)
 
         if fetch_failures and args.verbose:
-            print(
-                f"Best-effort mode: continuing with {fetch_failures} fetch failure(s)",
-                file=sys.stderr,
-            )
+            print(f"Best-effort mode: continuing with {fetch_failures} fetch failure(s)", file=sys.stderr)
 
         output = build_output(
             movies=enriched,
@@ -274,7 +271,6 @@ def main() -> None:
             input_meta=input_meta,
             with_showtimes=with_showtimes,
         )
-
         enforce_output(output)
 
         payload = json.dumps(output, ensure_ascii=False, indent=2)
@@ -286,10 +282,7 @@ def main() -> None:
                 print(f"Wrote schedule to {args.output}", file=sys.stderr)
 
         if args.verbose:
-            print(
-                f"Schedule enrichment complete: {with_showtimes}/{len(enriched)} movies with showtimes",
-                file=sys.stderr,
-            )
+            print(f"Schedule enrichment complete: {with_showtimes}/{len(enriched)} movies with showtimes", file=sys.stderr)
 
         sys.exit(EXIT_OK)
 
