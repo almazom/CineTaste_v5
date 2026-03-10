@@ -110,6 +110,11 @@ class TestCliRequiredArgs:
         assert result.returncode == 2
         assert "--input" in result.stderr
 
+    def test_ct_showtimes_requires_url(self):
+        result = run_tool("ct-showtimes", [])
+        assert result.returncode == 2
+        assert "--url" in result.stderr
+
     def test_ct_filter_requires_input(self):
         result = run_tool("ct-filter", [])
         assert result.returncode == 2
@@ -169,6 +174,25 @@ class TestCliSuccessPaths:
         assert result.returncode == 0, result.stderr
         payload = json.loads(output_path.read_text(encoding="utf-8"))
         is_valid, errors = validate_against_contract(payload, "movie-schedule")
+        assert is_valid, errors
+
+    def test_ct_showtimes_dry_run_emits_movie_showtimes_contract(self, tmp_path: Path):
+        output_path = tmp_path / "showtimes.json"
+        result = run_tool(
+            "ct-showtimes",
+            [
+                "--url",
+                "https://kinoteatr.ru/film/postoronniy-2/naberezhnie-chelni/",
+                "--date",
+                "2026-03-10",
+                "--dry-run",
+                "--output",
+                str(output_path),
+            ],
+        )
+        assert result.returncode == 0, result.stderr
+        payload = json.loads(output_path.read_text(encoding="utf-8"))
+        is_valid, errors = validate_against_contract(payload, "movie-showtimes")
         assert is_valid, errors
 
     def test_ct_filter_emits_filter_result_contract(self, tmp_path: Path):
@@ -326,6 +350,46 @@ class TestCliErrorPaths:
         )
         assert result.returncode == 2
         assert "--date must be YYYY-MM-DD" in result.stderr
+
+    def test_ct_showtimes_invalid_date_returns_invalid_args(self):
+        result = run_tool(
+            "ct-showtimes",
+            [
+                "--url",
+                "https://kinoteatr.ru/film/postoronniy-2/naberezhnie-chelni/",
+                "--date",
+                "invalid-date",
+                "--dry-run",
+            ],
+        )
+        assert result.returncode == 2
+        assert "--date must be YYYY-MM-DD" in result.stderr
+
+    def test_ct_showtimes_invalid_url_returns_invalid_args(self):
+        result = run_tool(
+            "ct-showtimes",
+            [
+                "--url",
+                "not-a-uri",
+                "--dry-run",
+            ],
+        )
+        assert result.returncode == 2
+        assert "--url must be an absolute URI" in result.stderr
+
+    def test_ct_showtimes_unknown_source_returns_invalid_args(self):
+        result = run_tool(
+            "ct-showtimes",
+            [
+                "--url",
+                "https://kinoteatr.ru/film/postoronniy-2/naberezhnie-chelni/",
+                "--source",
+                "unknown-source",
+                "--dry-run",
+            ],
+        )
+        assert result.returncode == 2
+        assert "Unknown source" in result.stderr
 
     def test_ct_filter_invalid_recommendation_returns_invalid_args(self):
         sample = ROOT / "contracts" / "examples" / "analysis-result.sample.json"

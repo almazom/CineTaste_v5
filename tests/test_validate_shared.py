@@ -18,6 +18,7 @@ from validate import (
     validate_filter_result,
     validate_message_text,
     validate_movie_batch,
+    validate_movie_showtimes,
     validate_movie_schedule,
     validate_send_confirmation,
 )
@@ -64,6 +65,7 @@ class TestValidateShared:
     def test_convenience_wrappers(self):
         movie_batch = load_sample("movie-batch")
         movie_schedule = load_sample("movie-schedule")
+        movie_showtimes = load_sample("movie-showtimes")
         analysis_result = load_sample("analysis-result")
         filter_result = load_sample("filter-result")
         message_text = load_sample("message-text")
@@ -76,6 +78,7 @@ class TestValidateShared:
 
         assert validate_movie_batch(movie_batch)[0]
         assert validate_movie_schedule(movie_schedule)[0]
+        assert validate_movie_showtimes(movie_showtimes)[0]
         assert validate_analysis_result(analysis_result)[0]
         assert validate_filter_result(filter_result)[0]
         assert validate_message_text(message_text)[0]
