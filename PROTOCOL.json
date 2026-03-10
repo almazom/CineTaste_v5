@@ -50,7 +50,7 @@
       "file": "contracts/movie-showtimes.schema.json",
       "version": "1.0.0",
       "description": "Showtimes for one selected movie URL",
-      "produced_by": ["ct-showtimes"],
+      "produced_by": ["ct-time-price"],
       "consumed_by": []
     },
     "analysis-result": {
@@ -104,11 +104,11 @@
       "stateless": true,
       "has_adapter": true
     },
-    "ct-showtimes": {
-      "manifest": "tools/ct-showtimes/MANIFEST.json",
-      "verb": "showtimes",
+    "ct-time-price": {
+      "manifest": "tools/ct-time-price/MANIFEST.json",
+      "verb": "time-price",
       "position": 2,
-      "description": "Fetch showtimes for one selected movie URL",
+      "description": "Fetch session times and prices for one selected movie URL",
       "input_contract": null,
       "output_contract": "movie-showtimes",
       "stateless": true,

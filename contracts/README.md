@@ -18,7 +18,7 @@ ct-fetch ──→ movie-batch ──→ ct-schedule ──→ movie-schedule �
 |----------|----------|----------|-------------|
 | `movie-batch` | ct-fetch | ct-schedule | Raw movies from cinema |
 | `movie-schedule` | ct-schedule | ct-cognize | Movies enriched with showtimes |
-| `movie-showtimes` | ct-showtimes | — | Showtimes for one selected movie URL |
+| `movie-showtimes` | ct-time-price | — | Showtimes for one selected movie URL |
 | `analysis-result` | ct-cognize | ct-filter | AI-scored movies |
 | `filter-result` | ct-filter | ct-format | Filtered recommendations |
 | `message-text` | ct-format | t2me | Telegram markdown |
