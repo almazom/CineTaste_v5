@@ -38,6 +38,26 @@ class TestScheduleAdapter:
         assert [item["time"] for item in out] == ["10:10", "12:40", "22:55"]
         assert all(item["booking_url"] == "https://example.com/film" for item in out)
 
+    def test_parse_showtimes_html_prefers_real_seance_blocks(self):
+        html = """
+        <meta itemprop="uploadDate" content="2026-03-10 03:01:50" />
+        <div class="item buy_seance">
+          <div class="time">21:10</div>
+          <p class="price">от 250 ₽</p>
+          <p class="hall"><span>Стандарт</span></p>
+        </div>
+        """
+        out = parse_showtimes_html(html, "2026-03-10", booking_url="https://example.com/film")
+        assert out == [
+            {
+                "time": "21:10",
+                "datetime_iso": "2026-03-10T21:10:00+03:00",
+                "price": "от 250 ₽",
+                "hall": "Стандарт",
+                "booking_url": "https://example.com/film",
+            }
+        ]
+
     def test_dry_run_showtimes_is_deterministic(self):
         first = dry_run_showtimes("movie-1", "2026-03-03")
         second = dry_run_showtimes("movie-1", "2026-03-03")
@@ -58,7 +78,18 @@ class TestScheduleAdapter:
 
     def test_fetch_showtimes_success(self, monkeypatch):
         response = SimpleNamespace(
-            text="<span>09:30</span><span>14:00</span>",
+            text="""
+            <div class="item buy_seance">
+              <div class="time">09:30</div>
+              <p class="price">от 300 ₽</p>
+              <p class="hall"><span>Стандарт</span></p>
+            </div>
+            <div class="item buy_seance">
+              <div class="time">14:00</div>
+              <p class="price">от 450 ₽</p>
+              <p class="hall"><span>IMAX</span></p>
+            </div>
+            """,
             raise_for_status=lambda: None,
         )
 
@@ -66,6 +97,7 @@ class TestScheduleAdapter:
 
         out = fetch_showtimes("https://example.com/film", "2026-03-03")
         assert [item["time"] for item in out] == ["09:30", "14:00"]
+        assert [item["price"] for item in out] == ["от 300 ₽", "от 450 ₽"]
 
 
 class TestMovieScheduleContract:

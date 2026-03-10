@@ -12,6 +12,7 @@ import re
 from typing import Any
 
 import requests
+from bs4 import BeautifulSoup
 
 TIME_RE = re.compile(r"(?<!\d)([01]\d|2[0-3]):([0-5]\d)(?!\d)")
 
@@ -31,8 +32,64 @@ def to_datetime_iso(date_value: str, time_value: str) -> str:
     return f"{date_value}T{time_value}:00+03:00"
 
 
+def _clean_text(value: str) -> str:
+    return " ".join(value.split())
+
+
+def _extract_structured_showtimes(
+    html: str,
+    date_value: str,
+    booking_url: str = "",
+) -> list[dict[str, Any]]:
+    """Extract showtimes from explicit seance blocks when available."""
+    soup = BeautifulSoup(html, "html.parser")
+    blocks = soup.select(".item.buy_seance")
+    if not blocks:
+        return []
+
+    showtimes: list[dict[str, Any]] = []
+    seen: set[tuple[str, str, str]] = set()
+
+    for block in blocks:
+        time_node = block.select_one(".time")
+        if time_node is None:
+            continue
+
+        match = TIME_RE.search(_clean_text(time_node.get_text(" ", strip=True)))
+        if match is None:
+            continue
+
+        time_value = f"{match.group(1)}:{match.group(2)}"
+        hall_node = block.select_one(".hall span") or block.select_one(".hall")
+        price_node = block.select_one(".price")
+        hall_value = _clean_text(hall_node.get_text(" ", strip=True)) if hall_node else ""
+        price_value = _clean_text(price_node.get_text(" ", strip=True)) if price_node else ""
+        dedupe_key = (time_value, hall_value, price_value)
+        if dedupe_key in seen:
+            continue
+        seen.add(dedupe_key)
+
+        item: dict[str, Any] = {
+            "time": time_value,
+            "datetime_iso": to_datetime_iso(date_value, time_value),
+        }
+        if price_value:
+            item["price"] = price_value
+        if hall_value:
+            item["hall"] = hall_value
+        if booking_url:
+            item["booking_url"] = booking_url
+        showtimes.append(item)
+
+    return showtimes
+
+
 def parse_showtimes_html(html: str, date_value: str, booking_url: str = "") -> list[dict[str, Any]]:
     """Extract and normalize unique showtimes from HTML."""
+    structured = _extract_structured_showtimes(html, date_value, booking_url=booking_url)
+    if structured:
+        return structured
+
     found = list(dict.fromkeys(
         f"{m.group(1)}:{m.group(2)}" for m in TIME_RE.finditer(html)
     ))
