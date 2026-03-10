@@ -1,0 +1,407 @@
+# CineTaste Test Fixtures
+# Sample data for integration testing
+
+# ─────────────────────────────────────────────────────────────────────────────
+# USERS & PROFILES
+# ─────────────────────────────────────────────────────────────────────────────
+
+users:
+  default:
+    email: "test @cinetaste.local"
+    telegram_handle: "@test_user"
+    profile_path: "taste/profile.yaml"
+    
+  admin:
+    email: "admin @cinetaste.local"
+    telegram_handle: "@admin"
+    profile_path: "taste/profile.yaml"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TASTE PROFILES (for testing different preference scenarios)
+# ─────────────────────────────────────────────────────────────────────────────
+
+taste_profiles:
+  # Standard profile — balanced preferences
+  standard:
+    version: "1.1"
+    user: "test_user"
+    likes:
+      directors:
+        - "Tarkovsky"
+        - "Nolan"
+        - "Lynch"
+      genres:
+        - "science fiction"
+        - "drama"
+        - "art-house"
+      keywords:
+        - "philosophical"
+        - "atmospheric"
+    dislikes:
+      genres:
+        - "horror"
+        - "slasher"
+      keywords:
+        - "blockbuster"
+        - "franchise"
+    thresholds:
+      must_see: 85
+      recommended: 60
+      maybe: 40
+      skip: 0
+
+  # Strict profile — very selective
+  strict:
+    version: "1.1"
+    user: "strict_user"
+    likes:
+      directors:
+        - "Kubrick"
+        - "Tarkovsky"
+      genres:
+        - "art-house"
+    dislikes:
+      genres:
+        - "horror"
+        - "comedy"
+        - "action"
+    thresholds:
+      must_see: 95
+      recommended: 80
+      maybe: 60
+      skip: 0
+
+  # Lenient profile — accepts most content
+  lenient:
+    version: "1.1"
+    user: "casual_user"
+    likes:
+      directors: []
+      genres:
+        - "drama"
+        - "comedy"
+    dislikes:
+      genres: []
+    thresholds:
+      must_see: 50
+      recommended: 30
+      maybe: 15
+      skip: 0
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MOVIES (for testing various scenarios)
+# ─────────────────────────────────────────────────────────────────────────────
+
+movies:
+  # Classic art-house — should match standard profile
+  stalker:
+    title: "Сталкер (Stalker)"
+    year: 1979
+    director: "Andrei Tarkovsky"
+    genres:
+      - "science fiction"
+      - "drama"
+      - "art-house"
+    keywords:
+      - "philosophical"
+      - "atmospheric"
+      - "surreal"
+    expected_score: 95
+    expected_recommendation: "must_see"
+
+  # Modern sci-fi — partial match
+  inception:
+    title: "Inception"
+    year: 2010
+    director: "Christopher Nolan"
+    genres:
+      - "science fiction"
+      - "action"
+    keywords:
+      - "mind-bending"
+      - "atmospheric"
+    expected_score: 75
+    expected_recommendation: "recommended"
+
+  # Horror — should be filtered out
+  the_shining:
+    title: "The Shining"
+    year: 1980
+    director: "Stanley Kubrick"
+    genres:
+      - "horror"
+      - "drama"
+    keywords:
+      - "psychological"
+    expected_score: 45
+    expected_recommendation: "skip"
+    filter_reason: "horror genre in dislikes"
+
+  # Blockbuster franchise — should be filtered
+  avengers:
+    title: "Avengers: Endgame"
+    year: 2019
+    director: "Russo Brothers"
+    genres:
+      - "action"
+      - "adventure"
+    keywords:
+      - "blockbuster"
+      - "franchise"
+      - "sequel"
+    expected_score: 20
+    expected_recommendation: "skip"
+    filter_reason: "blockbuster and franchise keywords"
+
+  # Borderline case — exactly at threshold
+  borderline:
+    title: "Borderline Film"
+    year: 2020
+    director: "Unknown Director"
+    genres:
+      - "drama"
+    keywords:
+      - "character-driven"
+    expected_score: 60
+    expected_recommendation: "recommended"
+    note: "Exactly at recommended threshold (>= 60)"
+
+  # Empty title edge case
+  special_chars:
+    title: "Film with \"quotes\" and émojis 🎬"
+    year: 2021
+    director: "François Truffaut"
+    genres:
+      - "drama"
+    keywords: []
+    expected_score: 50
+    note: "Tests special character handling"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SHOWTIMES (for ct-schedule testing)
+# ─────────────────────────────────────────────────────────────────────────────
+
+showtimes:
+  naberezhnie-chelni:
+    cinemas:
+      - name: "Киномакс"
+        id: "kino-max"
+        address: "пр. Мусы Джалиля, 57"
+      - name: "Синема Парк"
+        id: "cinema-park"
+        address: "ул. 40 лет Победы, 11"
+
+    schedule:
+      - movie_title: "Сталкер (Stalker)"
+        cinema: "Киномакс"
+        times:
+          - "14:30"
+          - "19:00"
+        date: "2026-03-10"
+        format: "2D"
+        language: "Russian"
+
+      - movie_title: "Inception"
+        cinema: "Синема Парк"
+        times:
+          - "16:00"
+          - "21:30"
+        date: "2026-03-10"
+        format: "IMAX"
+        language: "English with subtitles"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ANALYSIS RESULTS (for ct-filter testing)
+# ─────────────────────────────────────────────────────────────────────────────
+
+analysis_results:
+  # Sample batch with varying scores
+  mixed_batch:
+    analyzed:
+      - movie:
+          title: "Сталкер (Stalker)"
+          year: 1979
+          director: "Andrei Tarkovsky"
+          genres: ["science fiction", "drama"]
+        score: 95
+        recommendation: "must_see"
+        reasoning: "Perfect match: Tarkovsky + philosophical sci-fi"
+
+      - movie:
+          title: "Inception"
+          year: 2010
+          director: "Christopher Nolan"
+          genres: ["science fiction", "action"]
+        score: 75
+        recommendation: "recommended"
+        reasoning: "Nolan directs, but action-heavy"
+
+      - movie:
+          title: "The Shining"
+          year: 1980
+          director: "Stanley Kubrick"
+          genres: ["horror", "drama"]
+        score: 45
+        recommendation: "skip"
+        reasoning: "Horror genre is in dislikes"
+
+      - movie:
+          title: "Avengers: Endgame"
+          year: 2019
+          director: "Russo Brothers"
+          genres: ["action", "adventure"]
+        score: 20
+        recommendation: "skip"
+        reasoning: "Blockbuster franchise keywords"
+
+  # All high scores
+  all_recommended:
+    analyzed:
+      - movie:
+          title: "Film A"
+          director: "Tarkovsky"
+        score: 90
+        recommendation: "must_see"
+      - movie:
+          title: "Film B"
+          director: "Nolan"
+        score: 85
+        recommendation: "must_see"
+      - movie:
+          title: "Film C"
+          director: "Lynch"
+        score: 80
+        recommendation: "recommended"
+
+  # All low scores
+  all_skipped:
+    analyzed:
+      - movie:
+          title: "Blockbuster 1"
+        score: 30
+        recommendation: "skip"
+      - movie:
+          title: "Blockbuster 2"
+        score: 25
+        recommendation: "skip"
+
+  # Empty analysis
+  empty:
+    analyzed: []
+    meta:
+      agent: "test"
+      timestamp: "2026-03-10T12:00:00Z"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TELEGRAM MESSAGES (for ct-format and t2me testing)
+# ─────────────────────────────────────────────────────────────────────────────
+
+telegram_messages:
+  # Standard recommendation message
+  standard:
+    template: |
+      🎬 **Кино на сегодня — Набережные Челны**
+      
+      **Сталкер (Stalker)** (1979)
+      Режиссёр: Andrei Tarkovsky
+      ⭐ 95/100 — Обязательно к просмотру
+      
+      🕐 Показ: 14:30, 19:00
+      📍 Киномакс
+      
+      _Философская научная фантастика от мастера арт-хауса._
+      
+      ---
+      
+      **Inception** (2010)
+      Режиссёр: Christopher Nolan
+      ⭐ 75/100 — Рекомендуется
+      
+      🕐 Показ: 16:00, 21:30
+      📍 Синема Парк (IMAX)
+      
+      _Захватывающий трип в мир сновидений._
+
+  # Empty state message
+  no_movies:
+    template: |
+      🎬 **Кино на сегодня — Набережные Челны**
+      
+      К сожалению, сегодня нет фильмов, соответствующих вашим предпочтениям.
+      
+      Попробуем завтра! 🌅
+
+  # Single recommendation
+  single:
+    template: |
+      🎬 **Кино на сегодня — Набережные Челны**
+      
+      **Сталкер (Stalker)** (1979)
+      Режиссёр: Andrei Tarkovsky
+      ⭐ 95/100 — Обязательно к просмотру
+      
+      🕐 Показ: 14:30, 19:00
+      📍 Киномакс
+      
+      _Философская научная фантастика от мастера арт-хауса._
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ERROR SCENARIOS (for recovery path testing)
+# ─────────────────────────────────────────────────────────────────────────────
+
+error_scenarios:
+  source_unavailable:
+    type: "http_error"
+    status: 503
+    message: "Service Temporarily Unavailable"
+    recovery: "Retry after 5 minutes"
+
+  ai_agent_timeout:
+    type: "timeout"
+    timeout_seconds: 720
+    recovery: "Increase timeout or retry with different agent"
+
+  all_agents_fail:
+    type: "agent_chain_exhausted"
+    agents_tried: ["kimi", "gemini", "qwen", "pi"]
+    recovery: "Check network connectivity and API credentials"
+
+  telegram_auth_error:
+    type: "telegram_error"
+    code: "unauthorized"
+    message: "Bot token invalid"
+    recovery: "Update bot token in .env"
+
+  contract_violation:
+    type: "schema_error"
+    schema: "movie-batch"
+    field: "movies[].title"
+    error: "missing required field"
+    recovery: "Fix ct-fetch title extraction"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# EXPECTED RESULTS (for test assertions)
+# ─────────────────────────────────────────────────────────────────────────────
+
+expected_results:
+  # Full pipeline with standard profile
+  full_pipeline_standard:
+    input: "mixed_batch"
+    expected_filtered_count: 2  # stalker + inception
+    expected_must_see: 1
+    expected_recommended: 1
+    expected_skip: 2
+
+  # Strict profile filters more
+  full_pipeline_strict:
+    input: "mixed_batch"
+    expected_filtered_count: 1  # only stalker
+    expected_must_see: 1
+    expected_recommended: 0
+    expected_skip: 3
+
+  # Empty input
+  empty_input:
+    input: "empty"
+    expected_filtered_count: 0
+    message_type: "no_movies"
