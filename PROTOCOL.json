@@ -46,6 +46,13 @@
       "produced_by": ["ct-schedule"],
       "consumed_by": ["ct-cognize", "ct-analyze"]
     },
+    "movie-showtimes": {
+      "file": "contracts/movie-showtimes.schema.json",
+      "version": "1.0.0",
+      "description": "Showtimes for one selected movie URL",
+      "produced_by": ["ct-showtimes"],
+      "consumed_by": []
+    },
     "analysis-result": {
       "file": "contracts/analysis-result.schema.json",
       "version": "1.0.0",
@@ -94,6 +101,16 @@
       "description": "Enrich movie list with showtime schedule",
       "input_contract": "movie-batch",
       "output_contract": "movie-schedule",
+      "stateless": true,
+      "has_adapter": true
+    },
+    "ct-showtimes": {
+      "manifest": "tools/ct-showtimes/MANIFEST.json",
+      "verb": "showtimes",
+      "position": 2,
+      "description": "Fetch showtimes for one selected movie URL",
+      "input_contract": null,
+      "output_contract": "movie-showtimes",
       "stateless": true,
       "has_adapter": true
     },
