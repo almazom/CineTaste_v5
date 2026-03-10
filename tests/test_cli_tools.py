@@ -110,8 +110,8 @@ class TestCliRequiredArgs:
         assert result.returncode == 2
         assert "--input" in result.stderr
 
-    def test_ct_showtimes_requires_url(self):
-        result = run_tool("ct-showtimes", [])
+    def test_ct_time_price_requires_url(self):
+        result = run_tool("ct-time-price", [])
         assert result.returncode == 2
         assert "--url" in result.stderr
 
@@ -176,10 +176,10 @@ class TestCliSuccessPaths:
         is_valid, errors = validate_against_contract(payload, "movie-schedule")
         assert is_valid, errors
 
-    def test_ct_showtimes_dry_run_emits_movie_showtimes_contract(self, tmp_path: Path):
+    def test_ct_time_price_dry_run_emits_movie_showtimes_contract(self, tmp_path: Path):
         output_path = tmp_path / "showtimes.json"
         result = run_tool(
-            "ct-showtimes",
+            "ct-time-price",
             [
                 "--url",
                 "https://kinoteatr.ru/film/postoronniy-2/naberezhnie-chelni/",
@@ -351,9 +351,9 @@ class TestCliErrorPaths:
         assert result.returncode == 2
         assert "--date must be YYYY-MM-DD" in result.stderr
 
-    def test_ct_showtimes_invalid_date_returns_invalid_args(self):
+    def test_ct_time_price_invalid_date_returns_invalid_args(self):
         result = run_tool(
-            "ct-showtimes",
+            "ct-time-price",
             [
                 "--url",
                 "https://kinoteatr.ru/film/postoronniy-2/naberezhnie-chelni/",
@@ -365,9 +365,9 @@ class TestCliErrorPaths:
         assert result.returncode == 2
         assert "--date must be YYYY-MM-DD" in result.stderr
 
-    def test_ct_showtimes_invalid_url_returns_invalid_args(self):
+    def test_ct_time_price_invalid_url_returns_invalid_args(self):
         result = run_tool(
-            "ct-showtimes",
+            "ct-time-price",
             [
                 "--url",
                 "not-a-uri",
@@ -377,9 +377,9 @@ class TestCliErrorPaths:
         assert result.returncode == 2
         assert "--url must be an absolute URI" in result.stderr
 
-    def test_ct_showtimes_unknown_source_returns_invalid_args(self):
+    def test_ct_time_price_unknown_source_returns_invalid_args(self):
         result = run_tool(
-            "ct-showtimes",
+            "ct-time-price",
             [
                 "--url",
                 "https://kinoteatr.ru/film/postoronniy-2/naberezhnie-chelni/",
