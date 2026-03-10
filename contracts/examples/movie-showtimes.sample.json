@@ -1,0 +1,22 @@
+{
+  "movie_url": "https://kinoteatr.ru/film/postoronniy-2/naberezhnie-chelni/",
+  "date": "2026-03-10",
+  "showtimes": [
+    {
+      "time": "10:10",
+      "datetime_iso": "2026-03-10T10:10:00+03:00",
+      "booking_url": "https://kinoteatr.ru/film/postoronniy-2/naberezhnie-chelni/"
+    },
+    {
+      "time": "15:20",
+      "datetime_iso": "2026-03-10T15:20:00+03:00",
+      "booking_url": "https://kinoteatr.ru/film/postoronniy-2/naberezhnie-chelni/"
+    }
+  ],
+  "meta": {
+    "source": "kinoteatr.ru",
+    "fetched_at": "2026-03-10T10:20:57+03:00",
+    "showtimes_count": 2,
+    "dry_run": false
+  }
+}
