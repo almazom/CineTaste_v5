@@ -18,10 +18,8 @@ Features:
 from __future__ import annotations
 
 import json
-import os
 import subprocess
 import sys
-import tempfile
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -236,7 +234,7 @@ class E2ERunner:
             step.end_time = time.time()
             step.duration_ms = int((step.end_time - step.start_time) * 1000)
             step.status = StepStatus.FAILED
-            step.error = f"Step timed out after 300 seconds"
+            step.error = "Step timed out after 300 seconds"
             self.log_failure(step)
             return False
 

@@ -16,7 +16,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 
 def generate_html_report(
@@ -505,7 +505,6 @@ def generate_html_report(
 
 def generate_status_banner(report_data: Dict[str, Any]) -> str:
     """Generate status banner HTML."""
-    status = report_data["status"]
     s = report_data["summary"]
 
     if s["failed"] == 0:

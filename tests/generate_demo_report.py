@@ -6,6 +6,7 @@ Generate demo E2E report for testing visualization.
 import json
 from datetime import datetime, timedelta
 from pathlib import Path
+import subprocess
 
 REPORTS_DIR = Path("reports/e2e")
 REPORTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -134,7 +135,7 @@ with open(txt_path, "w", encoding="utf-8") as f:
     f.write("  CineTaste v5 — E2E Integration Test Summary\n")
     f.write("=" * 72 + "\n\n")
     f.write(f"Run ID: {run_id}\n")
-    f.write(f"Status: COMPLETED\n\n")
+    f.write("Status: COMPLETED\n\n")
     s = demo_report["summary"]
     f.write("RESULTS:\n")
     f.write(f"  ✓ Passed: {s['passed']}\n")
@@ -145,7 +146,6 @@ with open(txt_path, "w", encoding="utf-8") as f:
 print(f"✓ Demo text summary: {txt_path}")
 
 # Generate HTML report
-import subprocess
 html_path = REPORTS_DIR / f"e2e-report-{run_id}.html"
 subprocess.run(
     ["python3", "tests/e2e_html_report.py", str(json_path), "-o", str(html_path)],
@@ -160,7 +160,7 @@ subprocess.run(
     capture_output=True,
     text=True,
 )
-print(f"✓ Dashboard: reports/e2e/dashboard.html")
+print("✓ Dashboard: reports/e2e/dashboard.html")
 
 print("\n✓ Demo reports generated successfully!")
 print(f"  Run ID: {run_id}")

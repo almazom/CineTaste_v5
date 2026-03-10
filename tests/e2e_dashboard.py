@@ -12,6 +12,7 @@ Creates a comprehensive dashboard with:
 """
 
 from __future__ import annotations
+import sys
 
 import json
 from datetime import datetime
@@ -387,7 +388,7 @@ def generate_stats_cards(summary: Dict[str, Any], trends: Dict[str, Any]) -> str
 
 def generate_pass_rate_chart(trends: Dict[str, Any]) -> str:
     """Generate pass rate chart HTML."""
-    return f"""
+    return """
         <div class="chart-card">
             <h3>📈 Pass Rate Trend</h3>
             <div class="chart-container">
@@ -399,7 +400,7 @@ def generate_pass_rate_chart(trends: Dict[str, Any]) -> str:
 
 def generate_duration_chart(trends: Dict[str, Any]) -> str:
     """Generate duration chart HTML."""
-    return f"""
+    return """
         <div class="chart-card">
             <h3>⏱️ Execution Duration</h3>
             <div class="chart-container">
