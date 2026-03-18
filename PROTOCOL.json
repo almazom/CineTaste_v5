@@ -53,6 +53,13 @@
       "produced_by": ["ct-time-price"],
       "consumed_by": []
     },
+    "provider-latest": {
+      "file": "contracts/provider-latest.schema.json",
+      "version": "1.0.0",
+      "description": "Latest local AI provider session file(s) for one project directory",
+      "produced_by": ["ct-provider-latest"],
+      "consumed_by": []
+    },
     "analysis-result": {
       "file": "contracts/analysis-result.schema.json",
       "version": "1.0.0",
@@ -111,6 +118,16 @@
       "description": "Fetch session times and prices for one selected movie URL",
       "input_contract": null,
       "output_contract": "movie-showtimes",
+      "stateless": true,
+      "has_adapter": true
+    },
+    "ct-provider-latest": {
+      "manifest": "tools/ct-provider-latest/MANIFEST.json",
+      "verb": "provider-latest",
+      "position": 7,
+      "description": "Find the latest local AI provider session file for a project directory",
+      "input_contract": null,
+      "output_contract": "provider-latest",
       "stateless": true,
       "has_adapter": true
     },

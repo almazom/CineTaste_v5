@@ -1,0 +1,96 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "provider-latest.schema.json",
+  "title": "provider-latest",
+  "type": "object",
+  "required": ["project_dir", "providers", "meta"],
+  "properties": {
+    "project_dir": {
+      "type": "string",
+      "description": "Absolute project directory used to match provider session files"
+    },
+    "providers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["provider", "status"],
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": ["claude", "qwen", "pi", "gemini"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["found", "not_found", "error"]
+          },
+          "project_key": {
+            "type": ["string", "null"],
+            "description": "Provider-specific project key or directory slug"
+          },
+          "file": {
+            "type": ["string", "null"],
+            "description": "Absolute path to the latest matching session file"
+          },
+          "format": {
+            "type": ["string", "null"],
+            "enum": ["json", "jsonl", null]
+          },
+          "session_id": {
+            "type": ["string", "null"]
+          },
+          "cwd": {
+            "type": ["string", "null"]
+          },
+          "model": {
+            "type": ["string", "null"]
+          },
+          "api_provider": {
+            "type": ["string", "null"]
+          },
+          "message_count": {
+            "type": ["integer", "null"],
+            "minimum": 0
+          },
+          "last_timestamp": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "mtime": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "error": {
+            "type": ["string", "null"]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "meta": {
+      "type": "object",
+      "required": ["scanned_at", "providers_requested", "providers_found", "latest_only"],
+      "properties": {
+        "scanned_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "providers_requested": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["claude", "qwen", "pi", "gemini"]
+          }
+        },
+        "providers_found": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "latest_only": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

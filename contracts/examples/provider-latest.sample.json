@@ -1,0 +1,71 @@
+{
+  "project_dir": "/home/pets/zoo/CineTaste_v5",
+  "providers": [
+    {
+      "provider": "claude",
+      "status": "found",
+      "project_key": "-home-pets-zoo-CineTaste-v5",
+      "file": "/home/pets/.claude/projects/-home-pets-zoo-CineTaste-v5/7ea6a0ab-1514-40ed-b93d-124de6e84ef4.jsonl",
+      "format": "jsonl",
+      "session_id": "7ea6a0ab-1514-40ed-b93d-124de6e84ef4",
+      "cwd": "/home/pets/zoo/CineTaste_v5",
+      "model": "kimi-k2.5",
+      "api_provider": null,
+      "message_count": 4,
+      "last_timestamp": "2026-03-10T08:54:31.000000+00:00",
+      "mtime": "2026-03-10T08:54:31.366541+00:00",
+      "error": null
+    },
+    {
+      "provider": "qwen",
+      "status": "found",
+      "project_key": "-home-pets-zoo-CineTaste-v5",
+      "file": "/home/pets/.qwen/projects/-home-pets-zoo-CineTaste-v5/chats/72caa0c9-f846-48eb-92ac-0f22c2160067.jsonl",
+      "format": "jsonl",
+      "session_id": "72caa0c9-f846-48eb-92ac-0f22c2160067",
+      "cwd": "/home/pets/zoo/CineTaste_v5",
+      "model": "MiniMax-M2.5",
+      "api_provider": null,
+      "message_count": 5,
+      "last_timestamp": "2026-03-10T12:39:18.000000+00:00",
+      "mtime": "2026-03-10T12:39:18.792395+00:00",
+      "error": null
+    },
+    {
+      "provider": "pi",
+      "status": "found",
+      "project_key": "--home-pets-zoo-CineTaste_v5--",
+      "file": "/home/pets/.pi/agent/sessions/--home-pets-zoo-CineTaste_v5--/2026-03-10T11-39-13-139Z_53253927-3a8a-4f64-b5e1-1263213c5d03.jsonl",
+      "format": "jsonl",
+      "session_id": "53253927-3a8a-4f64-b5e1-1263213c5d03",
+      "cwd": "/home/pets/zoo/CineTaste_v5",
+      "model": "glm-5",
+      "api_provider": "zai",
+      "message_count": 2,
+      "last_timestamp": "2026-03-10T11:39:34.384000+00:00",
+      "mtime": "2026-03-10T14:39:34.384585+00:00",
+      "error": null
+    },
+    {
+      "provider": "gemini",
+      "status": "found",
+      "project_key": "cinetaste-v5",
+      "file": "/home/pets/.gemini/tmp/cinetaste-v5/chats/session-2026-03-10T10-23-3373a3e4.json",
+      "format": "json",
+      "session_id": "3373a3e4-4da2-4abc-af61-ee28b5abbfbf",
+      "cwd": "/home/pets/zoo/CineTaste_v5",
+      "model": "gemini-3-flash-preview",
+      "api_provider": null,
+      "message_count": 2,
+      "last_timestamp": "2026-03-10T10:53:48.808000+00:00",
+      "mtime": "2026-03-10T13:53:48.810001+00:00",
+      "error": null
+    }
+  ],
+  "meta": {
+    "scanned_at": "2026-03-10T14:44:00+03:00",
+    "providers_requested": ["claude", "qwen", "pi", "gemini"],
+    "providers_found": 4,
+    "latest_only": true
+  }
+}

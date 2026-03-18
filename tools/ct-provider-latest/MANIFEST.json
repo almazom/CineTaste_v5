@@ -1,0 +1,103 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "ct-provider-latest/MANIFEST.json",
+  "title": "ct-provider-latest Tool Manifest",
+  "version": "1.0.0",
+  "identity": {
+    "name": "ct-provider-latest",
+    "verb": "provider-latest",
+    "position": 7,
+    "description": "Find the latest local AI provider session file for a project directory",
+    "stateless": true
+  },
+  "contracts": {
+    "input": null,
+    "output": "provider-latest@1.0.0"
+  },
+  "cli": {
+    "usage": "ct-provider-latest [--project-dir <DIR>] [--provider <NAME|all>] [--latest] [--output <FILE>]",
+    "flags": [
+      {
+        "name": "--project-dir",
+        "short": "-p",
+        "type": "string",
+        "default": "cwd",
+        "description": "Project directory used to match provider histories; defaults to the current working directory"
+      },
+      {
+        "name": "--provider",
+        "short": "-r",
+        "type": "string",
+        "default": "all",
+        "description": "Provider to inspect: all, claude, qwen, pi, gemini"
+      },
+      {
+        "name": "--latest",
+        "type": "boolean",
+        "default": true,
+        "description": "Return only the newest matching file per provider (currently the only supported mode)"
+      },
+      {
+        "name": "--output",
+        "short": "-o",
+        "type": "string",
+        "default": "stdout",
+        "description": "Output file path ('-' or 'stdout' writes to stdout)"
+      },
+      {
+        "name": "--help",
+        "short": "-h",
+        "type": "boolean",
+        "description": "Show help"
+      },
+      {
+        "name": "--version",
+        "type": "boolean",
+        "description": "Show version"
+      }
+    ],
+    "exit_codes": {
+      "0": "Success",
+      "1": "Internal error",
+      "2": "Invalid arguments",
+      "65": "Output contract violation",
+      "73": "Output/path write failure"
+    }
+  },
+  "adapters": {
+    "claude": {
+      "storage": "~/.claude/projects",
+      "format": "jsonl",
+      "binding": "cwd inside session file"
+    },
+    "qwen": {
+      "storage": "~/.qwen/projects/*/chats",
+      "format": "jsonl",
+      "binding": "cwd inside session file"
+    },
+    "pi": {
+      "storage": "~/.pi/agent/sessions",
+      "format": "jsonl",
+      "binding": "cwd inside session file"
+    },
+    "gemini": {
+      "storage": "~/.gemini/history + ~/.gemini/tmp",
+      "format": "json",
+      "binding": ".project_root marker"
+    }
+  },
+  "files": {
+    "required": [
+      "main.py",
+      "port.py",
+      "MANIFEST.json"
+    ],
+    "optional": []
+  },
+  "examples": {
+    "cwd": "ct-provider-latest",
+    "project_dir": "ct-provider-latest --project-dir ~/zoo/CineTaste_v5",
+    "one_provider": "ct-provider-latest --project-dir ~/zoo/CineTaste_v5 --provider pi",
+    "latest_all": "ct-provider-latest --project-dir ~/zoo/CineTaste_v5 --latest"
+  }
+}
