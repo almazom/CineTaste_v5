@@ -25,6 +25,10 @@
 | [07-agent-preflight.md](07-agent-preflight.md) | Agent preflight configuration | Modifying agent behavior |
 | [08-docs-template-preference.md](08-docs-template-preference.md) | Preferred premium docs style | Publishing docs / HTML rendering |
 | [09-run-logging.md](09-run-logging.md) | Pipeline run logging system | Understanding artifact preservation |
+| [10-ct-fetch.md](10-ct-fetch.md) | Batch movie discovery from kinoteatr.ru | Working on stage 1 / week-vs-day behavior |
+| [11-ct-schedule.md](11-ct-schedule.md) | Showtime collection into `movie-schedule` | Working on stage 2 / per-movie session enrichment |
+| [12-ct-time-price.md](12-ct-time-price.md) | Single movie URL time/price checks | Debugging one page or presale date mismatch |
+| [13-ct-cognize.md](13-ct-cognize.md) | Cognitive stage input, prompt rules, and output merge | Running or modifying stage 3 |
 
 ## Quick Start
 
@@ -58,4 +62,4 @@ flows/latest/FLOW.md     # Executable pipeline
 ```
 
 ---
-*Last updated: 2026-03-05*
+*Last updated: 2026-03-18*

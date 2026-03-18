@@ -33,10 +33,14 @@ Treat `@aura.md` as the runtime protocol (`AURA.md` symlink in repo root).
 |------|--------------|
 | `01-architecture.md` | First time / major changes |
 | `02-contracts.md` | Working with data flow |
-| `03-tools.md` | Building/using tools |
+| `03-tools.md` | Tool inventory / choosing the right CLI |
 | `04-taste.md` | Modifying preferences |
 | `05-troubleshooting.md` | Something broke |
 | `06-ai-agents.md` | Working with `ct-cognize --agent auto` |
+| `10-ct-fetch.md` | Batch discovery from kinoteatr.ru |
+| `11-ct-schedule.md` | Collecting showtimes into `movie-schedule` |
+| `12-ct-time-price.md` | Checking one movie URL for times and prices |
+| `13-ct-cognize.md` | Running the cognitive layer on `movie-schedule` |
 
 ---
 
@@ -95,6 +99,8 @@ cat contracts/movie-batch.schema.json
 ### Step 3: Check Active Tool Manifests
 ```bash
 cat tools/ct-fetch/MANIFEST.json
+cat tools/ct-schedule/MANIFEST.json
+cat tools/ct-time-price/MANIFEST.json
 cat tools/ct-cognize/MANIFEST.json
 ```
 
@@ -108,6 +114,80 @@ cat flows/latest/FLOW.md   # Current flow file (Version: 1.3.1)
 ./run --dry-run    # Preview / validates send via t2me --dry-run
 ./run              # Production (sends to Telegram)
 ```
+
+## 🔧 Tool Drill-Down
+
+### `./ct-fetch` — batch discovery
+
+Use `./ct-fetch` for city-level movie discovery and for checking whether a title appears in today's or the weekly batch.
+
+```bash
+./ct-fetch --city naberezhnie-chelni --when now
+./ct-fetch --city naberezhnie-chelni --when week --output /tmp/movies.json
+./ct-fetch --city naberezhnie-chelni --when 2026-03-29 --output /tmp/movies.json
+```
+
+Quick facts:
+- Output contract: `movie-batch@1.0.0`
+- `--when now` = today's listing
+- `--when week` = 7-day aggregation with `available_days`
+- `available_days_accurate` comes from per-movie detail pages and is the better source of truth when it disagrees with the aggregated week listing
+
+Details: `.MEMORY/10-ct-fetch.md`
+
+### `./ct-schedule` — collect showtimes
+
+Use `./ct-schedule` to turn `movie-batch` into `movie-schedule` by attaching showtimes.
+
+```bash
+./ct-schedule --input /tmp/movies.json --output /tmp/scheduled.json
+./ct-schedule --input /tmp/movies.json --date 2026-03-29 --output /tmp/scheduled.json
+./ct-schedule --input /tmp/movies.json --best-effort --output /tmp/scheduled.json
+```
+
+Quick facts:
+- Input contract: `movie-batch@1.0.0`
+- Output contract: `movie-schedule@1.0.0`
+- Default date comes from `input.meta.date`
+- `--best-effort` keeps partial results when some movie pages fail to resolve showtimes
+
+Details: `.MEMORY/11-ct-schedule.md`
+
+### `./ct-time-price` — single movie probe
+
+Use `./ct-time-price` for one Kinoteatr movie URL when you need the exact page date, session times, and prices.
+
+```bash
+./ct-time-price --url https://kinoteatr.ru/film/.../naberezhnie-chelni/
+./ct-time-price --url https://kinoteatr.ru/film/.../naberezhnie-chelni/ --date 2026-03-29
+./ct-time-price --url https://kinoteatr.ru/film/.../naberezhnie-chelni/ --output /tmp/showtimes.json
+```
+
+Quick facts:
+- Output contract: `movie-showtimes@1.0.0`
+- Not part of the main `./run` chain; it is an auxiliary inspection tool
+- It returns showtimes only, not full movie metadata
+- For advance sales / presale pages, pass the explicit page date instead of assuming local today
+
+Details: `.MEMORY/12-ct-time-price.md`
+
+### `./ct-cognize` — cognitive stage
+
+Use `./ct-cognize` only with a valid `movie-schedule` payload. It validates the contract, prepares a temp workdir, runs agent preflight, then scores each movie against the taste profile.
+
+```bash
+./ct-cognize --input /tmp/scheduled.json --taste taste/profile.yaml --agent auto
+./ct-cognize --input /tmp/scheduled.json --taste taste/profile.yaml --agents qwen,pi,claude
+./ct-cognize --input /tmp/scheduled.json --taste taste/profile.yaml --timings --verbose
+```
+
+Quick facts:
+- Input contract: `movie-schedule@1.0.0`
+- Output contract: `analysis-result@1.0.0`
+- `--agent auto` = parallel preflight + ordered fallback
+- `--list-agents` shows only currently enabled agents from `tools/ct-cognize/agent-config.json`
+
+Details: `.MEMORY/13-ct-cognize.md`, `.MEMORY/06-ai-agents.md`
 
 ---
 
@@ -130,7 +210,11 @@ CineTaste_v5/
 │   ├── 03-tools.md
 │   ├── 04-taste.md
 │   ├── 05-troubleshooting.md
-│   └── 06-ai-agents.md
+│   ├── 06-ai-agents.md
+│   ├── 10-ct-fetch.md
+│   ├── 11-ct-schedule.md
+│   ├── 12-ct-time-price.md
+│   └── 13-ct-cognize.md
 │
 ├── contracts/                 # JSON Schema boundaries
 │   ├── movie-batch.schema.json
@@ -143,6 +227,7 @@ CineTaste_v5/
 ├── tools/                     # CLI microservices
 │   ├── ct-fetch/MANIFEST.json
 │   ├── ct-schedule/MANIFEST.json
+│   ├── ct-time-price/MANIFEST.json
 │   ├── ct-cognize/MANIFEST.json
 │   ├── ct-analyze/MANIFEST.json   # legacy
 │   ├── ct-filter/MANIFEST.json
@@ -219,6 +304,20 @@ t2me send --file message.txt
 ls -1 logs/failed_* | tail -n 1
 ```
 
+### Debug One Movie
+
+```bash
+# 1. Find the movie in batch context
+./ct-fetch --city naberezhnie-chelni --when week --output /tmp/movies.json
+
+# 2. Verify one page's exact session date/time/price
+./ct-time-price --url https://kinoteatr.ru/film/.../naberezhnie-chelni/ --date 2026-03-29
+
+# 3. Build or extract a one-movie movie-schedule payload
+#    then run cognitive analysis on that payload
+./ct-cognize --input /tmp/one-movie-scheduled.json --taste taste/profile.yaml --agent auto
+```
+
 ---
 
 ## 🆘 Getting Help
@@ -230,5 +329,5 @@ ls -1 logs/failed_* | tail -n 1
 
 ---
 
-*Last updated: 2026-03-08*
+*Last updated: 2026-03-18*
 *Version: 5.4.0*

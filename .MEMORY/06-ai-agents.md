@@ -1,17 +1,28 @@
 # AI Agents — `ct-cognize`
 
 > Purpose: runtime behavior of cognitive analysis stage (`ct-cognize`)
-> Updated: 2026-03-10
+> Updated: 2026-03-18
+> Source of Truth: `tools/ct-cognize/agent-config.json`
 
-## Active Agents
+Related card:
+- [13-ct-cognize.md](13-ct-cognize.md) for the full stage-level flow
+
+## Enabled Agents
 
 | Agent | CLI | Mode | Timeout | Preflight | Notes |
 |------|-----|------|---------|-----------|-------|
-| kimi | `kimi` | stdin | 600s | `--print --final-message-only -p` | strongest for unknown movies / web search |
-| gemini | `gemini` | cwd | 600s | `-p` | file-reading in workdir |
 | qwen | `qwen` | cwd | 600s | `-p` | file-reading in workdir |
-| pi | `pi` | @file | 600s | `--no-session --provider zai --model glm-5 --thinking off --no-tools -p` | deterministic fallback path |
-| claude | `claude` | cwd | 600s | `-p --model MiniMax-M2.5 --no-session-persistence` | alternative general-purpose agent |
+| pi | `pi` | @file | 600s | `--no-session --provider zai --model glm-5 --thinking off --no-tools -p` | deterministic fallback path; runtime pinned to `--provider zai --model glm-5` |
+| claude | `claude` | cwd | 600s | `-p --model MiniMax-M2.5 --no-session-persistence` | alternative general-purpose agent; runtime uses `--permission-mode bypassPermissions` |
+
+`ct-cognize --list-agents` shows only enabled agents.
+
+## Disabled Agents
+
+| Agent | Status | Reason |
+|------|--------|--------|
+| kimi | disabled | Consistently fails with 402 membership error |
+| gemini | disabled | Consistently fails with EACCES permission error |
 
 ## Selection Policy
 
@@ -50,16 +61,16 @@ This prevents interactive UI output in automation pipelines.
 
 ```bash
 # Supported agents
-ct-cognize --list-agents
+./ct-cognize --list-agents
 
 # Version
-ct-cognize --version
+./ct-cognize --version
 
 # Stdin mode
-cat scheduled.json | ct-cognize --input - --taste taste/profile.yaml
+cat scheduled.json | ./ct-cognize --input - --taste taste/profile.yaml
 
 # Explicit chain
-ct-cognize --input scheduled.json --taste taste/profile.yaml --agents pi,qwen,gemini
+./ct-cognize --input scheduled.json --taste taste/profile.yaml --agents qwen,pi,claude
 ```
 
 ## Diagnostics Controls
@@ -70,4 +81,3 @@ ct-cognize --input scheduled.json --taste taste/profile.yaml --agents pi,qwen,ge
 - `--verbose`: richer diagnostics
 
 Diagnostics never contaminate JSON payload on stdout.
-
