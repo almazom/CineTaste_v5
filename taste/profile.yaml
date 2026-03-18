@@ -22,6 +22,7 @@ likes:
   genres:
     - "art-house"
     - "anime"
+    - "japanese anime"
     - "indie"
     - "science fiction"
     - "drama"
@@ -33,6 +34,8 @@ likes:
     - "surreal"
     - "atmospheric"
     - "character-driven"
+    - "japanese anime"
+    - "anime"
 
 # What the user dislikes
 dislikes:

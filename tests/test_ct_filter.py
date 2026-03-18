@@ -104,3 +104,24 @@ class TestFilterLogic:
         }
         is_valid, errors = validate_against_contract(data, "filter-result")
         assert is_valid, f"Validation errors: {errors}"
+
+    def test_showtimes_allowed(self):
+        """Movie showtimes with price should validate."""
+        data = {
+            "filtered": [
+                make_filter_result_item(
+                    showtimes=[
+                        {
+                            "time": "21:10",
+                            "datetime_iso": "2026-03-10T21:10:00+03:00",
+                            "price": "от 250 ₽",
+                            "hall": "Стандарт",
+                            "booking_url": "https://example.com/film",
+                        }
+                    ]
+                )
+            ],
+            "meta": {"total_input": 1, "matched": 1, "thresholds": {}}
+        }
+        is_valid, errors = validate_against_contract(data, "filter-result")
+        assert is_valid, f"Validation errors: {errors}"

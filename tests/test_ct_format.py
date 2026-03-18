@@ -43,7 +43,8 @@ class TestTelegramRenderer:
         message = render_message(filtered, "Test City")
 
         assert "Test Movie" in message
-        assert "Test City" in message
+        assert "📊" not in message
+        assert "📍" not in message
 
     def test_render_message_must_see(self):
         """Should render must_see section."""
@@ -79,6 +80,54 @@ class TestTelegramRenderer:
         filtered = []
         message = render_message(filtered, "Test City", date="10.03.2026")
         assert "10.03.2026" in message
+        assert "Сегодня ничего не подходит" in message
+
+    def test_render_message_with_same_price_showtimes(self):
+        filtered = [
+            make_filtered_item(
+                title="Сеансы",
+                showtimes=[
+                    {
+                        "time": "14:25",
+                        "datetime_iso": "2026-03-10T14:25:00+03:00",
+                        "price": "от 250 ₽",
+                    },
+                    {
+                        "time": "17:30",
+                        "datetime_iso": "2026-03-10T17:30:00+03:00",
+                        "price": "от 250 ₽",
+                    },
+                ],
+            )
+        ]
+        message = render_message(filtered, "Test City")
+        assert "14:25, 17:30, от 250 ₽" in message
+        assert "🕒" not in message
+        assert "💳" not in message
+
+    def test_render_message_with_different_prices_showtimes(self):
+        filtered = [
+            make_filtered_item(
+                title="Сеансы",
+                showtimes=[
+                    {
+                        "time": "09:10",
+                        "datetime_iso": "2026-03-10T09:10:00+03:00",
+                        "price": "от 165 ₽",
+                    },
+                    {
+                        "time": "17:10",
+                        "datetime_iso": "2026-03-10T17:10:00+03:00",
+                        "price": "от 255 ₽",
+                    },
+                ],
+            )
+        ]
+        message = render_message(filtered, "Test City")
+        assert "09:10, от 165 ₽" in message
+        assert "17:10, от 255 ₽" in message
+        assert "🕒" not in message
+        assert "💳" not in message
 
     def test_render_detailed(self):
         """Detailed renderer should include optional fields."""
@@ -100,8 +149,9 @@ class TestTelegramRenderer:
     def test_render_empty_filtered(self):
         """Should handle empty filtered list."""
         message = render_message([], "Test City")
-        assert "Test City" in message
-        assert "0 фильмов" in message
+        assert "Сегодня ничего не подходит" in message
+        assert "📊" not in message
+        assert "📍" not in message
 
 
 class TestMessageTextContract:

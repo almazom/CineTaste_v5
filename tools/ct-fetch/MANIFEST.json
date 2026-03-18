@@ -15,7 +15,7 @@
     "output": "movie-batch@1.0.0"
   },
   "cli": {
-    "usage": "ct-fetch --city <CITY> [--when <DATE>] [--source kinoteatr] [--output <FILE>] [--dry-run]",
+    "usage": "ct-fetch --city <CITY> [--when now|week|YYYY-MM-DD] [--source kinoteatr] [--output <FILE>] [--dry-run]",
     "flags": [
       {
         "name": "--city",
@@ -29,7 +29,7 @@
         "short": "-w",
         "type": "string",
         "default": "now",
-        "description": "Date filter: 'now' or YYYY-MM-DD; when date is provided, meta.date mirrors this value"
+        "description": "Date filter: 'now' (today), 'week' (next 7 days), or YYYY-MM-DD; 'week' aggregates movies across days with showtimes_by_day"
       },
       {
         "name": "--output",
@@ -98,6 +98,7 @@
   },
   "examples": {
     "fetch_today": "ct-fetch --city naberezhnie-chelni --when now",
+    "fetch_week": "ct-fetch --city naberezhnie-chelni --when week",
     "fetch_date": "ct-fetch --city naberezhnie-chelni --when 2026-03-15",
     "to_file": "ct-fetch --city naberezhnie-chelni --output movies.json"
   }

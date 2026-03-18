@@ -20,7 +20,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DOTENV_PATH = PROJECT_ROOT / ".env"
 load_dotenv(DOTENV_PATH)
 
-from adapter_kinoteatr import fetch_movies, CITY_URLS  # noqa: E402
+from adapter_kinoteatr import fetch_movies, fetch_movies_week, CITY_URLS  # noqa: E402
 from port import enforce_output  # noqa: E402
 
 SUPPORTED_SOURCES = {
@@ -69,7 +69,7 @@ Examples:
     parser.add_argument(
         "--when", "-w",
         default="now",
-        help="Date filter: 'now' or YYYY-MM-DD (default: now)"
+        help="Date filter: 'now', 'week', or YYYY-MM-DD (default: now)"
     )
 
     parser.add_argument(
@@ -104,30 +104,36 @@ Examples:
 def build_output(movies: list, city: str, city_display: str, when: str) -> dict:
     """Build output conforming to movie-batch@1.0.0 contract."""
     date_value = datetime.now().strftime("%Y-%m-%d")
-    if when != "now":
+    if when not in ("now", "week"):
         date_value = when
+
+    meta = {
+        "city": city,
+        "city_display": city_display,
+        "date": date_value,
+        "source_url": CITY_URLS.get(city, ""),
+        "fetched_at": datetime.now(timezone.utc).isoformat()
+    }
+
+    if when == "week":
+        meta["mode"] = "week"
+        meta["days_fetched"] = 7
 
     return {
         "movies": movies,
-        "meta": {
-            "city": city,
-            "city_display": city_display,
-            "date": date_value,
-            "source_url": CITY_URLS.get(city, ""),
-            "fetched_at": datetime.now(timezone.utc).isoformat()
-        }
+        "meta": meta
     }
 
 
 def validate_when(when: str) -> str:
     """Validate --when value and normalize it."""
-    if when == "now":
+    if when in ("now", "week"):
         return when
 
     try:
         datetime.strptime(when, "%Y-%m-%d")
     except ValueError:
-        raise ValueError("--when must be 'now' or YYYY-MM-DD")
+        raise ValueError("--when must be 'now', 'week', or YYYY-MM-DD")
 
     return when
 
@@ -215,6 +221,10 @@ def main() -> int:
             if args.verbose:
                 print("DRY RUN: Using test data", file=sys.stderr)
             movies = dry_run_data(args.city)
+        elif when == "week":
+            if args.verbose:
+                print(f"Fetching movies for {args.city} for the week (7 days)...", file=sys.stderr)
+            movies = fetch_movies_week(args.city)
         else:
             if args.verbose:
                 print(f"Fetching movies for {args.city} from {args.source} (when={when})...", file=sys.stderr)

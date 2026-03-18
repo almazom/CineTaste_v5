@@ -155,7 +155,10 @@ def build_filtered_item(item: dict, recommendation: str, score: int) -> dict:
             "year": movie.get("year"),
             "duration_min": movie.get("duration_min"),
             "source": movie.get("source", ""),
-            "url": movie.get("url", "")
+            "url": movie.get("url", ""),
+            "showtimes": movie.get("showtimes", []),
+            "available_days": movie.get("available_days", []),
+            "available_days_accurate": movie.get("available_days_accurate", []),
         },
         "relevance_score": score,
         "recommendation": recommendation,

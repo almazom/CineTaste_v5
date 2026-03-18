@@ -4,7 +4,16 @@
       "movie": {
         "id": "test-1",
         "title": "Тестовый фильм",
-        "url": "https://kinoteatr.ru/film/test-1/naberezhnie-chelni/"
+        "url": "https://kinoteatr.ru/film/test-1/naberezhnie-chelni/",
+        "showtimes": [
+          {
+            "time": "21:10",
+            "datetime_iso": "2026-03-10T21:10:00+03:00",
+            "price": "от 250 ₽",
+            "hall": "Стандарт",
+            "booking_url": "https://kinoteatr.ru/film/test-1/naberezhnie-chelni/"
+          }
+        ]
       },
       "relevance_score": 85,
       "recommendation": "recommended"
