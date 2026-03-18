@@ -64,7 +64,16 @@
         "--no-tools",
         "-p"
       ],
-      "run_args": ["--print", "--no-tools", "--thinking", "high"],
+      "run_args": [
+        "--print",
+        "--no-tools",
+        "--thinking",
+        "high",
+        "--provider",
+        "zai",
+        "--model",
+        "glm-5"
+      ],
       "timeout": 600,
       "preflight_timeout": 45,
       "supports_web_search": false,
@@ -80,7 +89,13 @@
         "MiniMax-M2.5",
         "--no-session-persistence"
       ],
-      "run_args": ["--approval-mode", "yolo"],
+      "run_args": [
+        "--permission-mode",
+        "bypassPermissions",
+        "--model",
+        "MiniMax-M2.5",
+        "--no-session-persistence"
+      ],
       "timeout": 600,
       "preflight_timeout": 45,
       "supports_web_search": false,

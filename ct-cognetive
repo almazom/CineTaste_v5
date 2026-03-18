@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export CT_COGNIZE_PROG="$(basename "$0")"
+exec python3 "$ROOT/tools/ct-cognize/main.py" "$@"

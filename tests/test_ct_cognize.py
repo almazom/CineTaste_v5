@@ -119,6 +119,23 @@ class TestPortValidation:
         is_valid, errors = validate_input(data)
         assert not is_valid
 
+
+class TestAgentConfig:
+    def test_pi_runtime_pins_glm5(self):
+        pi = next(agent for agent in AGENTS if agent["name"] == "pi")
+
+        assert "--provider" in pi["run_args"]
+        assert "zai" in pi["run_args"]
+        assert "--model" in pi["run_args"]
+        assert "glm-5" in pi["run_args"]
+
+    def test_claude_runtime_uses_permission_mode(self):
+        claude = next(agent for agent in AGENTS if agent["name"] == "claude")
+
+        assert "--permission-mode" in claude["run_args"]
+        assert "bypassPermissions" in claude["run_args"]
+        assert "--approval-mode" not in claude["run_args"]
+
     def test_validate_output_valid(self):
         data = sample_analysis_result()
         is_valid, errors = validate_output(data)
@@ -304,8 +321,8 @@ class TestAgentSelectionAndFallback:
         assert [a["name"] for a in chain] == ["fast", "slow"]
 
     def test_parse_agent_list_preserves_order_and_uniques(self):
-        parsed = parse_agent_list("pi, qwen,pi,gemini")
-        assert parsed == ["pi", "qwen", "gemini"]
+        parsed = parse_agent_list("pi, qwen,pi,claude")
+        assert parsed == ["pi", "qwen", "claude"]
 
     def test_parse_agent_list_unknown_raises(self):
         with pytest.raises(RuntimeError, match="Unknown agent"):

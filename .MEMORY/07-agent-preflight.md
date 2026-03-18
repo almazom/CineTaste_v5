@@ -56,7 +56,7 @@ This file defines:
 - **CLI**: `pi`
 - **Mode**: `at_file` (@file syntax to inject content)
 - **Preflight**: `--no-session --provider zai --model glm-5 --thinking off --no-tools -p`
-- **Runtime**: `--print --no-tools --thinking high`
+- **Runtime**: `--print --no-tools --thinking high --provider zai --model glm-5`
 - **Timeouts**: 45s preflight / 600s runtime
 - **Special**: Deterministic, no-tools mode
 - **Use case**: Reliable fallback, consistent behavior
@@ -65,10 +65,12 @@ This file defines:
 - **CLI**: `claude`
 - **Mode**: `cwd` (reads files from working directory)
 - **Preflight**: `-p --model MiniMax-M2.5 --no-session-persistence`
-- **Runtime**: `--approval-mode yolo`
+- **Runtime**: `--permission-mode bypassPermissions --model MiniMax-M2.5 --no-session-persistence`
 - **Timeouts**: 45s preflight / 600s runtime
 - **Special**: Uses MiniMax-M2.5 model
 - **Use case**: Alternative general-purpose agent
+
+Claude Code `2.1.72` does not expose `--approval-mode`; the supported non-interactive flag is `--permission-mode`.
 
 ## Preflight Prompt
 
