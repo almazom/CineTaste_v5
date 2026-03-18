@@ -6,7 +6,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 RUNNER="$ROOT/ops/scheduler/run_pipeline.sh"
 CRON_SHELL="/bin/bash"
 CRON_PATH="/home/pets/.local/bin:/home/pets/.npm-global/bin:/usr/local/bin:/usr/bin:/bin"
-CRON_INTERVAL="${CINETASTE_CRON_INTERVAL:-*/15 * * * *}"
+CRON_INTERVAL="${CINETASTE_CRON_INTERVAL:-0 20 * * *}"
 MODE="${1:-production}"
 
 if [[ ! -x "$RUNNER" ]]; then

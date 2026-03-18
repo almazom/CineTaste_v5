@@ -17,7 +17,7 @@ VERBOSE=false
 DRY_RUN=false
 RESEND_FILE=""
 INPUT_FILE=""
-TIMEOUT=720
+TIMEOUT=600
 LIST_RUNS=false
 RERUN_ID=""
 
@@ -360,6 +360,7 @@ CineTaste v5 — Cinema recommendations to Telegram
 
 Options:
   --when DATE       Date filter: 'now' or YYYY-MM-DD (default: now)
+  --week            Fetch movies for the next 7 days (shorthand for --when week)
   --input FILE      Skip fetch/analyze, use cached analysis-result JSON
   --resend FILE     Resend existing message file
   --dry-run, -n     Execute full pipeline but skip live send (uses t2me --dry-run)
@@ -372,6 +373,7 @@ Options:
 
 Examples:
   ./run                           # Full production pipeline
+  ./run --week                    # Fetch and analyze movies for the week
   ./run --dry-run                 # Dry-run (no Telegram send)
   ./run --list                    # Show recent runs
   ./run --rerun 2026-03-10T065504Z  # Rerun specific run
@@ -462,14 +464,35 @@ with protocol_path.open(encoding="utf-8") as f:
     protocol = json.load(f)
 
 tools = protocol.get("tools", {})
-ordered_tools = sorted(
-    (
-        {"name": name, "position": meta.get("position"), "manifest": meta.get("manifest", "")}
-        for name, meta in tools.items()
-        if meta.get("status") != "legacy"
-    ),
-    key=lambda x: x["position"],
-)
+flow = protocol.get("flow", {})
+flow_stage_names = flow.get("stages", [])
+if not flow_stage_names:
+    raise SystemExit("PROTOCOL flow.stages is empty or missing")
+
+missing_stage_tools = [name for name in flow_stage_names if name not in tools]
+if missing_stage_tools:
+    raise SystemExit(
+        "PROTOCOL flow.stages references unknown tools: "
+        f"{missing_stage_tools}"
+    )
+
+legacy_stage_tools = [
+    name for name in flow_stage_names if tools.get(name, {}).get("status") == "legacy"
+]
+if legacy_stage_tools:
+    raise SystemExit(
+        "PROTOCOL flow.stages must not include legacy tools: "
+        f"{legacy_stage_tools}"
+    )
+
+ordered_tools = [
+    {
+        "name": name,
+        "position": tools[name].get("position"),
+        "manifest": tools[name].get("manifest", ""),
+    }
+    for name in flow_stage_names
+]
 
 positions = [item["position"] for item in ordered_tools]
 expected_positions = list(range(1, len(ordered_tools) + 1))
@@ -726,6 +749,10 @@ while [[ $# -gt 0 ]]; do
             [[ $# -ge 2 ]] || die "--when requires a value"
             WHEN="$2"
             shift 2
+            ;;
+        --week)
+            WHEN="week"
+            shift
             ;;
         --input)
             [[ $# -ge 2 ]] || die "--input requires a value"
