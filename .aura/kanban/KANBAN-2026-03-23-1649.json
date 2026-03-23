@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "KANBAN-2026-03-23-1649.json",
+  "title": "Kanban Plan",
+  "description": "Simplify the ct-cognize implementation around agent selection, invocation, and response parsing without changing behavior",
+  "planning_session": {
+    "id": "KANBAN-2026-03-23-1649",
+    "created_at": "2026-03-23T16:49:16+03:00",
+    "author": "codex",
+    "goal": "Run the code-simplifier skill on a high-value portion of ct-cognize and verify behavior with focused tests"
+  },
+  "states": ["TODO", "DOING", "DONE"],
+  "columns": {
+    "TODO": [],
+    "DOING": [],
+    "DONE": [
+      {
+        "id": "bootstrap-and-scope",
+        "task": "Read AURA, PROTOCOL, memory index, flow, and inspect the current modified ct-cognize scope",
+        "contract_impact": [],
+        "priority": 0,
+        "estimated_complexity": "low",
+        "notes": "Confirmed the recent user-facing change is in ct-cognize prompt text; selected this tool for simplification"
+      },
+      {
+        "id": "simplify-ct-cognize-core",
+        "task": "Refactor ct-cognize agent selection, invocation, and response parsing for clarity while preserving exact runtime behavior",
+        "contract_impact": ["analysis-result"],
+        "priority": 1,
+        "estimated_complexity": "medium",
+        "notes": "Removed duplicated model-flag parsing, simplified explicit agent lookup, and linearized response parsing in tools/ct-cognize/main.py"
+      },
+      {
+        "id": "run-focused-verification",
+        "task": "Run focused ct-cognize tests to confirm the simplification preserved behavior",
+        "contract_impact": ["analysis-result"],
+        "priority": 2,
+        "estimated_complexity": "low",
+        "notes": "pytest is blocked in this environment because pytest_bdd is missing, so validation used py_compile plus a direct Python smoke script covering parse_response, select_agent_chain, and cognize"
+      }
+    ]
+  },
+  "acceptance_criteria": [
+    "Simplification stays within ct-cognize and preserves CLI/tool behavior",
+    "Agent selection or parsing logic becomes clearer with less duplication",
+    "Focused ct-cognize tests pass after the refactor",
+    "No unrelated user changes are reverted"
+  ],
+  "stats": {
+    "total": 3,
+    "todo": 0,
+    "doing": 0,
+    "done": 3,
+    "progress_percent": 100
+  }
+}

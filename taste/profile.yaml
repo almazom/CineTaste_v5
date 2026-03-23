@@ -1,7 +1,7 @@
 # CineTaste Taste Profile
-# Version: 1.1
+# Version: 1.2
 
-version: "1.1"
+version: "1.2"
 user: "default"
 
 # What the user likes
@@ -14,8 +14,11 @@ likes:
     - "Nolan"
     - "Fellini"
     - "Франсуа Озон"
+    - "Jan Komasa"
   actors:
     - "Timothée Chalamet"
+    - "Stephen Graham"
+    - "Andrea Riseborough"
   studios:
     - "A24"
     - "Criterion"
@@ -24,8 +27,16 @@ likes:
     - "anime"
     - "japanese anime"
     - "indie"
+    - "independent drama"
+    - "psychological drama"
+    - "social drama"
+    - "festival drama"
     - "science fiction"
     - "drama"
+  regions:
+    - "European cinema"
+    - "Polish cinema"
+    - "British independent cinema"
   eras:
     - "Soviet cinema 1960s"
     - "Soviet cinema 1970s"
@@ -34,6 +45,12 @@ likes:
     - "surreal"
     - "atmospheric"
     - "character-driven"
+    - "european indie"
+    - "festival cinema"
+    - "social realism"
+    - "psychological"
+    - "intense"
+    - "understated"
     - "japanese anime"
     - "anime"
 
