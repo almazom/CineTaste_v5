@@ -25,6 +25,7 @@ logs/failed_*/
 runs/
 reports/
 ssot/
+.codex-review/
 # t2me binary (but not t2me/ directory)
 /t2me
 bio/
@@ -68,4 +69,3 @@ sdd_package_*/
 
 # Archive
 archive/
-
