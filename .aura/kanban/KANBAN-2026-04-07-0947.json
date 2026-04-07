@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "KANBAN-2026-04-07-0947.json",
+  "title": "Kanban Plan",
+  "description": "Simplify the freshly modified CineTaste changes where useful, verify them, and commit everything in atomic groups with push.",
+  "planning_session": {
+    "id": "KANBAN-2026-04-07-0947",
+    "created_at": "2026-04-07T09:47:00+03:00",
+    "author": "codex",
+    "goal": "Run a focused simplification pass over the current worktree, validate the touched areas, and auto-commit/push the resulting changes."
+  },
+  "states": [
+    "TODO",
+    "DOING",
+    "DONE"
+  ],
+  "columns": {
+    "TODO": [],
+    "DOING": [],
+    "DONE": [
+      {
+        "id": "task-01",
+        "task": "Review the current diff and apply a narrow simplification pass to recently modified code and docs without changing behavior.",
+        "contract_impact": [
+          "analysis-result@1.0.0",
+          "filter-result@1.0.0"
+        ],
+        "priority": 1,
+        "estimated_complexity": "medium",
+        "notes": "Completed with helper-based cleanup in rule_engine.py and adapter_kinoteatr.py plus a readability pass over the new planning-standard document."
+      },
+      {
+        "id": "task-02",
+        "task": "Run the fitting checks for the modified scope, scan staged diffs for secrets, and confirm the worktree is ready for commit.",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "medium",
+        "notes": "Completed: pytest subset passed (133 passed, 5 deselected), secret regex scan returned clean, and .gitignore was checked for new artifacts."
+      },
+      {
+        "id": "task-03",
+        "task": "Commit the current worktree in atomic groups, push to origin, and report the resulting commit hashes.",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "medium",
+        "notes": "Completed with atomic commits 187cf36 and de6f7d7 plus this closing kanban-state commit, then pushed to origin."
+      }
+    ]
+  },
+  "acceptance_criteria": [
+    "A dedicated kanban exists for the simplification and commit workflow and latest points to it",
+    "Recently modified code and docs are simplified only where it improves clarity without changing behavior",
+    "Relevant tests and safety checks run successfully, including a secret scan",
+    "All current relevant changes are committed in atomic groups and pushed to origin"
+  ],
+  "stats": {
+    "total": 3,
+    "todo": 0,
+    "doing": 0,
+    "done": 3,
+    "progress_percent": 100
+  }
+}
