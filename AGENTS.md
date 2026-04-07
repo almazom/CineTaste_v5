@@ -41,6 +41,8 @@ Treat `@aura.md` as the runtime protocol (`AURA.md` symlink in repo root).
 | `11-ct-schedule.md` | Collecting showtimes into `movie-schedule` |
 | `12-ct-time-price.md` | Checking one movie URL for times and prices |
 | `13-ct-cognize.md` | Running the cognitive layer on `movie-schedule` |
+| `14-codex-proxy.md` | Running headless `codex` / `codex review` through the local round-robin proxy |
+| `16-ct-format.md` | Understanding Telegram horizon rendering and relative-date phrasing |
 
 ---
 
@@ -114,6 +116,32 @@ cat flows/latest/FLOW.md   # Current flow file (Version: 1.3.1)
 ./run --dry-run    # Preview / validates send via t2me --dry-run
 ./run              # Production (sends to Telegram)
 ```
+
+### Step 6: Headless Codex via Proxy
+
+For manual headless Codex runs, prefer the proxy-backed wrapper:
+
+```bash
+codex_wp exec -C /home/pets/zoo/CineTaste_v5 "inspect current changes"
+codex_wp review -C /home/pets/zoo/CineTaste_v5 --uncommitted
+```
+
+If you need custom sandbox or approval flags, export the proxy env and run `codex` directly:
+
+```bash
+eval "$(cdx proxy --print-env-only)"
+codex -C /home/pets/zoo/CineTaste_v5 review --uncommitted
+```
+
+Monitor long-running headless Codex work with:
+
+```bash
+cdx status --json
+cdx doctor
+cdx trace
+```
+
+Details: `.MEMORY/14-codex-proxy.md`
 
 ## 🔧 Tool Drill-Down
 
@@ -329,5 +357,5 @@ ls -1 logs/failed_* | tail -n 1
 
 ---
 
-*Last updated: 2026-03-18*
+*Last updated: 2026-03-26*
 *Version: 5.4.0*

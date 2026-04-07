@@ -29,6 +29,9 @@
 | [11-ct-schedule.md](11-ct-schedule.md) | Showtime collection into `movie-schedule` | Working on stage 2 / per-movie session enrichment |
 | [12-ct-time-price.md](12-ct-time-price.md) | Single movie URL time/price checks | Debugging one page or presale date mismatch |
 | [13-ct-cognize.md](13-ct-cognize.md) | Cognitive stage input, prompt rules, and output merge | Running or modifying stage 3 |
+| [14-codex-proxy.md](14-codex-proxy.md) | Proxy-backed headless Codex operator flow | Running `codex`/`codex review` through the local round-robin proxy |
+| [15-review-short-tips.md](15-review-short-tips.md) | Fast reviewer mental model | Quick repo review / safe modifications |
+| [16-ct-format.md](16-ct-format.md) | Telegram rendering horizons and relative-date copy | Modifying message layout or delivery readability |
 
 ## Quick Start
 
@@ -62,4 +65,4 @@ flows/latest/FLOW.md     # Executable pipeline
 ```
 
 ---
-*Last updated: 2026-03-18*
+*Last updated: 2026-04-07*

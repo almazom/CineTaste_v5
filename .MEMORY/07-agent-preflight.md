@@ -1,7 +1,7 @@
 # Agent Preflight Configuration
 
 > Purpose: Centralized configuration for AI agent preflight behavior
-> Updated: 2026-03-10
+> Updated: 2026-04-07
 > Source of Truth: `tools/ct-cognize/agent-config.json`
 
 ## Overview
@@ -55,10 +55,10 @@ This file defines:
 ### pi
 - **CLI**: `pi`
 - **Mode**: `at_file` (@file syntax to inject content)
-- **Preflight**: `--no-session --provider zai --model glm-5 --thinking off --no-tools -p`
-- **Runtime**: `--print --no-tools --thinking high --provider zai --model glm-5`
+- **Preflight**: `--no-session --provider zai --model glm-5-turbo --thinking off --no-tools -p`
+- **Runtime**: `--print --no-tools --thinking high --provider zai --model glm-5-turbo`
 - **Timeouts**: 45s preflight / 600s runtime
-- **Special**: Deterministic, no-tools mode
+- **Special**: Deterministic, no-tools mode; as of 2026-04-07 `glm-5-turbo` beat `glm-5` and `glm-5.1` on the local one-token harness
 - **Use case**: Reliable fallback, consistent behavior
 
 ### claude
@@ -72,20 +72,51 @@ This file defines:
 
 Claude Code `2.1.72` does not expose `--approval-mode`; the supported non-interactive flag is `--permission-mode`.
 
+### qodercli
+- **CLI**: `qodercli`
+- **Mode**: `cwd` (reads files from working directory)
+- **Preflight**: `-q -p`
+- **Runtime**: `-q --dangerously-skip-permissions`
+- **Timeouts**: 45s preflight / 600s runtime
+- **Special**: non-interactive Qoder harness; model selection stays on the CLI default unless explicitly changed in config
+- **Use case**: extra general-purpose fallback when qwen/pi/claude are unavailable
+
+### kimi_wp
+- **CLI**: `kimi_wp`
+- **Mode**: `cwd` (reads files from working directory)
+- **Preflight**: `-s read-only -p`
+- **Runtime**: `-s read-only`
+- **Timeouts**: 45s preflight / 600s runtime
+- **Special**: wrapper locked to Kimi K2.5; read-only by default
+- **Use case**: Kimi-backed fallback without direct kimi CLI integration
+
+### codex_wp
+- **CLI**: `codex_wp`
+- **Mode**: `headless exec` (runs `codex_wp exec` in the temp workdir)
+- **Preflight**: `exec --skip-git-repo-check "1+2=? Reply with exactly one token: three"`
+- **Runtime**: `exec --skip-git-repo-check "<analysis prompt>"`
+- **Timeouts**: 90s preflight / 600s runtime
+- **Special**: auto-boots the local proxy and runs headless Codex without requiring the temp workdir to be a Git repo
+- **Use case**: deep fallback when the other configured CLIs are down but proxy-backed Codex is still healthy
+
 ## Preflight Prompt
 
-All agents receive the same prompt (in Russian for consistency):
+Default preflight prompt for most agents:
 ```
 Ответь одним словом: ok
 ```
 
-Expected response tokens: `ok`, `ок` (Cyrillic variant)
+Default success tokens: `ok`, `ок` (Cyrillic variant)
+
+Agent-specific override:
+- `codex_wp` uses `1+2=? Reply with exactly one token: three`
+- accepted success tokens: `three`, `3`
 
 ## Timeout Strategy
 
 | Phase | Timeout | Rationale |
 |-------|---------|-----------|
-| Preflight | 45s | Long enough for slow APIs, short enough to fail fast |
+| Preflight | 45s by default | Long enough for slow APIs, short enough to fail fast; individual agents can override |
 | Runtime | 600s | 10 minutes allows analysis of 20+ movies |
 | Pipeline | 720s | Default in `./run`, configurable via `--timeout` |
 
@@ -111,8 +142,8 @@ CT_COGNIZE_RUNTIME_TIMEOUT=600
 CT_PIPELINE_TIMEOUT=720
 
 # Agent selection
-CT_COGNIZE_AGENT=auto        # or: pi, qwen, gemini, kimi, claude
-CT_COGNIZE_AGENTS=pi,qwen    # ordered fallback chain
+CT_COGNIZE_AGENT=auto        # or: pi, qwen, claude, qodercli, kimi_wp, codex_wp
+CT_COGNIZE_AGENTS=pi,codex_wp,qodercli
 ```
 
 ## Modifying Configuration
@@ -136,7 +167,7 @@ To change agent behavior:
 ./ct-cognize --input scheduled.json --taste taste/profile.yaml --agent pi
 
 # Run with fallback chain
-./ct-cognize --input scheduled.json --taste taste/profile.yaml --agents qwen,pi,claude
+./ct-cognize --input scheduled.json --taste taste/profile.yaml --agents pi,codex_wp,qodercli
 
 # Pipeline with extended timeout
 ./run --timeout 1200

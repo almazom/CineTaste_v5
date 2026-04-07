@@ -84,9 +84,9 @@ results:
 # Agent selection
 agent_preflight:
   - name: pi
-    model: glm-5
+    model: glm-5-turbo
     status: ok
-    response_time_ms: 7100
+    response_time_ms: 4180
   - name: claude
     model: MiniMax-M2.5
     status: ok
