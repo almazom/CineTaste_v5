@@ -3,6 +3,7 @@ Test ct-filter tool contract validation.
 """
 
 import json
+import importlib.util
 import sys
 from pathlib import Path
 
@@ -11,6 +12,15 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "tools" / "_shared"))
 sys.path.insert(0, str(Path(__file__).parent.parent / "tools" / "ct-filter"))
 
 from validate import validate_against_contract
+
+FILTER_MAIN_SPEC = importlib.util.spec_from_file_location(
+    "ct_filter_main",
+    Path(__file__).parent.parent / "tools" / "ct-filter" / "main.py",
+)
+FILTER_MAIN = importlib.util.module_from_spec(FILTER_MAIN_SPEC)
+assert FILTER_MAIN_SPEC.loader is not None
+FILTER_MAIN_SPEC.loader.exec_module(FILTER_MAIN)
+build_filtered_item = FILTER_MAIN.build_filtered_item
 
 
 def make_filter_result_item(
@@ -125,3 +135,33 @@ class TestFilterLogic:
         }
         is_valid, errors = validate_against_contract(data, "filter-result")
         assert is_valid, f"Validation errors: {errors}"
+
+    def test_build_filtered_item_preserves_quality_fields(self):
+        item = {
+            "movie": {
+                "id": "1",
+                "title": "Test",
+                "url": "https://example.com",
+                "showtimes": [],
+                "available_days": [],
+                "available_days_accurate": [],
+            },
+            "relevance_score": 88,
+            "confidence": 0.76,
+            "recommendation": "recommended",
+            "reasoning": "Rules-first result",
+            "key_matches": ["аниме"],
+            "red_flags": ["скудные метаданные"],
+            "rule_score": 90,
+            "llm_delta": -2,
+            "review_required": True,
+            "decision_basis": ["rule:anime_floor", "quality:review_required"],
+        }
+
+        filtered = build_filtered_item(item, "recommended", 88)
+
+        assert filtered["confidence"] == 0.76
+        assert filtered["key_matches"] == ["аниме"]
+        assert filtered["rule_score"] == 90
+        assert filtered["llm_delta"] == -2
+        assert filtered["review_required"] is True

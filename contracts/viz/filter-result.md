@@ -28,8 +28,13 @@
       │   └─ url ✓             │
       │                        │
       ├─ relevance_score ✓    (0-100)
+      ├─ confidence           (0-1)
       ├─ recommendation ✓     [must_see | recommended]
-      └─ reasoning            (string)
+      ├─ reasoning            (string)
+      ├─ rule_score           (baseline)
+      ├─ llm_delta            (bounded correction)
+      ├─ review_required      (boolean)
+      └─ decision_basis[]     (array of strings)
 
 
    ⚠️ ВНИМАНИЕ: Только must_see и recommended проходят!
@@ -48,6 +53,7 @@
 - `movie` — данные фильма (id, title, url обязательны)
 - `relevance_score` — оценка (0-100)
 - `recommendation` — только `must_see` или `recommended`
+- quality-поля (`confidence`, `rule_score`, `llm_delta`, `review_required`, `decision_basis`) сохраняются из stage 3 для диагностики shortlist
 
 ### Meta
 - `total_input` — сколько фильмов пришло на вход
@@ -83,8 +89,13 @@
         "url": "https://kinoteatr.ru/matrix"
       },
       "relevance_score": 92,
+      "confidence": 0.88,
       "recommendation": "must_see",
-      "reasoning": "Философская фантастика"
+      "reasoning": "Философская фантастика",
+      "rule_score": 89,
+      "llm_delta": 3,
+      "review_required": false,
+      "decision_basis": ["rule:genre_match", "llm_delta:+3"]
     }
   ],
   "meta": {

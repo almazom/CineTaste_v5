@@ -14,7 +14,16 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "tools" / "_shared"))
 sys.path.insert(0, str(Path(__file__).parent.parent / "tools" / "ct-fetch"))
 
 from validate import validate_against_contract
-from adapter_kinoteatr import DOTENV_PATH, fetch_movies, fetch_movies_month, parse_html, parse_html_with_date, _build_listing_url, _fetch_html
+from adapter_kinoteatr import (
+    DOTENV_PATH,
+    _build_listing_url,
+    _extract_detail_metadata,
+    _fetch_html,
+    fetch_movies,
+    fetch_movies_month,
+    parse_html,
+    parse_html_with_date,
+)
 
 
 class TestKinoteatrAdapter:
@@ -175,6 +184,40 @@ class TestFetchDeterministic:
         movies = parse_html_with_date(html, "2026-04-26")
         assert movies[0]["url"].endswith("/film/o-moem-pererozhdenii-v-sliz-slezy-sinego-morya/naberezhnie-chelni/")
         assert movies[0]["available_days"] == ["2026-04-26"]
+
+    def test_extract_detail_metadata_recovers_description_duration_and_year(self):
+        html = """
+        <meta name="description" content="Фильм «Лабиринт» (2026): цены на билеты." />
+        <h1 itemprop="name">Лабиринт</h1>
+        <meta itemprop="duration" content="T115M" />
+        <p itemprop="description">
+            Застенчивая старшеклассница Сиори Маэдзава попадает в таинственный мир.
+        </p>
+        <span class="clear_span" itemprop="director" itemscope itemtype="http://schema.org/Person">
+            <span class="clear_span" itemprop="name">Сё\u200cдзи Кавамо\u200cри</span>
+        </span>
+        <div class="movie_actors">В ролях<td><span itemprop="name">Актёр Один</span></td></div>
+        <div data-dates="2026-04-26, 2026-04-27"></div>
+        """
+
+        metadata = _extract_detail_metadata(html)
+
+        assert metadata["director"] == "Сёдзи Кавамори"
+        assert metadata["duration_min"] == 115
+        assert metadata["year"] == 2026
+        assert metadata["raw_description"].startswith("Застенчивая старшеклассница")
+        assert metadata["actors"] == ["Актёр Один"]
+        assert metadata["available_days_accurate"] == ["2026-04-26", "2026-04-27"]
+
+    def test_extract_detail_metadata_prefers_page_genres(self):
+        html = """
+        <span itemprop="genre">Аниме</span>, <span itemprop="genre"> Мультфильм</span>,
+        <span itemprop="genre"> Семейный</span>
+        """
+
+        metadata = _extract_detail_metadata(html)
+
+        assert metadata["genres"] == ["Аниме", "Мультфильм", "Семейный"]
 
     def test_dotenv_path_is_project_relative(self):
         expected = (Path(__file__).resolve().parents[1] / ".env").resolve()

@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "KANBAN-2026-04-07-0808.json",
+  "title": "Kanban Plan",
+  "description": "Extend CineTaste discovery and rendering from today-plus-week to explicit today, next 7 days, and next 30 days horizons.",
+  "planning_session": {
+    "id": "KANBAN-2026-04-07-0808",
+    "created_at": "2026-04-07T08:08:00+03:00",
+    "author": "codex",
+    "goal": "Add a month horizon so strongly matching upcoming movies can appear in a separate next-30-days section without losing today or next-7-days output."
+  },
+  "states": [
+    "TODO",
+    "DOING",
+    "DONE"
+  ],
+  "columns": {
+    "TODO": [],
+    "DOING": [],
+    "DONE": [
+      {
+        "id": "task-01",
+        "task": "Extend discovery to support a 30-day horizon and ensure month/week aggregation preserves per-movie links and available days.",
+        "contract_impact": [
+          "movie-batch@1.0.0"
+        ],
+        "priority": 1,
+        "estimated_complexity": "medium",
+        "notes": "ct-fetch currently supports now/week/date only; parse_html_with_date also needs the same URL-attachment robustness as single-day parse_html."
+      },
+      {
+        "id": "task-02",
+        "task": "Update formatting and pipeline behavior so the daily run emits sections for today, next 7 days, and next 30 days.",
+        "contract_impact": [
+          "message-text@1.0.0"
+        ],
+        "priority": 1,
+        "estimated_complexity": "medium",
+        "notes": "Current renderer only splits into today versus later; pipeline likely needs a wider fetch horizon by default."
+      },
+      {
+        "id": "task-03",
+        "task": "Update docs and verification notes for the new month horizon and changed default run behavior.",
+        "contract_impact": [
+          "movie-batch@1.0.0"
+        ],
+        "priority": 2,
+        "estimated_complexity": "medium",
+        "notes": "Need docs aligned with fetch month mode, three output sections, and any new run defaults."
+      }
+    ]
+  },
+  "acceptance_criteria": [
+    "A fresh implementation kanban exists and .aura/kanban/latest points to it",
+    "The pipeline can discover movies up to 30 days ahead",
+    "Rendered Telegram output has explicit sections for today, next 7 days, and next 30 days",
+    "Upcoming non-today profile matches such as later anime premieres can surface in the month section when they fall within 30 days"
+  ],
+  "stats": {
+    "total": 3,
+    "todo": 0,
+    "doing": 0,
+    "done": 3,
+    "progress_percent": 100
+  }
+}

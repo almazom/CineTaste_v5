@@ -16,7 +16,15 @@
         ]
       },
       "relevance_score": 85,
-      "recommendation": "recommended"
+      "confidence": 0.8,
+      "recommendation": "recommended",
+      "reasoning": "Жанр и атмосфера совпадают с профилем.",
+      "key_matches": ["драма"],
+      "red_flags": [],
+      "rule_score": 82,
+      "llm_delta": 3,
+      "review_required": false,
+      "decision_basis": ["rule:genre_match", "llm_delta:+3"]
     }
   ],
   "meta": {

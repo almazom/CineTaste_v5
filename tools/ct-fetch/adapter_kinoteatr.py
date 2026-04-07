@@ -6,6 +6,7 @@ Fetches movie data from kinoteatr.ru for a given city.
 Uses regex-based extraction for robustness.
 """
 
+import html as html_lib
 import os
 import re
 import time
@@ -38,12 +39,123 @@ HEADERS = {
 }
 
 RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
+ZERO_WIDTH_PATTERN = re.compile(r"[\u200b-\u200f\u2060\ufeff]")
+TAG_PATTERN = re.compile(r"<[^>]+>")
 
 
 def _normalize_title_key(value: str) -> str:
     """Normalize title variants so listing cards and clickable anchors can be joined."""
-    normalized = value.strip().lower().replace("ё", "е")
+    normalized = _clean_text(value).lower().replace("ё", "е")
     return re.sub(r"\s+", " ", normalized)
+
+
+def _clean_text(value: str) -> str:
+    """Normalize extracted HTML text and strip invisible formatting chars."""
+    text = html_lib.unescape(value or "")
+    text = ZERO_WIDTH_PATTERN.sub("", text)
+    text = TAG_PATTERN.sub(" ", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _parse_duration_minutes(html: str) -> int | None:
+    """Extract duration from schema content or visible runtime text."""
+    duration_match = re.search(r'itemprop="duration" content="T(?:(\d+)H)?(?:(\d+)M)?"', html)
+    if duration_match:
+        hours = int(duration_match.group(1) or 0)
+        minutes = int(duration_match.group(2) or 0)
+        total = hours * 60 + minutes
+        if total > 0:
+            return total
+
+    text_match = re.search(r"(\d+)\s*ч\.\s*(\d+)\s*мин\.", html)
+    if text_match:
+        return int(text_match.group(1)) * 60 + int(text_match.group(2))
+
+    return None
+
+
+def _parse_year(html: str) -> int | None:
+    """Extract release year from page metadata when available."""
+    meta_match = re.search(r'<meta name="description" content="[^"]*\((\d{4})\):', html)
+    if meta_match:
+        return int(meta_match.group(1))
+
+    title_match = re.search(r"\((\d{4}),", html)
+    if title_match:
+        return int(title_match.group(1))
+
+    return None
+
+
+def _extract_clean_matches(pattern: str, html: str) -> list[str]:
+    """Return cleaned regex matches while preserving order."""
+    return [
+        value
+        for value in (_clean_text(match) for match in re.findall(pattern, html, re.IGNORECASE))
+        if value
+    ]
+
+
+def _extract_detail_metadata(html: str) -> Dict[str, Any]:
+    """Extract richer movie metadata from a kinoteatr detail page."""
+    metadata: Dict[str, Any] = {}
+
+    description_match = re.search(
+        r'<p[^>]*itemprop="description"[^>]*>(.*?)</p>',
+        html,
+        re.DOTALL | re.IGNORECASE,
+    )
+    if not description_match:
+        description_match = re.search(
+            r'itemprop="description" content="([^"]+)"',
+            html,
+            re.DOTALL | re.IGNORECASE,
+        )
+    if description_match:
+        description = _clean_text(description_match.group(1))
+        if description:
+            metadata["raw_description"] = description
+
+    director_match = re.search(
+        r'itemprop="director"[^>]*>.*?itemprop="name">([^<]+)',
+        html,
+        re.DOTALL | re.IGNORECASE,
+    )
+    if director_match:
+        director = _clean_text(director_match.group(1))
+        if director:
+            metadata["director"] = director
+
+    actors_block = re.search(
+        r'class="movie_actors">В ролях.*?<td[^>]*>(.*?)</td>',
+        html,
+        re.DOTALL | re.IGNORECASE,
+    )
+    if actors_block:
+        actors = _extract_clean_matches(r'itemprop="name">([^<]+)', actors_block.group(1))
+        if actors:
+            metadata["actors"] = actors
+
+    genres = _extract_clean_matches(r'itemprop="genre">([^<]+)', html)
+    if genres:
+        metadata["genres"] = list(dict.fromkeys(genres))
+
+    duration_min = _parse_duration_minutes(html)
+    if duration_min is not None:
+        metadata["duration_min"] = duration_min
+
+    year = _parse_year(html)
+    if year is not None:
+        metadata["year"] = year
+
+    data_dates_match = re.search(r'data-dates="([^"]+)"', html)
+    if data_dates_match:
+        accurate_dates = [_clean_text(value) for value in data_dates_match.group(1).split(",")]
+        accurate_dates = [value for value in accurate_dates if value]
+        if accurate_dates:
+            metadata["available_days_accurate"] = accurate_dates
+
+    return metadata
 
 
 def _normalize_listing_base(url: str) -> str:
@@ -193,7 +305,7 @@ def parse_html(html: str) -> List[Dict[str, Any]]:
 
 
 def _enrich_from_detail_pages(movies: List[Dict[str, Any]]) -> None:
-    """Fetch each movie's detail page to extract director, actors, and accurate available days."""
+    """Fetch each movie's detail page to extract richer metadata."""
     for movie in movies:
         url = movie.get("url")
         if not url:
@@ -206,37 +318,7 @@ def _enrich_from_detail_pages(movies: List[Dict[str, Any]]) -> None:
                 attempts=2,
             )
 
-            # Director via schema.org itemprop
-            d = re.search(
-                r'itemprop="director"[^>]*>.*?itemprop="name">([^<]+)',
-                html, re.DOTALL
-            )
-            if d:
-                movie["director"] = d.group(1).strip()
-
-            # Actors via schema.org itemprop inside movie_actors block
-            actors_block = re.search(
-                r'class="movie_actors">В ролях.*?<td[^>]*>(.*?)</td>',
-                html, re.DOTALL
-            )
-            if actors_block:
-                movie["actors"] = re.findall(
-                    r'itemprop="name">([^<]+)', actors_block.group(1)
-                )
-
-            # Extract accurate available days from data-dates attribute
-            # This is the source of truth for when movie actually plays
-            data_dates_match = re.search(
-                r'data-dates="([^"]+)"',
-                html
-            )
-            if data_dates_match:
-                dates_str = data_dates_match.group(1)
-                # Parse comma-separated dates
-                accurate_dates = [d.strip() for d in dates_str.split(',') if d.strip()]
-                if accurate_dates:
-                    movie["available_days_accurate"] = accurate_dates
-
+            movie.update(_extract_detail_metadata(html))
         except (ConnectionError, AttributeError, TypeError):
             pass  # best-effort enrichment
 

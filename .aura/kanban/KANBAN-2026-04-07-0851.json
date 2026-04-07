@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "KANBAN-2026-04-07-0851.json",
+  "title": "Kanban Plan",
+  "description": "Add a rules-first quality layer to ct-cognize so ranking becomes more stable, explainable, and aligned with taste profile hard rules.",
+  "planning_session": {
+    "id": "KANBAN-2026-04-07-0851",
+    "created_at": "2026-04-07T08:51:00+03:00",
+    "author": "codex",
+    "goal": "Raise taste-selection confidence by combining deterministic taste rules with bounded LLM refinement and preserving quality signals in downstream artifacts."
+  },
+  "states": [
+    "TODO",
+    "DOING",
+    "DONE"
+  ],
+  "columns": {
+    "TODO": [],
+    "DOING": [],
+    "DONE": [
+      {
+        "id": "task-01",
+        "task": "Implement taste/movie normalization and deterministic rule scoring in ct-cognize before the agent call.",
+        "contract_impact": [
+          "analysis-result@1.0.0"
+        ],
+        "priority": 1,
+        "estimated_complexity": "high",
+        "notes": "Completed with rules-first scoring, zero-width-safe normalization, and anime-creator fallback floors for sparse pages."
+      },
+      {
+        "id": "task-02",
+        "task": "Replace free-form AI scoring with bounded LLM refinement merged against rule floors, ceilings, and quality confidence.",
+        "contract_impact": [
+          "analysis-result@1.0.0"
+        ],
+        "priority": 1,
+        "estimated_complexity": "high",
+        "notes": "Completed with bounded merge, confidence gates, preserved diagnostics, and stable live pi delivery."
+      },
+      {
+        "id": "task-03",
+        "task": "Extend analysis/filter contracts and docs so rule_score, llm_delta, confidence, review_required, and decision_basis survive validation and downstream stages.",
+        "contract_impact": [
+          "analysis-result@1.0.0",
+          "filter-result@1.0.0"
+        ],
+        "priority": 2,
+        "estimated_complexity": "medium",
+        "notes": "Completed across contracts, downstream filter propagation, samples, viz docs, and memory cards."
+      },
+      {
+        "id": "task-04",
+        "task": "Add regression coverage and live verification for the rules-first ranking path and strong anime matches.",
+        "contract_impact": [
+          "analysis-result@1.0.0",
+          "filter-result@1.0.0"
+        ],
+        "priority": 2,
+        "estimated_complexity": "medium",
+        "notes": "Completed with 133 passing targeted tests and live Telegram verification after reruns."
+      }
+    ]
+  },
+  "acceptance_criteria": [
+    "ct-cognize computes a deterministic rule layer before agent refinement",
+    "LLM output is merged with bounded delta and cannot violate hard profile rules",
+    "analysis-result and filter-result preserve rule_score, llm_delta, confidence, review_required, and decision_basis",
+    "Regression tests prove strong anime matches survive and false-positive drift is reduced",
+    "One live pipeline run confirms the new scoring path still delivers to Telegram"
+  ],
+  "stats": {
+    "total": 4,
+    "todo": 0,
+    "doing": 0,
+    "done": 4,
+    "progress_percent": 100
+  }
+}

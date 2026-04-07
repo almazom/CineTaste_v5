@@ -29,6 +29,7 @@ from main import (
     parallel_preflight,
     select_agent_chain,
 )
+from rule_engine import build_rule_map, bounded_merge_analysis
 
 
 ROOT = Path(__file__).parent.parent
@@ -50,6 +51,7 @@ def sample_movies():
             "source": "kinoteatr.ru",
             "url": "https://kinoteatr.ru/film/test-movie/city/",
             "showtimes": [{"time": "14:00", "datetime_iso": "2026-03-03T14:00:00+03:00"}],
+            "raw_description": "Character-driven psychological drama with intense performances.",
         },
         {
             "id": "kt-another-film",
@@ -62,8 +64,34 @@ def sample_movies():
             "source": "kinoteatr.ru",
             "url": "https://kinoteatr.ru/film/another-film/city/",
             "showtimes": [{"time": "18:00", "datetime_iso": "2026-03-03T18:00:00+03:00"}],
+            "raw_description": "Broad mainstream comedy sequel.",
         },
     ]
+
+
+def sample_taste_profile():
+    return {
+        "version": "1.2",
+        "likes": {
+            "directors": ["Test Director"],
+            "actors": ["Actor One"],
+            "genres": ["drama", "anime", "japanese anime"],
+            "keywords": ["character-driven", "psychological"],
+        },
+        "dislikes": {
+            "genres": ["horror", "slasher", "mainstream comedy"],
+            "keywords": ["blockbuster", "franchise", "sequel", "remake"],
+        },
+        "canon": [
+            {"director": "Test Director", "weight": 1.0},
+        ],
+        "thresholds": {
+            "must_see": 85,
+            "recommended": 60,
+            "maybe": 40,
+            "skip": 0,
+        },
+    }
 
 
 def sample_schedule_input():
@@ -83,6 +111,7 @@ def sample_schedule_input():
 def sample_analysis_result(agent_name="gemini"):
     movies = sample_movies()
     agent = {"name": agent_name, "supports_web_search": False}
+    rule_map = build_rule_map(movies, sample_taste_profile())
     analyses = [
         {
             "movie_id": "kt-test-movie",
@@ -101,7 +130,7 @@ def sample_analysis_result(agent_name="gemini"):
             "red_flags": ["comedy"],
         },
     ]
-    return merge(movies, analyses, agent)
+    return merge(movies, analyses, agent, rule_map, sample_taste_profile()["thresholds"], "1.2")
 
 
 # ── Port Validation ────────────────────────────────────────────────────
@@ -211,49 +240,173 @@ class TestMerge:
 
     def test_merge_exact_id(self):
         movies = sample_movies()
+        rule_map = build_rule_map(movies, sample_taste_profile())
         analyses = [{"movie_id": "kt-test-movie", "relevance_score": 85, "recommendation": "must_see"}]
         agent = {"name": "test", "supports_web_search": False}
-        result = merge(movies, analyses, agent)
+        result = merge(movies, analyses, agent, rule_map, sample_taste_profile()["thresholds"], "1.2")
         assert len(result["analyzed"]) == 1
         assert result["analyzed"][0]["movie"]["title"] == "Test Movie"
-        assert result["analyzed"][0]["relevance_score"] == 85
+        assert result["analyzed"][0]["relevance_score"] >= 85
         assert result["meta"]["agent"] == "test"
+        assert result["analyzed"][0]["rule_score"] >= 85
 
     def test_merge_fuzzy_id(self):
         movies = sample_movies()
+        rule_map = build_rule_map(movies, sample_taste_profile())
         # AI returns a longer ID — should fuzzy-match
         analyses = [{"movie_id": "kt-test-movie-extended", "relevance_score": 75, "recommendation": "recommended"}]
         agent = {"name": "test", "supports_web_search": False}
-        result = merge(movies, analyses, agent)
+        result = merge(movies, analyses, agent, rule_map, sample_taste_profile()["thresholds"], "1.2")
         assert result["analyzed"][0]["movie"]["title"] == "Test Movie"
 
     def test_merge_missing_id(self):
         movies = sample_movies()
+        rule_map = build_rule_map(movies, sample_taste_profile())
         analyses = [{"movie_id": "nonexistent-movie", "relevance_score": 50, "recommendation": "skip"}]
         agent = {"name": "test", "supports_web_search": False}
-        result = merge(movies, analyses, agent)
+        result = merge(movies, analyses, agent, rule_map, sample_taste_profile()["thresholds"], "1.2")
         assert result["analyzed"][0]["movie"]["title"] == "Unknown"
 
     def test_merge_preserves_meta(self):
         movies = sample_movies()
+        rule_map = build_rule_map(movies, sample_taste_profile())
         analyses = [{"movie_id": "kt-test-movie", "relevance_score": 90, "recommendation": "must_see"}]
         agent = {"name": "gemini", "supports_web_search": False}
-        result = merge(movies, analyses, agent)
+        result = merge(movies, analyses, agent, rule_map, sample_taste_profile()["thresholds"], "1.2")
         assert result["meta"]["analyzer"] == "cognize:gemini"
         assert "analyzed_at" in result["meta"]
+        assert result["meta"]["quality_policy"] == "rules_first_v1"
+        assert result["meta"]["taste_profile"] == "1.2"
 
     def test_merge_multiple_movies(self):
         movies = sample_movies()
+        rule_map = build_rule_map(movies, sample_taste_profile())
         analyses = [
             {"movie_id": "kt-test-movie", "relevance_score": 90, "recommendation": "must_see"},
             {"movie_id": "kt-another-film", "relevance_score": 30, "recommendation": "skip"},
         ]
         agent = {"name": "qwen", "supports_web_search": False}
-        result = merge(movies, analyses, agent)
+        result = merge(movies, analyses, agent, rule_map, sample_taste_profile()["thresholds"], "1.2")
         assert len(result["analyzed"]) == 2
         titles = [a["movie"]["title"] for a in result["analyzed"]]
         assert "Test Movie" in titles
         assert "Another Film" in titles
+
+
+class TestRuleScoring:
+    def test_build_rule_map_marks_anime_as_must_see(self):
+        movies = [
+            {
+                "id": "anime-1",
+                "title": "Anime Film",
+                "director": "",
+                "actors": [],
+                "genres": ["аниме", "фэнтези"],
+                "raw_description": "Japanese anime feature film.",
+            }
+        ]
+
+        rule_map = build_rule_map(movies, sample_taste_profile())
+        rule_info = rule_map["anime-1"]
+
+        assert rule_info["rule_score"] >= 90
+        assert rule_info["recommendation_floor"] == "must_see"
+        assert "аниме" in rule_info["key_rule_matches"]
+
+    def test_build_rule_map_marks_known_anime_creator_as_recommended(self):
+        movies = [
+            {
+                "id": "anime-creator-1",
+                "title": "Labyrinth",
+                "director": "Сё\u200cдзи Кавамо\u200cри",
+                "actors": [],
+                "genres": [],
+                "raw_description": (
+                    "Застенчивая старшеклассница Сиори Маэдзава попадает в таинственный мир "
+                    "внутри своего смартфона."
+                ),
+            }
+        ]
+
+        rule_map = build_rule_map(movies, sample_taste_profile())
+        rule_info = rule_map["anime-creator-1"]
+
+        assert rule_info["rule_score"] >= 62
+        assert rule_info["recommendation_floor"] == "recommended"
+        assert "аниме-автор: Shoji Kawamori" in rule_info["key_rule_matches"]
+
+    def test_bounded_merge_demotes_low_confidence_must_see(self):
+        movie = {
+            "id": "sparse-1",
+            "title": "Sparse Film",
+            "director": "",
+            "actors": [],
+            "genres": [],
+            "raw_description": "",
+            "source": "kinoteatr.ru",
+            "url": "",
+        }
+        thresholds = sample_taste_profile()["thresholds"]
+        rule_info = {
+            "rule_score": 58,
+            "recommendation_floor": None,
+            "recommendation_ceiling": None,
+            "key_rule_matches": [],
+            "key_rule_penalties": ["скудные метаданные"],
+            "decision_basis": ["quality:sparse_metadata"],
+            "metadata_confidence": 0.25,
+            "strong_positive": False,
+            "hard_negative": False,
+        }
+        analysis = {
+            "movie_id": "sparse-1",
+            "relevance_score": 97,
+            "recommendation": "must_see",
+            "reasoning": "Model overreached.",
+            "confidence": 0.55,
+        }
+
+        merged = bounded_merge_analysis(movie, analysis, rule_info, thresholds)
+
+        assert merged["review_required"] is True
+        assert merged["recommendation"] != "must_see"
+        assert merged["confidence"] < 0.78
+
+    def test_bounded_merge_preserves_anime_creator_floor(self):
+        movie = {
+            "id": "anime-creator-1",
+            "title": "Labyrinth",
+            "director": "Сёдзи Кавамори",
+            "actors": [],
+            "genres": [],
+            "raw_description": "Таинственный цифровой мир и японский режиссёр-аниматор.",
+            "source": "kinoteatr.ru",
+            "url": "",
+        }
+        thresholds = sample_taste_profile()["thresholds"]
+        rule_info = {
+            "rule_score": 62,
+            "recommendation_floor": "recommended",
+            "recommendation_ceiling": None,
+            "key_rule_matches": ["аниме-автор: Shoji Kawamori"],
+            "key_rule_penalties": [],
+            "decision_basis": ["rule:anime_creator"],
+            "metadata_confidence": 0.57,
+            "strong_positive": False,
+            "hard_negative": False,
+        }
+        analysis = {
+            "movie_id": "anime-creator-1",
+            "relevance_score": 30,
+            "recommendation": "maybe",
+            "reasoning": "Model was too conservative.",
+            "confidence": 0.52,
+        }
+
+        merged = bounded_merge_analysis(movie, analysis, rule_info, thresholds)
+
+        assert merged["recommendation"] == "recommended"
+        assert merged["relevance_score"] >= thresholds["recommended"]
 
 
 # ── Agent Registry ─────────────────────────────────────────────────────

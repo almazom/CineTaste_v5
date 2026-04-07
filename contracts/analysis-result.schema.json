@@ -52,7 +52,7 @@
               },
               "available_days": {
                 "type": "array",
-                "description": "List of dates (YYYY-MM-DD) when this movie is playing. Present when fetched in week mode.",
+                "description": "List of dates (YYYY-MM-DD) when this movie is playing. Present when fetched in aggregated horizon modes such as week or month.",
                 "items": {
                   "type": "string",
                   "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
@@ -98,6 +98,25 @@
             "type": "array",
             "items": { "type": "string" },
             "description": "What didn't match"
+          },
+          "rule_score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Deterministic rules-first baseline score before bounded LLM refinement"
+          },
+          "llm_delta": {
+            "type": "number",
+            "description": "Bounded LLM score adjustment applied on top of rule_score"
+          },
+          "review_required": {
+            "type": "boolean",
+            "description": "True when the movie scored well enough to inspect manually due to low confidence or rule/LLM tension"
+          },
+          "decision_basis": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Compact decision trail explaining the deterministic and LLM quality gates that shaped the final verdict"
           }
         },
         "additionalProperties": false
@@ -111,7 +130,9 @@
         "analyzed_at": { "type": "string", "format": "date-time" },
         "taste_profile": { "type": "string", "description": "Taste profile version" },
         "agent": { "type": "string", "description": "Agent name (kimi, pi, dry_run)" },
-        "web_search_used": { "type": "boolean", "description": "Whether web search was used" }
+        "web_search_used": { "type": "boolean", "description": "Whether web search was used" },
+        "quality_policy": { "type": "string", "description": "Rules/merge policy label used for this analysis run" },
+        "review_required_count": { "type": "integer", "minimum": 0, "description": "How many analyzed items were flagged for manual review due to low confidence or rule tension" }
       },
       "additionalProperties": false
     }

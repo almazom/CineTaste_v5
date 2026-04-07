@@ -156,7 +156,7 @@ class TestCliSuccessPaths:
         result = run_tool("ct-cognize", ["--list-agents"])
         assert result.returncode == 0, result.stderr
         listed = {line.strip() for line in result.stdout.splitlines() if line.strip()}
-        assert {"kimi", "gemini", "qwen", "pi"}.issubset(listed)
+        assert {"qwen", "pi", "claude", "qodercli", "kimi_wp", "codex_wp"}.issubset(listed)
 
     def test_ct_schedule_dry_run_emits_movie_schedule_contract(self, tmp_path: Path):
         sample = ROOT / "contracts" / "examples" / "movie-batch.sample.json"

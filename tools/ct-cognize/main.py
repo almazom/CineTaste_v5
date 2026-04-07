@@ -26,10 +26,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).parent))
 sys.path.insert(0, str(ROOT / "tools" / "_shared"))
 from port import enforce_input, enforce_output  # noqa: E402
+from rule_engine import (  # noqa: E402
+    bounded_merge_analysis,
+    build_rule_map,
+    build_rule_signals_payload,
+)
 
 # ── Exit Taxonomy ───────────────────────────────────────────────────────
 
@@ -370,18 +377,17 @@ INSTRUCTION = """Ты — кинокритик с утонченным вкус�
 ЗАДАЧА:
 1. Прочитай файл taste.yaml — это вкусы и предпочтения пользователя.
 2. Прочитай файл movies.json — это полный список доступных фильмов со всеми деталями.
-3. Проанализируй КАЖДЫЙ фильм из списка: насколько он соответствует вкусу пользователя.
+3. Прочитай файл rule_signals.json — это детерминированные сигналы, границы и baseline-score.
+4. Проанализируй КАЖДЫЙ фильм из списка: насколько он соответствует вкусу пользователя.
 
 ПРАВИЛА:
 - Будь СТРОГ! Большинство фильмов — skip
-- Канонический режиссёр (из taste.yaml canon) = автоматический must_see (score ≥ 90)
-- Любимый актёр (из taste.yaml actors) = бонус к оценке (+15)
-- Аниме = автоматический must_see
+- rule_signals.json — это источник bounded-оценки: recommendation_floor нельзя опускать, recommendation_ceiling нельзя превышать
+- rule_score — базовая детерминированная оценка; если нет сильных новых оснований, держись близко к ней
+- При sparse metadata НЕ поднимай фильм в must_see без явных подтверждений из режиссёра/актёров/жанров/описания
 - Исследуй каждый фильм по его описанию, режиссёру, актёрам, жанрам
-- Сильные soft-сигналы из taste.yaml (любимые режиссёры, европейское indie/фестивальное кино, character-driven, psychological/social drama) должны заметно повышать оценку
-- Если метаданные неполные (например, пустые genres или короткое описание), НЕ считай это само по себе red flag; опирайся на режиссёра, актёров и другие доступные сигналы
-- При нескольких сильных совпадениях и отсутствии явных red_flags можно ставить recommended даже при sparse metadata
 - НЕ угадывай только по названию
+- Используй ТОЧНЫЙ movie_id из movies.json
 
 ФОРМАТ ОТВЕТА — ТОЛЬКО валидный JSON-массив, БЕЗ markdown, БЕЗ объяснений:
 [
@@ -391,7 +397,9 @@ INSTRUCTION = """Ты — кинокритик с утонченным вкус�
     "recommendation": "must_see|recommended|maybe|skip",
     "reasoning": "Краткое объяснение 1-2 предложения",
     "key_matches": ["совпадение с профилем"],
-    "red_flags": ["проблема"]
+    "red_flags": ["проблема"],
+    "confidence": 0.74,
+    "decision_basis": ["что было решающим"]
   }
 ]"""
 
@@ -413,6 +421,7 @@ def call_agent(agent: dict, workdir: str) -> str:
     mode = agent["file_mode"]
     movies_path = os.path.join(workdir, "movies.json")
     taste_path = os.path.join(workdir, "taste.yaml")
+    rules_path = os.path.join(workdir, "rule_signals.json")
     started = time.perf_counter()
     model_info = _model_suffix(agent.get("run_args", []))
 
@@ -431,7 +440,7 @@ def call_agent(agent: dict, workdir: str) -> str:
 
         elif mode == "at_file":
             result = subprocess.run(
-                cmd_base + [f"@{taste_path}", f"@{movies_path}"],
+                cmd_base + [f"@{taste_path}", f"@{movies_path}", f"@{rules_path}"],
                 input=INSTRUCTION,
                 capture_output=True,
                 text=True,
@@ -541,47 +550,38 @@ def _find_movie(movie_id: str, movie_map: dict) -> dict:
     return {}
 
 
-def merge(movies: list, analyses: list, agent: dict) -> dict:
+def merge(
+    movies: list,
+    analyses: list,
+    agent: dict,
+    rule_map: dict[str, dict[str, Any]],
+    thresholds: dict[str, int],
+    taste_version: str,
+) -> dict:
     """Merge AI analyses with original movie data into analysis-result contract."""
     movie_map = {movie["id"]: movie for movie in movies}
     analyzed = []
+    review_required_count = 0
 
     for analysis in analyses:
         movie_id = analysis.get("movie_id")
         movie = _find_movie(movie_id, movie_map)
-
-        analyzed.append({
-            "movie": {
-                "id": movie.get("id", movie_id),
-                "title": movie.get("title", "Unknown"),
-                "original_title": movie.get("original_title", ""),
-                "director": movie.get("director", ""),
-                "actors": movie.get("actors", []),
-                "genres": movie.get("genres", []),
-                "year": movie.get("year"),
-                "duration_min": movie.get("duration_min"),
-                "source": movie.get("source", ""),
-                "url": movie.get("url", ""),
-                "showtimes": movie.get("showtimes", []),
-                "available_days": movie.get("available_days", []),
-                "available_days_accurate": movie.get("available_days_accurate", []),
-            },
-            "relevance_score": analysis.get("relevance_score", 50),
-            "confidence": 0.8,
-            "recommendation": analysis.get("recommendation", "maybe"),
-            "reasoning": analysis.get("reasoning", ""),
-            "key_matches": analysis.get("key_matches", []),
-            "red_flags": analysis.get("red_flags", []),
-        })
+        rule_info = rule_map.get(movie.get("id", movie_id), {})
+        merged_item = bounded_merge_analysis(movie, analysis, rule_info, thresholds)
+        if merged_item["review_required"]:
+            review_required_count += 1
+        analyzed.append(merged_item)
 
     return {
         "analyzed": analyzed,
         "meta": {
             "analyzer": f"cognize:{agent['name']}",
             "analyzed_at": datetime.now(timezone.utc).isoformat(),
-            "taste_profile": "1.0",
+            "taste_profile": taste_version,
             "agent": agent["name"],
             "web_search_used": agent.get("supports_web_search", False),
+            "quality_policy": "rules_first_v1",
+            "review_required_count": review_required_count,
         },
     }
 
@@ -641,6 +641,23 @@ def _load_schedule_payload(input_path: str) -> dict:
     return payload
 
 
+def _load_taste_payload(taste_path: str) -> dict[str, Any]:
+    try:
+        raw = Path(taste_path).read_text(encoding="utf-8")
+    except OSError as exc:
+        raise PathError(f"Cannot read taste profile '{taste_path}': {exc}") from exc
+
+    try:
+        payload = yaml.safe_load(raw) or {}
+    except yaml.YAMLError as exc:
+        raise ContractError(f"Invalid YAML in taste profile '{taste_path}': {exc}") from exc
+
+    if not isinstance(payload, dict):
+        raise ContractError("Taste profile YAML must decode to an object")
+
+    return payload
+
+
 def _validate_fs_paths(input_path: str, taste_path: str, output_path: str) -> None:
     if input_path != "-" and not Path(input_path).is_file():
         raise PathError(f"input file not found: {input_path}")
@@ -695,25 +712,40 @@ def cognize(
         payload = _load_schedule_payload(str(schedule_input))
 
     movies = payload.get("movies", [])
+    taste_payload = _load_taste_payload(taste_path)
+    thresholds = {
+        "must_see": int((taste_payload.get("thresholds") or {}).get("must_see", 85)),
+        "recommended": int((taste_payload.get("thresholds") or {}).get("recommended", 60)),
+        "maybe": int((taste_payload.get("thresholds") or {}).get("maybe", 40)),
+        "skip": int((taste_payload.get("thresholds") or {}).get("skip", 0)),
+    }
+    taste_version = str(taste_payload.get("version", "unknown"))
+    rule_map = build_rule_map(movies, taste_payload)
 
     agents = select_agent_chain(agent_name, custom_agents)
     strict_single = custom_agents is None and agent_name != "auto"
 
     workdir = tempfile.mkdtemp(prefix="ct-cognize-")
     try:
-        with open(os.path.join(workdir, "movies.json"), "w", encoding="utf-8") as handle:
-            json.dump({"movies": movies}, handle, ensure_ascii=False, indent=2)
-        try:
-            shutil.copy2(taste_path, os.path.join(workdir, "taste.yaml"))
-        except OSError as exc:
-            raise PathError(f"Cannot read taste profile '{taste_path}': {exc}") from exc
+        Path(os.path.join(workdir, "movies.json")).write_text(
+            json.dumps({"movies": movies}, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        Path(os.path.join(workdir, "taste.yaml")).write_text(
+            Path(taste_path).read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        Path(os.path.join(workdir, "rule_signals.json")).write_text(
+            json.dumps(build_rule_signals_payload(movies, rule_map), ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
 
         last_error: Exception | None = None
         for idx, agent in enumerate(agents):
             try:
                 response = call_agent(agent, workdir)
                 analyses = parse_response(response)
-                return merge(movies, analyses, agent)
+                return merge(movies, analyses, agent, rule_map, thresholds, taste_version)
             except (AgentExecutionError, RuntimeError) as error:
                 last_error = AgentExecutionError(str(error))
                 if strict_single:

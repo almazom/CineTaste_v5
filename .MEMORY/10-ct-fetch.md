@@ -47,10 +47,12 @@ Important fields in `movie-batch`:
 - `meta.mode=week|month` and `meta.days_fetched` for aggregated horizons
 - `available_days`: aggregated play dates discovered during week/month fetch
 - `available_days_accurate`: detail-page `data-dates` values and the better source of truth when they disagree
+- detail-page enrichment now also attempts to recover clean `director`, `raw_description`, `duration_min`, `year`, and schema `genres`
 
 ## Reliability Notes
 
 - The adapter normalizes the env-provided listing URL before adding the `when` query, so stale `?when=...` fragments in `.env` do not corrupt later requests.
+- Detail pages sometimes include zero-width formatting characters inside names; `ct-fetch` strips those before saving metadata so downstream matching stays stable.
 - Transient upstream responses such as `502`, `503`, `504`, `429`, and network timeouts are retried with short backoff before the command exits with source-unavailable status.
 - If `ddos-guard` is returning a stable `502` for both listing and detail pages, that is an upstream outage and not something `ct-fetch` can fully solve on its own.
 - `./run` may still continue in degraded mode after a `ct-fetch` exit `69` by reusing the newest cached `artifacts/movies.json` for the same city and forcing `ct-schedule --best-effort`; disable that with `CT_FETCH_CACHE_FALLBACK=0` if you need strict failure semantics.
@@ -65,7 +67,7 @@ Important fields in `movie-batch`:
 ## Common Gotchas
 
 - Aggregated output can include movies that are not actually playing today.
-- `raw_description` may be sparse; fetch is a discovery stage, not a deep metadata stage.
+- `raw_description` can still be sparse when a detail page itself is sparse or temporarily broken, but the fetcher now prefers the detail-page synopsis over the listing stub whenever it exists.
 - If a title exists only as an advance sale, the week/month batch may surface it while `available_days_accurate` points to a later exact date.
 
 ## Related Cards

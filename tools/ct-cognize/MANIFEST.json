@@ -2,13 +2,13 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "ct-cognize/MANIFEST.json",
   "title": "ct-cognize Tool Manifest",
-  "version": "1.2.0",
+  "version": "1.3.0",
 
   "identity": {
     "name": "ct-cognize",
     "verb": "cognize",
     "position": 3,
-    "description": "Human-level cognitive analysis — AI reads movie and taste files directly",
+    "description": "Rules-first cognitive analysis — deterministic taste scoring plus bounded AI refinement",
     "stateless": true
   },
 
@@ -104,8 +104,8 @@
   },
 
   "design": {
-    "philosophy": "Human-level perception: agent reads two files (movies + taste) and thinks about each movie, just like a person would.",
-    "approach": "Validate movie-schedule input contract first, write movies.json and taste.yaml to a temp workdir, run preflight probes to pick ready agents (auto race or user-defined ordered chain), including wrapper-backed agents such as qodercli, kimi_wp, and codex_wp, launch agent subprocesses in CI-safe non-interactive mode, parse JSON response, and fallback to remaining ready agents on runtime failure."
+    "philosophy": "Rules-first perception: deterministic taste scoring provides stable floors, ceilings, and confidence signals before the LLM refines each movie.",
+    "approach": "Validate movie-schedule input contract first, compile deterministic taste rules, write movies.json, taste.yaml, and rule_signals.json to a temp workdir, run preflight probes to pick ready agents (auto race or user-defined ordered chain), launch agent subprocesses in CI-safe non-interactive mode, parse JSON response, then merge it back through bounded rules-first quality gates before enforcing analysis-result."
   },
 
   "adapters": {

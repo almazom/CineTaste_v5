@@ -161,8 +161,15 @@ def build_filtered_item(item: dict, recommendation: str, score: int) -> dict:
             "available_days_accurate": movie.get("available_days_accurate", []),
         },
         "relevance_score": score,
+        "confidence": item.get("confidence"),
         "recommendation": recommendation,
-        "reasoning": item.get("reasoning", "")
+        "reasoning": item.get("reasoning", ""),
+        "key_matches": item.get("key_matches", []),
+        "red_flags": item.get("red_flags", []),
+        "rule_score": item.get("rule_score"),
+        "llm_delta": item.get("llm_delta"),
+        "review_required": item.get("review_required", False),
+        "decision_basis": item.get("decision_basis", []),
     }
 
 
@@ -285,4 +292,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
