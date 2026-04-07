@@ -22,6 +22,7 @@ from main import (
     AGENTS,
     AGENT_NAMES,
     INSTRUCTION,
+    call_agent,
     main as cli_main,
     _run_preflight,
     parse_agent_list,
@@ -121,13 +122,13 @@ class TestPortValidation:
 
 
 class TestAgentConfig:
-    def test_pi_runtime_pins_glm5(self):
+    def test_pi_runtime_pins_glm5_turbo(self):
         pi = next(agent for agent in AGENTS if agent["name"] == "pi")
 
         assert "--provider" in pi["run_args"]
         assert "zai" in pi["run_args"]
         assert "--model" in pi["run_args"]
-        assert "glm-5" in pi["run_args"]
+        assert "glm-5-turbo" in pi["run_args"]
 
     def test_claude_runtime_uses_permission_mode(self):
         claude = next(agent for agent in AGENTS if agent["name"] == "claude")
@@ -271,7 +272,7 @@ class TestAgentRegistry:
             assert not missing, f"Agent {agent.get('name', '?')} missing fields: {missing}"
 
     def test_file_modes_valid(self):
-        valid_modes = {"cwd", "at_file", "stdin"}
+        valid_modes = {"cwd", "at_file", "stdin", "codex_exec"}
         for agent in AGENTS:
             assert agent["file_mode"] in valid_modes, f"{agent['name']} has invalid file_mode: {agent['file_mode']}"
 
@@ -364,6 +365,35 @@ class TestAgentSelectionAndFallback:
 
         result = _run_preflight(agent)
         assert result["ok"] is False
+
+    def test_preflight_uses_agent_specific_prompt_and_tokens(self, monkeypatch):
+        agent = {
+            "name": "codex_wp",
+            "cmd": "codex_wp",
+            "preflight_args": ["exec", "--skip-git-repo-check"],
+            "preflight_prompt": "1+2=? Reply with exactly one token: three",
+            "preflight_ok_tokens": ["three", "3"],
+            "preflight_timeout": 5,
+        }
+        recorded = {}
+
+        def fake_run(args, **kwargs):
+            recorded["args"] = args
+            return SimpleNamespace(returncode=0, stdout="three", stderr="")
+
+        monkeypatch.setattr("main.shutil.which", lambda _: "/usr/bin/codex_wp")
+        monkeypatch.setattr("main.subprocess.run", fake_run)
+
+        result = _run_preflight(agent)
+
+        assert result["ok"] is True
+        assert result["reply"] == "three"
+        assert recorded["args"] == [
+            "codex_wp",
+            "exec",
+            "--skip-git-repo-check",
+            "1+2=? Reply with exactly one token: three",
+        ]
 
 
 # ── CLI ────────────────────────────────────────────────────────────────
@@ -522,6 +552,35 @@ class TestCognizeIntegration:
         result = cognize(str(movies_file), str(taste_file), agent_name="auto")
         assert result["meta"]["agent"] == "fallback"
         assert len(result["analyzed"]) == 1
+
+    def test_call_agent_codex_exec_uses_positional_prompt(self, monkeypatch, tmp_path):
+        workdir = tmp_path / "workdir"
+        workdir.mkdir()
+        (workdir / "movies.json").write_text(json.dumps({"movies": sample_movies()}), encoding="utf-8")
+        (workdir / "taste.yaml").write_text("likes: {}\n", encoding="utf-8")
+
+        agent = {
+            "name": "codex_wp",
+            "cmd": "codex_wp",
+            "run_args": ["exec", "--skip-git-repo-check"],
+            "timeout": 10,
+            "file_mode": "codex_exec",
+        }
+        recorded = {}
+
+        def fake_run(args, **kwargs):
+            recorded["args"] = args
+            recorded["cwd"] = kwargs["cwd"]
+            return SimpleNamespace(returncode=0, stdout='[{"movie_id":"kt-test-movie"}]', stderr="")
+
+        monkeypatch.setattr("main.subprocess.run", fake_run)
+
+        response = call_agent(agent, str(workdir))
+
+        assert response == '[{"movie_id":"kt-test-movie"}]'
+        assert recorded["cwd"] == str(workdir)
+        assert recorded["args"][:3] == ["codex_wp", "exec", "--skip-git-repo-check"]
+        assert recorded["args"][-1] == INSTRUCTION
 
     def test_cognize_rejects_raw_movie_array(self, monkeypatch, tmp_path):
         from main import cognize

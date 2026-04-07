@@ -12,7 +12,7 @@ FLOW_FILE="$ROOT/flows/latest/FLOW.md"
 CITY="naberezhnie-chelni"
 CITY_DISPLAY="Набережные Челны"
 APP_VERSION="unknown"
-WHEN="now"
+WHEN="month"
 VERBOSE=false
 DRY_RUN=false
 RESEND_FILE=""
@@ -35,6 +35,10 @@ SCHEDULED_WITH="cached"
 ANALYZED_COUNT="cached"
 FILTERED_COUNT=0
 MSG_LINES=0
+FETCH_CACHE_FALLBACK_USED=false
+FETCH_CACHE_SOURCE=""
+FETCH_CACHE_SOURCE_DATE=""
+CT_SCHEDULE_EXTRA_FLAGS=""
 
 TMPDIR="$(mktemp -d)"
 SSOT_JSON="$TMPDIR/ssot.json"
@@ -227,6 +231,104 @@ log() {
     fi
 }
 
+is_truthy() {
+    case "${1,,}" in
+        1|true|yes|on) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+resolve_requested_date() {
+    case "${WHEN}" in
+        ""|now|week) date +%F ;;
+        *) printf '%s\n' "$WHEN" ;;
+    esac
+}
+
+restore_cached_movies_batch() {
+    is_truthy "${CT_FETCH_CACHE_FALLBACK:-1}" || return 1
+
+    local target_date
+    local cache_info
+    target_date="$(resolve_requested_date)"
+
+    cache_info="$(
+        python3 - "$ROOT" "$RUN_DIR" "$CITY" "$WHEN" "$target_date" "${CT_FETCH_CACHE_FALLBACK_MAX_AGE_DAYS:-3}" "$TMPDIR/movies.json" <<'PY'
+import json
+import sys
+from datetime import date, datetime, timezone
+from pathlib import Path
+
+root = Path(sys.argv[1])
+current_run_dir = Path(sys.argv[2]).resolve() if sys.argv[2] else None
+city = sys.argv[3]
+when_arg = sys.argv[4]
+target_date = date.fromisoformat(sys.argv[5])
+max_age_days = int(sys.argv[6])
+output_path = Path(sys.argv[7])
+
+runs_dir = root / "runs"
+candidates = []
+
+for path in runs_dir.rglob("artifacts/movies.json"):
+    if "latest" in path.parts:
+        continue
+    resolved = path.resolve()
+    if current_run_dir and resolved.is_relative_to(current_run_dir):
+        continue
+
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        continue
+
+    meta = payload.get("meta") or {}
+    movies = payload.get("movies")
+    if meta.get("city") != city or not isinstance(movies, list) or not movies:
+        continue
+
+    source_date_raw = str(meta.get("date", "")).strip()
+    try:
+        source_date = date.fromisoformat(source_date_raw)
+    except ValueError:
+        continue
+
+    age_days = (target_date - source_date).days
+    if age_days < 0 or age_days > max_age_days:
+        continue
+
+    candidates.append((resolved.stat().st_mtime, resolved, payload, source_date_raw))
+
+if not candidates:
+    raise SystemExit("no suitable cached movies.json artifact found")
+
+candidates.sort(key=lambda item: item[0], reverse=True)
+_, source_path, payload, source_date_raw = candidates[0]
+
+payload["meta"]["date"] = target_date.isoformat()
+payload["meta"]["fetched_at"] = datetime.now(timezone.utc).isoformat()
+payload["meta"]["source_url"] = f"https://kinoteatr.ru/kinoafisha/{city}/?when={when_arg}"
+
+output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+print(f"{source_path}\t{source_date_raw}\t{len(payload['movies'])}")
+PY
+    )" || return 1
+
+    IFS=$'\t' read -r FETCH_CACHE_SOURCE FETCH_CACHE_SOURCE_DATE MOVIE_COUNT <<< "$cache_info"
+    FETCH_CACHE_FALLBACK_USED=true
+    CT_SCHEDULE_EXTRA_FLAGS="--best-effort"
+    export CT_SCHEDULE_EXTRA_FLAGS
+    STAGE_STATUS["ct-fetch"]="fallback"
+    echo "$(date -Iseconds) | fallback | ct-fetch | source=${FETCH_CACHE_SOURCE} | source_date=${FETCH_CACHE_SOURCE_DATE} | target_date=${target_date}" >> "$RUN_DIR/logs/stages.log"
+    warn "ct-fetch unavailable; reusing cached batch from ${FETCH_CACHE_SOURCE} (meta.date=${FETCH_CACHE_SOURCE_DATE})"
+    warn "Continuing with ct-schedule in --best-effort mode for ${target_date}"
+    return 0
+}
+
+trigger_failure() {
+    return "${1:-1}"
+}
+
 cleanup() {
     if [[ -d "${TMPDIR:-}" ]]; then
         rm -rf "$TMPDIR"
@@ -359,8 +461,9 @@ Usage: ./run [OPTIONS]
 CineTaste v5 — Cinema recommendations to Telegram
 
 Options:
-  --when DATE       Date filter: 'now' or YYYY-MM-DD (default: now)
+  --when DATE       Date filter: 'now', 'week', 'month', or YYYY-MM-DD (default: month)
   --week            Fetch movies for the next 7 days (shorthand for --when week)
+  --month           Fetch movies for the next 30 days (shorthand for --when month)
   --input FILE      Skip fetch/analyze, use cached analysis-result JSON
   --resend FILE     Resend existing message file
   --dry-run, -n     Execute full pipeline but skip live send (uses t2me --dry-run)
@@ -372,8 +475,9 @@ Options:
   --help, -h        Show help
 
 Examples:
-  ./run                           # Full production pipeline
+  ./run                           # Full production pipeline (today + next 7 + next 30 days)
   ./run --week                    # Fetch and analyze movies for the week
+  ./run --month                   # Fetch and analyze movies for the next 30 days
   ./run --dry-run                 # Dry-run (no Telegram send)
   ./run --list                    # Show recent runs
   ./run --rerun 2026-03-10T065504Z  # Rerun specific run
@@ -754,6 +858,10 @@ while [[ $# -gt 0 ]]; do
             WHEN="week"
             shift
             ;;
+        --month)
+            WHEN="month"
+            shift
+            ;;
         --input)
             [[ $# -ge 2 ]] || die "--input requires a value"
             INPUT_FILE="$2"
@@ -814,6 +922,7 @@ fi
 
 load_protocol_defaults
 export ROOT TMPDIR CITY CITY_DISPLAY WHEN
+export CT_SCHEDULE_EXTRA_FLAGS
 
 # Initialize run logging (unless resending)
 if [[ -z "$RESEND_FILE" && -z "$RERUN_ID" ]]; then
@@ -876,7 +985,16 @@ for idx in "${!STAGES[@]}"; do
         continue
     fi
 
-    run_stage "$stage" "$current" "$TOTAL_STAGES"
+    stage_exit=0
+    run_stage "$stage" "$current" "$TOTAL_STAGES" || stage_exit=$?
+    if [[ "$stage_exit" -ne 0 ]]; then
+        if [[ "$stage" == "ct-fetch" && "$stage_exit" -eq 69 ]] && restore_cached_movies_batch; then
+            stage_exit=0
+        fi
+    fi
+    if [[ "$stage_exit" -ne 0 ]]; then
+        trigger_failure "$stage_exit"
+    fi
 
     case "$stage" in
         ct-fetch)

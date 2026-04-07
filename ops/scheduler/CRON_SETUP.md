@@ -33,6 +33,9 @@ Environment variables in `.env` or exported before install:
 | `CINETASTE_SCHEDULE_WHEN` | `now` | Date filter for movies |
 | `CINETASTE_SCHEDULER_LOG` | `logs/scheduler.log` | Log file path |
 | `CINETASTE_SCHEDULER_STATUS_LOG` | `logs/scheduler-status.log` | Status log path |
+| `CINETASTE_SCHEDULER_MAX_ATTEMPTS` | `3` | Maximum whole-pipeline attempts for retryable failures |
+| `CINETASTE_SCHEDULER_RETRY_DELAY_SECONDS` | `180` | Delay between retryable attempts |
+| `CINETASTE_SCHEDULER_RETRY_EXIT_CODES` | `69` | Comma-separated pipeline exit codes that should be retried |
 
 ## Cron Entry Format
 
@@ -49,7 +52,8 @@ MAILTO=""
 2. **Logging**: All output to `logs/scheduler.log`
 3. **Status tracking**: `logs/scheduler-status.log` for monitoring
 4. **Env loading**: Auto-sources `.env` file
-5. **Safe cleanup**: Removes old CineTaste entries before adding new
+5. **Retry loop**: Retries source-unavailable pipeline failures before giving up
+6. **Safe cleanup**: Removes old CineTaste entries before adding new
 
 ## Checking Status
 

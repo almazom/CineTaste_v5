@@ -153,8 +153,8 @@ PREFLIGHT_OK_TOKENS = set(CONFIG["preflight"]["ok_tokens"])
 
 
 def _extract_alpha_tokens(text: str) -> list[str]:
-    """Extract lowercase alpha tokens from output text."""
-    return re.findall(r"[a-zа-яё]+", text.lower())
+    """Extract lowercase text tokens from output text."""
+    return re.findall(r"[a-zа-яё0-9]+", text.lower())
 
 
 def _compact_output(stdout: str, stderr: str, limit: int = 120) -> str:
@@ -179,11 +179,26 @@ def _model_suffix(args: list[str]) -> str:
     return f" model={model}" if model else ""
 
 
+def _preflight_prompt_for(agent: dict) -> str:
+    """Resolve the prompt used for an agent preflight probe."""
+    return str(agent.get("preflight_prompt", PREFLIGHT_PROMPT))
+
+
+def _preflight_ok_tokens_for(agent: dict) -> set[str]:
+    """Resolve the accepted success tokens for an agent preflight probe."""
+    tokens = agent.get("preflight_ok_tokens")
+    if tokens:
+        return {str(token).lower() for token in tokens}
+    return PREFLIGHT_OK_TOKENS
+
+
 def _run_preflight(agent: dict) -> dict:
     """Run one agent preflight probe and return structured result."""
     cmd = agent["cmd"]
     preflight_timeout = agent.get("preflight_timeout", CONFIG["preflight"]["timeout_default"])
     started = time.perf_counter()
+    preflight_prompt = _preflight_prompt_for(agent)
+    ok_tokens = _preflight_ok_tokens_for(agent)
 
     if not shutil.which(cmd):
         return {
@@ -196,7 +211,7 @@ def _run_preflight(agent: dict) -> dict:
 
     try:
         result = subprocess.run(
-            [cmd] + agent["preflight_args"] + [PREFLIGHT_PROMPT],
+            [cmd] + agent["preflight_args"] + [preflight_prompt],
             capture_output=True,
             text=True,
             timeout=preflight_timeout,
@@ -223,11 +238,11 @@ def _run_preflight(agent: dict) -> dict:
     preflight_tokens = _extract_alpha_tokens(
         "\n".join(filter(None, (result.stdout, result.stderr)))
     )
-    token = next((t for t in preflight_tokens if t in PREFLIGHT_OK_TOKENS), "")
+    token = next((t for t in preflight_tokens if t in ok_tokens), "")
     if not token and preflight_tokens:
         token = preflight_tokens[-1]
 
-    ok = result.returncode == 0 and any(t in PREFLIGHT_OK_TOKENS for t in preflight_tokens)
+    ok = result.returncode == 0 and any(t in ok_tokens for t in preflight_tokens)
     error = "" if ok else f"got: {_compact_output(result.stdout, result.stderr)}"
 
     return {
@@ -421,6 +436,16 @@ def call_agent(agent: dict, workdir: str) -> str:
                 capture_output=True,
                 text=True,
                 timeout=timeout,
+                env=_subprocess_env(),
+            )
+
+        elif mode == "codex_exec":
+            result = subprocess.run(
+                cmd_base + [INSTRUCTION],
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                cwd=workdir,
                 env=_subprocess_env(),
             )
 
@@ -723,7 +748,7 @@ def _build_parser() -> argparse.ArgumentParser:
   ct-cognize --input scheduled.json --taste taste/profile.yaml --agent pi
 
   # Ordered fallback chain for shell workflows
-  ct-cognize --input scheduled.json --taste taste/profile.yaml --agents pi,qwen,gemini
+  ct-cognize --input scheduled.json --taste taste/profile.yaml --agents pi,codex_wp,qodercli
 
   # Print available agents
   ct-cognize --list-agents
@@ -766,7 +791,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     group.add_argument(
         "--agents",
-        help="Comma-separated ordered fallback chain (example: pi,qwen,gemini)",
+        help="Comma-separated ordered fallback chain (example: pi,codex_wp,qodercli)",
     )
 
     verbosity = parser.add_mutually_exclusive_group()

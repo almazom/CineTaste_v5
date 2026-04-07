@@ -58,7 +58,7 @@
         "--provider",
         "zai",
         "--model",
-        "glm-5",
+        "glm-5-turbo",
         "--thinking",
         "off",
         "--no-tools",
@@ -72,7 +72,7 @@
         "--provider",
         "zai",
         "--model",
-        "glm-5"
+        "glm-5-turbo"
       ],
       "timeout": 600,
       "preflight_timeout": 45,
@@ -100,6 +100,41 @@
       "preflight_timeout": 45,
       "supports_web_search": false,
       "file_mode": "cwd",
+      "enabled": true
+    },
+    {
+      "name": "qodercli",
+      "cmd": "qodercli",
+      "preflight_args": ["-q", "-p"],
+      "run_args": ["-q", "--dangerously-skip-permissions"],
+      "timeout": 600,
+      "preflight_timeout": 45,
+      "supports_web_search": false,
+      "file_mode": "cwd",
+      "enabled": true
+    },
+    {
+      "name": "kimi_wp",
+      "cmd": "kimi_wp",
+      "preflight_args": ["-s", "read-only", "-p"],
+      "run_args": ["-s", "read-only"],
+      "timeout": 600,
+      "preflight_timeout": 45,
+      "supports_web_search": false,
+      "file_mode": "cwd",
+      "enabled": true
+    },
+    {
+      "name": "codex_wp",
+      "cmd": "codex_wp",
+      "preflight_args": ["exec", "--skip-git-repo-check"],
+      "preflight_prompt": "1+2=? Reply with exactly one token: three",
+      "preflight_ok_tokens": ["three", "3"],
+      "run_args": ["exec", "--skip-git-repo-check"],
+      "timeout": 600,
+      "preflight_timeout": 90,
+      "supports_web_search": false,
+      "file_mode": "codex_exec",
       "enabled": true
     }
   ]

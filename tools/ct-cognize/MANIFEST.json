@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "ct-cognize/MANIFEST.json",
   "title": "ct-cognize Tool Manifest",
-  "version": "1.1.0",
+  "version": "1.2.0",
 
   "identity": {
     "name": "ct-cognize",
@@ -18,7 +18,7 @@
   },
 
   "cli": {
-    "usage": "ct-cognize <movie-schedule.json|-> <taste.yaml> | ct-cognize --input <FILE|-> --taste <FILE> [--agent <auto|kimi|gemini|qwen|pi> | --agents <LIST>] [--output <FILE>] [--trace-id <ID>] [--timings] [--quiet|--verbose] [--list-agents] [--version]",
+    "usage": "ct-cognize <movie-schedule.json|-> <taste.yaml> | ct-cognize --input <FILE|-> --taste <FILE> [--agent <auto|qwen|pi|claude|qodercli|kimi_wp|codex_wp> | --agents <LIST>] [--output <FILE>] [--trace-id <ID>] [--timings] [--quiet|--verbose] [--list-agents] [--version]",
     "flags": [
       {
         "name": "--input",
@@ -52,7 +52,7 @@
         "name": "--agents",
         "type": "string",
         "required": false,
-        "description": "Comma-separated ordered fallback chain, e.g. pi,qwen,gemini"
+        "description": "Comma-separated ordered fallback chain, e.g. pi,codex_wp,qodercli"
       },
       {
         "name": "--list-agents",
@@ -105,22 +105,25 @@
 
   "design": {
     "philosophy": "Human-level perception: agent reads two files (movies + taste) and thinks about each movie, just like a person would.",
-    "approach": "Validate movie-schedule input contract first, write movies.json and taste.yaml to a temp workdir, run preflight probes to pick ready agents (auto race or user-defined ordered chain), launch agent subprocesses in CI-safe non-interactive mode, parse JSON response, and fallback to remaining ready agents on runtime failure."
+    "approach": "Validate movie-schedule input contract first, write movies.json and taste.yaml to a temp workdir, run preflight probes to pick ready agents (auto race or user-defined ordered chain), including wrapper-backed agents such as qodercli, kimi_wp, and codex_wp, launch agent subprocesses in CI-safe non-interactive mode, parse JSON response, and fallback to remaining ready agents on runtime failure."
   },
 
   "adapters": {
     "kimi": { "status": "active", "description": "kimi CLI (web search capable)" },
     "gemini": { "status": "active", "description": "gemini CLI (cwd file-reading mode)" },
     "qwen": { "status": "active", "description": "qwen CLI (cwd file-reading mode)" },
-    "pi": { "status": "active", "description": "pi CLI (@file context)" }
+    "pi": { "status": "active", "description": "pi CLI (@file context)" },
+    "qodercli": { "status": "active", "description": "Qoder CLI (cwd file-reading mode)" },
+    "kimi_wp": { "status": "active", "description": "Qoder wrapper pinned to Kimi K2.5 in read-only mode" },
+    "codex_wp": { "status": "active", "description": "Proxy-backed Codex wrapper using headless exec from the temp workdir" }
   },
 
   "examples": {
     "positional": "ct-cognize scheduled.json taste/profile.yaml",
     "stdin": "cat scheduled.json | ct-cognize --input - --taste taste/profile.yaml",
     "auto": "ct-cognize --input scheduled.json --taste taste/profile.yaml",
-    "explicit": "ct-cognize --input scheduled.json --taste taste/profile.yaml --agent gemini",
-    "ordered_chain": "ct-cognize --input scheduled.json --taste taste/profile.yaml --agents pi,qwen,gemini",
+    "explicit": "ct-cognize --input scheduled.json --taste taste/profile.yaml --agent codex_wp",
+    "ordered_chain": "ct-cognize --input scheduled.json --taste taste/profile.yaml --agents pi,codex_wp,qodercli",
     "list_agents": "ct-cognize --list-agents",
     "version": "ct-cognize --version",
     "with_output": "ct-cognize --input scheduled.json --taste taste/profile.yaml --output analyzed.json",

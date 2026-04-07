@@ -38,6 +38,22 @@ The managed installer is:
 - `logs/scheduler.log`: full scheduled execution log
 - `logs/scheduler-status.log`: compact scheduler outcomes
 
+## Retry Policy
+
+The scheduler wrapper can retry source-unavailable pipeline exits before giving up.
+
+Environment variables:
+
+- `CINETASTE_SCHEDULER_MAX_ATTEMPTS` default `3`
+- `CINETASTE_SCHEDULER_RETRY_DELAY_SECONDS` default `180`
+- `CINETASTE_SCHEDULER_RETRY_EXIT_CODES` default `69`
+
+Current intent:
+
+- `69` means upstream/source unavailable
+- the wrapper retries those exits with delay
+- non-retryable failures still stop immediately
+
 ## Verification
 
 Dry-run the scheduler wrapper without sending live Telegram messages:
