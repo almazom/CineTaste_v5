@@ -20,7 +20,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DOTENV_PATH = PROJECT_ROOT / ".env"
 load_dotenv(DOTENV_PATH)
 
-from adapter_kinoteatr import fetch_movies, fetch_movies_week, CITY_URLS  # noqa: E402
+from adapter_kinoteatr import fetch_movies, fetch_movies_week, fetch_movies_month, CITY_URLS  # noqa: E402
 from port import enforce_output  # noqa: E402
 
 SUPPORTED_SOURCES = {
@@ -55,6 +55,7 @@ def parse_args() -> argparse.Namespace:
         epilog="""
 Examples:
   ct-fetch --city naberezhnie-chelni
+  ct-fetch --city naberezhnie-chelni --when month --output movies.json
   ct-fetch --city naberezhnie-chelni --when 2026-03-15 --output movies.json
   ct-fetch --city naberezhnie-chelni --dry-run
 """
@@ -69,7 +70,7 @@ Examples:
     parser.add_argument(
         "--when", "-w",
         default="now",
-        help="Date filter: 'now', 'week', or YYYY-MM-DD (default: now)"
+        help="Date filter: 'now', 'week', 'month', or YYYY-MM-DD (default: now)"
     )
 
     parser.add_argument(
@@ -104,7 +105,7 @@ Examples:
 def build_output(movies: list, city: str, city_display: str, when: str) -> dict:
     """Build output conforming to movie-batch@1.0.0 contract."""
     date_value = datetime.now().strftime("%Y-%m-%d")
-    if when not in ("now", "week"):
+    if when not in ("now", "week", "month"):
         date_value = when
 
     meta = {
@@ -115,9 +116,9 @@ def build_output(movies: list, city: str, city_display: str, when: str) -> dict:
         "fetched_at": datetime.now(timezone.utc).isoformat()
     }
 
-    if when == "week":
-        meta["mode"] = "week"
-        meta["days_fetched"] = 7
+    if when in {"week", "month"}:
+        meta["mode"] = when
+        meta["days_fetched"] = 7 if when == "week" else 30
 
     return {
         "movies": movies,
@@ -127,13 +128,13 @@ def build_output(movies: list, city: str, city_display: str, when: str) -> dict:
 
 def validate_when(when: str) -> str:
     """Validate --when value and normalize it."""
-    if when in ("now", "week"):
+    if when in ("now", "week", "month"):
         return when
 
     try:
         datetime.strptime(when, "%Y-%m-%d")
     except ValueError:
-        raise ValueError("--when must be 'now', 'week', or YYYY-MM-DD")
+        raise ValueError("--when must be 'now', 'week', 'month', or YYYY-MM-DD")
 
     return when
 
@@ -225,6 +226,10 @@ def main() -> int:
             if args.verbose:
                 print(f"Fetching movies for {args.city} for the week (7 days)...", file=sys.stderr)
             movies = fetch_movies_week(args.city)
+        elif when == "month":
+            if args.verbose:
+                print(f"Fetching movies for {args.city} for the next 30 days...", file=sys.stderr)
+            movies = fetch_movies_month(args.city)
         else:
             if args.verbose:
                 print(f"Fetching movies for {args.city} from {args.source} (when={when})...", file=sys.stderr)
@@ -258,4 +263,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

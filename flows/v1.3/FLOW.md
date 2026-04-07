@@ -78,6 +78,7 @@ movie-batch    movie-schedule   analysis-result  filter-result   message-text   
 
 "$ROOT/ct-schedule" \
     --input "$TMPDIR/movies.json" \
+    ${CT_SCHEDULE_EXTRA_FLAGS:-} \
     --output "$TMPDIR/scheduled.json"
 ```
 
@@ -166,7 +167,9 @@ Usage: ./run [OPTIONS]
 CineTaste v5 — Cinema recommendations to Telegram
 
 Options:
-  --when DATE       Date filter (default: now)
+  --when DATE       Date filter (default: month)
+  --week            Fetch movies for the next 7 days
+  --month           Fetch movies for the next 30 days
   --input FILE      Skip fetch/analyze, use cached
   --resend FILE     Resend existing message
   --dry-run, -n     Execute full flow without live Telegram delivery

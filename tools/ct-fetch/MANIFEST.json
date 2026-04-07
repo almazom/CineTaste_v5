@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "ct-fetch/MANIFEST.json",
   "title": "ct-fetch Tool Manifest",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "identity": {
     "name": "ct-fetch",
     "verb": "fetch",
@@ -15,7 +15,7 @@
     "output": "movie-batch@1.0.0"
   },
   "cli": {
-    "usage": "ct-fetch --city <CITY> [--when now|week|YYYY-MM-DD] [--source kinoteatr] [--output <FILE>] [--dry-run]",
+    "usage": "ct-fetch --city <CITY> [--when now|week|month|YYYY-MM-DD] [--source kinoteatr] [--output <FILE>] [--dry-run]",
     "flags": [
       {
         "name": "--city",
@@ -29,7 +29,7 @@
         "short": "-w",
         "type": "string",
         "default": "now",
-        "description": "Date filter: 'now' (today), 'week' (next 7 days), or YYYY-MM-DD; 'week' aggregates movies across days with showtimes_by_day"
+        "description": "Date filter: 'now' (today), 'week' (next 7 days), 'month' (next 30 days), or YYYY-MM-DD; aggregated horizons preserve per-movie available days"
       },
       {
         "name": "--output",
@@ -82,7 +82,7 @@
   "adapters": {
     "kinoteatr": {
       "file": "adapter_kinoteatr.py",
-      "description": "kinoteatr.ru scraper",
+      "description": "kinoteatr.ru scraper with normalized listing URLs and transient upstream retries",
       "status": "active"
     }
   },
@@ -99,6 +99,7 @@
   "examples": {
     "fetch_today": "ct-fetch --city naberezhnie-chelni --when now",
     "fetch_week": "ct-fetch --city naberezhnie-chelni --when week",
+    "fetch_month": "ct-fetch --city naberezhnie-chelni --when month",
     "fetch_date": "ct-fetch --city naberezhnie-chelni --when 2026-03-15",
     "to_file": "ct-fetch --city naberezhnie-chelni --output movies.json"
   }

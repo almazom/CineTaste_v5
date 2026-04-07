@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "tools" / "_shared"))
 sys.path.insert(0, str(Path(__file__).parent.parent / "tools" / "ct-fetch"))
 
 from validate import validate_against_contract
-from adapter_kinoteatr import DOTENV_PATH, fetch_movies, parse_html
+from adapter_kinoteatr import DOTENV_PATH, fetch_movies, fetch_movies_month, parse_html, parse_html_with_date, _build_listing_url, _fetch_html
 
 
 class TestKinoteatrAdapter:
@@ -96,6 +96,45 @@ class TestFetchDeterministic:
         assert "when=2026-03-10" in captured["urls"][0]
         assert len(movies) == 2
 
+    def test_fetch_movies_month_hits_30_listing_days(self, monkeypatch):
+        captured_dates = []
+
+        def fake_fetch_html(url, headers, timeout=30, attempts=3):
+            match = url.split("when=")[-1]
+            captured_dates.append(match)
+            return self.sample_html()
+
+        monkeypatch.setattr("adapter_kinoteatr._fetch_html", fake_fetch_html)
+        monkeypatch.setattr("adapter_kinoteatr._enrich_from_detail_pages", lambda movies: None)
+
+        movies = fetch_movies_month("naberezhnie-chelni")
+
+        assert len(captured_dates) == 30
+        assert len(movies) == 2
+
+    def test_build_listing_url_normalizes_env_query(self):
+        url = _build_listing_url("naberezhnie-chelni", "2026-03-10")
+        assert url == "https://kinoteatr.ru/kinoafisha/naberezhnie-chelni/?when=2026-03-10"
+
+    def test_fetch_html_retries_retryable_status(self, monkeypatch):
+        response_502 = Mock(status_code=502, text="<title>Error 502</title>", headers={"server": "ddos-guard"})
+        response_502.raise_for_status = Mock()
+        response_200 = Mock(status_code=200, text="<html>ok</html>", headers={"server": "ok"})
+        response_200.raise_for_status = Mock()
+        calls = {"count": 0}
+
+        def fake_get(url, headers, timeout):
+            calls["count"] += 1
+            return response_502 if calls["count"] < 3 else response_200
+
+        monkeypatch.setattr("adapter_kinoteatr.requests.get", fake_get)
+        monkeypatch.setattr("adapter_kinoteatr.time.sleep", lambda *_: None)
+
+        html = _fetch_html("https://kinoteatr.ru/test", headers={"User-Agent": "x"}, attempts=3)
+
+        assert html == "<html>ok</html>"
+        assert calls["count"] == 3
+
     def test_fetch_movies_request_exception(self, monkeypatch):
         # Use requests.RequestException branch via real class path.
         import requests
@@ -115,6 +154,27 @@ class TestFetchDeterministic:
         movies = parse_html(html)
         assert len(movies) == 1
         assert "url" not in movies[0]
+
+    def test_parse_html_matches_yo_title_variant(self, monkeypatch):
+        html = """
+        <div data-gtm-list-item-filmName="О моем перерождении в слизь: Слезы Синего моря" data-gtm-list-item-genre="аниме, фэнтези"></div>
+        <span class="contentRating">16+</span>
+        <a href="https://kinoteatr.ru/film/o-moem-pererozhdenii-v-sliz-slezy-sinego-morya/naberezhnie-chelni/" data-gtm-ec-name="О моем перерождении в слизь: Слёзы Синего моря"></a>
+        """
+        monkeypatch.setattr("adapter_kinoteatr._enrich_from_detail_pages", lambda movies: None)
+        movies = parse_html(html)
+        assert movies[0]["url"].endswith("/film/o-moem-pererozhdenii-v-sliz-slezy-sinego-morya/naberezhnie-chelni/")
+
+    def test_parse_html_with_date_matches_yo_title_variant(self, monkeypatch):
+        html = """
+        <div data-gtm-list-item-filmName="О моем перерождении в слизь: Слезы Синего моря" data-gtm-list-item-genre="аниме, фэнтези"></div>
+        <span class="contentRating">16+</span>
+        <a href="https://kinoteatr.ru/film/o-moem-pererozhdenii-v-sliz-slezy-sinego-morya/naberezhnie-chelni/" data-gtm-ec-name="О моем перерождении в слизь: Слёзы Синего моря"></a>
+        """
+        monkeypatch.setattr("adapter_kinoteatr._enrich_from_detail_pages", lambda movies: None)
+        movies = parse_html_with_date(html, "2026-04-26")
+        assert movies[0]["url"].endswith("/film/o-moem-pererozhdenii-v-sliz-slezy-sinego-morya/naberezhnie-chelni/")
+        assert movies[0]["available_days"] == ["2026-04-26"]
 
     def test_dotenv_path_is_project_relative(self):
         expected = (Path(__file__).resolve().parents[1] / ".env").resolve()
