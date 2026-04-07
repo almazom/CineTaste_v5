@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "KANBAN-2026-04-07-0936.json",
+  "title": "Kanban Plan",
+  "description": "Extract the CineTaste kanban-first planning standard into one transferable file that another AI agent can follow by reading it once.",
+  "planning_session": {
+    "id": "KANBAN-2026-04-07-0936",
+    "created_at": "2026-04-07T09:36:00+03:00",
+    "author": "codex",
+    "goal": "Produce a detailed, transferable planning standard document and deliver it to the user through notify-me."
+  },
+  "states": [
+    "TODO",
+    "DOING",
+    "DONE"
+  ],
+  "columns": {
+    "TODO": [],
+    "DOING": [],
+    "DONE": [
+      {
+        "id": "task-01",
+        "task": "Read the governing sources that define the CineTaste planning discipline and map the non-negotiable rules.",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "medium",
+        "notes": "Completed by extracting norms from AURA.md, AGENTS.md, PROTOCOL.json, docs/golden-standard.md, memory cards, template files, and recent kanban examples."
+      },
+      {
+        "id": "task-02",
+        "task": "Draft one reusable markdown file that explains the kanban-first planning system, its purpose, invariants, lifecycle, and copyable instructions for another AI agent.",
+        "contract_impact": [],
+        "priority": 1,
+        "estimated_complexity": "high",
+        "notes": "Completed in docs/ops/agent-kanban-planning-standard.md with precedence, lifecycle, state semantics, JSON contract, adoption recipe, and copyable instruction blocks."
+      },
+      {
+        "id": "task-03",
+        "task": "Verify the new document for clarity and completeness, then deliver it to the user through t2me with a short caption.",
+        "contract_impact": [],
+        "priority": 2,
+        "estimated_complexity": "medium",
+        "notes": "Completed via local QA read-through, t2me status/me checks, dry-run file send, and live Telegram delivery confirmation message_id=9820."
+      }
+    ]
+  },
+  "acceptance_criteria": [
+    "The resulting file explains the CineTaste kanban-first planning standard in enough detail for reuse by another AI agent",
+    "The file includes operational rules, lifecycle steps, task-state semantics, update discipline, and copyable instruction text",
+    "The file clearly distinguishes project-derived facts from transferable practices",
+    "The file is saved in the repository and can be shown standalone",
+    "The file is delivered to the user via notify-me with a Telegram confirmation"
+  ],
+  "stats": {
+    "total": 3,
+    "todo": 0,
+    "doing": 0,
+    "done": 3,
+    "progress_percent": 100
+  }
+}
